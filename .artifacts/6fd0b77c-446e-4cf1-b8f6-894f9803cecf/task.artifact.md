@@ -1,0 +1,19 @@
+- [x] Substituir ícones da aplicação
+    - [x] Criar diretório `drawable-nodpi` e copiar novo ícone
+    - [x] Atualizar `ic_launcher_foreground.xml` (main e debug)
+    - [x] Atualizar `ic_launcher_background.xml` (main e debug)
+    - [x] Atualizar `ic_launcher_monochrome.xml`
+- [x] Adicionar opção "Account" no ecrã More
+    - [x] Modificar `MoreScreen.kt` para incluir o novo item
+    - [x] Atualizar `MoreTab.kt` para passar a nova ação
+- [x] Verificar alterações e gerar walkthrough
+- [x] Alterar nome da app para "Aoi"
+    - [x] Atualizar `app_name` em `base/strings.xml`
+    - [x] Substituir "Mihon" por "Aoi" em todas as traduções
+- [x] Gerar walkthrough final
+- [x] Atualizar logótipo (Splash, More e Notificações)
+    - [x] Copiar `loading icon.png` para os recursos da app (como PNG direto)
+    - [x] Remover wrapper XML `ic_mihon.xml` para evitar erro no Compose
+    - [x] Ajustar escala na Splash Screen (`ic_mihon_splash.xml`)
+    - [x] Verificar build com `assembleDebug`
+- [x] Atualizar walkthrough

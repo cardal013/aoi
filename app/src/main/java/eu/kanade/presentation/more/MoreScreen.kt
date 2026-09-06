@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.ui.more.DownloadQueueState
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.automirroredrounded.Label
+import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.CloudOff
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Info
@@ -40,6 +41,7 @@ fun MoreScreen(
     onClickStats: () -> Unit,
     onClickDataAndStorage: () -> Unit,
     onClickSettings: () -> Unit,
+    onClickAccount: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
 ) {
@@ -125,6 +127,14 @@ fun MoreScreen(
             }
 
             item { HorizontalDivider() }
+
+            item {
+                TextPreferenceWidget(
+                    title = "Account",
+                    icon = MaterialSymbols.Rounded.Person,
+                    onPreferenceClick = onClickAccount,
+                )
+            }
 
             item {
                 TextPreferenceWidget(

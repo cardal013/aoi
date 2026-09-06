@@ -29,7 +29,7 @@ fun LogoHeader(
             tint = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier
                 .padding(iconPadding)
-                .size(64.dp),
+                .size(112.dp),
         )
 
         HorizontalDivider()
