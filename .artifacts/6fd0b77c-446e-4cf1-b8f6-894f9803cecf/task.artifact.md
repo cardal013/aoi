@@ -1,19 +1,11 @@
-- [x] Substituir ícones da aplicação
-    - [x] Criar diretório `drawable-nodpi` e copiar novo ícone
-    - [x] Atualizar `ic_launcher_foreground.xml` (main e debug)
-    - [x] Atualizar `ic_launcher_background.xml` (main e debug)
-    - [x] Atualizar `ic_launcher_monochrome.xml`
-- [x] Adicionar opção "Account" no ecrã More
-    - [x] Modificar `MoreScreen.kt` para incluir o novo item
-    - [x] Atualizar `MoreTab.kt` para passar a nova ação
-- [x] Verificar alterações e gerar walkthrough
-- [x] Alterar nome da app para "Aoi"
-    - [x] Atualizar `app_name` em `base/strings.xml`
-    - [x] Substituir "Mihon" por "Aoi" em todas as traduções
-- [x] Gerar walkthrough final
-- [x] Atualizar logótipo (Splash, More e Notificações)
-    - [x] Copiar `loading icon.png` para os recursos da app (como PNG direto)
-    - [x] Remover wrapper XML `ic_mihon.xml` para evitar erro no Compose
-    - [x] Ajustar escala na Splash Screen (`ic_mihon_splash.xml`)
-    - [x] Verificar build com `assembleDebug`
-- [x] Atualizar walkthrough
+- [x] Implementar popup "Importar extensões" (Movido para Definições)
+- [x] Implementar popup "Downloads apenas com Wi-Fi"
+- [x] Correção Estrutural da Splash Screen (Samsung/Android 12)
+- [x] Reposição do logótipo "Aoi" real
+    - [x] Remover vetor antigo (`ic_mihon.xml`)
+    - [x] Colocar logo em `res/drawable-xxxhdpi/` para escala correta
+    - [x] Sincronizar temas (`values`, `v31`, `night-v31`)
+- [x] Melhorar logging de importação de extensões (Tag: `AOI_IMPORT`)
+- [x] Corrigir tradução do botão "Não" no popup Wi-Fi
+- [x] Gerar novo build `app:assembleDebug`
+- [x] Verificar e gerar walkthrough final

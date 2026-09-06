@@ -122,7 +122,6 @@ class ExtensionsViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
 
     init {
-
         viewModelScope.launchIO { findAvailableExtensions() }
     }
 

@@ -17,6 +17,11 @@ class DownloadPreferences(
         true,
     )
 
+    val wifiDownloadPromptShown: Preference<Boolean> = preferenceStore.getBoolean(
+        "wifi_download_prompt_shown",
+        false,
+    )
+
     val saveChaptersAsCBZ: Preference<Boolean> = preferenceStore.getBoolean("save_chapter_as_cbz", true)
 
     val splitTallImages: Preference<Boolean> = preferenceStore.getBoolean("split_tall_images", true)

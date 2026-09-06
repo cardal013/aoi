@@ -41,4 +41,13 @@
         <item name="android:textColorHighlightInverse">@color/m3_dynamic_dark_highlighted_text</item>
         <item name="android:textColorAlertDialogListItem">@color/m3_dynamic_default_color_primary_text</item>
     </style>
+
+    <style name="Theme.Tachiyomi.SplashScreen" parent="Theme.SplashScreen.IconBackground">
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_mihon</item>
+        <item name="android:windowSplashScreenBackground">@color/splash</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@color/splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.Tachiyomi</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 </resources>

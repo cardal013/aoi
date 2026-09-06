@@ -135,6 +135,8 @@
     <string name="action_apply">Apply</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_ok">OK</string>
+    <string name="action_yes">Yes</string>
+    <string name="action_no">No</string>
     <string name="action_cancel_all">Cancel all</string>
     <string name="cancel_all_for_series">Cancel all for this series</string>
     <string name="action_sort">Sort</string>
@@ -378,6 +380,12 @@
     <string name="extensionStoresScreen.addStoreDeeplink.bodyText">Do you wish to add the extension store below?</string>
     <string name="extensionStoresScreen.deleteStore.title">Remove extension store</string>
     <string name="extensionStoresScreen.deleteStore.body">Do you wish to remove the extension store \"%1$s\" (%2$s)?</string>
+
+    <string name="extension_repo_import_prompt_title">Import extensions?</string>
+    <string name="extension_repo_import_prompt_message">Would you like to automatically add popular extension repositories? This will allow you to find and install more manga sources easily.</string>
+
+    <string name="wifi_download_prompt_title">Downloads over Wi-Fi</string>
+    <string name="wifi_download_prompt_message">Would you like to restrict downloads to Wi-Fi only? You can change this later in Download settings.</string>
 
       <!-- Reader section -->
     <string name="pref_fullscreen">Fullscreen</string>

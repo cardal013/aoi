@@ -7,13 +7,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -22,16 +26,19 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.icerock.moko.resources.StringResource
+import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.more.settings.screen.about.AboutScreen
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.setting.SettingsViewModel
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.ChromeReaderMode
 import mihon.icons.materialsymbols.rounded.Code
@@ -74,6 +81,8 @@ object SettingsMainScreen : Screen() {
 
     @Composable
     fun Content(twoPane: Boolean) {
+        val viewModel = metroViewModel<SettingsViewModel>()
+        val state by viewModel.state.collectAsStateWithLifecycle()
         val navigator = LocalNavigator.currentOrThrow
         val backPress = LocalBackPress.currentOrThrow
         val containerColor = if (twoPane) getPalerSurface() else MaterialTheme.colorScheme.surface
@@ -101,12 +110,12 @@ object SettingsMainScreen : Screen() {
             },
             containerColor = containerColor,
             content = { contentPadding ->
-                val state = rememberLazyListState()
+                val lazyListState = rememberLazyListState()
                 val indexSelected = if (twoPane) {
                     items.indexOfFirst { it.screen::class == navigator.items.first()::class }
                         .also {
                             LaunchedEffect(Unit) {
-                                state.animateScrollToItem(it)
+                                lazyListState.animateScrollToItem(it)
                                 if (it > 0) {
                                     // Lift scroll
                                     topBarState.contentOffset = topBarState.heightOffsetLimit
@@ -118,7 +127,7 @@ object SettingsMainScreen : Screen() {
                 }
 
                 LazyColumn(
-                    state = state,
+                    state = lazyListState,
                     contentPadding = contentPadding,
                 ) {
                     itemsIndexed(
@@ -153,6 +162,64 @@ object SettingsMainScreen : Screen() {
                             )
                         }
                     }
+                }
+            },
+        )
+
+        if (state.showWifiPrompt) {
+            WifiDownloadPrompt(
+                onConfirm = { viewModel.onDismissWifiPrompt(true) },
+                onDismiss = { viewModel.onDismissWifiPrompt(false) },
+            )
+        }
+
+        if (state.showExtensionPrompt) {
+            ExtensionImportPrompt(
+                onConfirm = viewModel::importDefaultRepositories,
+                onDismiss = viewModel::onDismissExtensionPrompt,
+            )
+        }
+    }
+
+    @Composable
+    private fun WifiDownloadPrompt(
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = stringResource(MR.strings.wifi_download_prompt_title)) },
+            text = { Text(text = stringResource(MR.strings.wifi_download_prompt_message)) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(text = stringResource(MR.strings.action_yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(MR.strings.action_no))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun ExtensionImportPrompt(
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = stringResource(MR.strings.extension_repo_import_prompt_title)) },
+            text = { Text(text = stringResource(MR.strings.extension_repo_import_prompt_message)) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(text = stringResource(MR.strings.action_yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(MR.strings.action_no))
                 }
             },
         )
