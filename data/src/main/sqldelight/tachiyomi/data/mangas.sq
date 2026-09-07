@@ -31,7 +31,7 @@ CREATE TABLE mangas(
     is_syncing INTEGER NOT NULL DEFAULT 0,
     notes TEXT NOT NULL DEFAULT "",
     memo BLOB AS JsonObject NOT NULL DEFAULT '{}',
-    reading_status INTEGER NOT NULL DEFAULT 1
+    reading_status INTEGER NOT NULL DEFAULT 2
 );
 
 CREATE INDEX library_favorite_index ON mangas(favorite) WHERE favorite = 1;
@@ -64,6 +64,14 @@ BEGIN
         new.favorite != old.favorite OR
         new.reading_status != old.reading_status
     );
+END;
+
+CREATE TRIGGER reset_reading_status_on_unfavorite
+AFTER UPDATE OF favorite ON mangas
+BEGIN
+  UPDATE mangas
+  SET reading_status = 2
+  WHERE _id = new._id AND new.favorite = 0;
 END;
 
 getMangaById:

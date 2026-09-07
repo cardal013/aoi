@@ -1,24 +1,15 @@
-- [x] **Domain Layer**
-    - [x] Create `ReadingStatus.kt`
-    - [x] Create `LibraryGrouping.kt`
-    - [x] Update `Manga.kt`
-    - [x] Update `MangaUpdate.kt`
-    - [x] Update `LibraryPreferences.kt`
-- [x] **Data Layer**
-    - [x] Create migration `15.sqm`
-    - [x] Update `mangas.sq`
-    - [x] Update `MangaMapper.kt`
-    - [x] Update `MangaRepositoryImpl.kt`
-    - [x] Fix `MangaRestorer.kt` (Restore/Backup)
-- [x] **UI Layer - Manga Details**
-    - [x] Update `MangaViewModel.kt`
-    - [x] Create `ReadingStatusDialog` in `MangaDialogs.kt`
-    - [x] Add status selector to `MangaInfoHeader.kt`
-- [x] **UI Layer - Library**
-    - [x] Update `LibraryViewModel.kt` for status grouping
-    - [x] Add "Group by" to `LibrarySettingsDialog.kt`
-- [x] **Resources**
-    - [x] Add strings to `strings.xml`
-- [x] **Verification**
-    - [x] Add unit test for status reset
+- [ ] **Domain Layer**
+    - [ ] Update `ReadingStatus.kt` (reorder, change default to `READING`)
+- [ ] **Data Layer**
+    - [ ] Update migration `15.sqm` (default `2`, trigger reset to `2`)
+    - [ ] Update `mangas.sq` (default `2`, trigger reset to `2`)
+- [ ] **UI Layer - Manga Details**
+    - [ ] Remove "Smart Update" button in `MangaInfoHeader.kt`
+    - [ ] Use `RoundedFilled.Bookmark` in `MangaInfoHeader.kt`
+- [ ] **UI Layer - Library**
+    - [ ] Update `LibraryCompactGrid.kt` (restore "Continue Reading" button)
+    - [ ] Update `LibraryComfortableGrid.kt` (restore "Continue Reading" button)
+    - [ ] Update `LibraryList.kt` (restore "Continue Reading" button)
+- [ ] **Verification**
+    - [ ] Update `ReadingStatusTest.kt`
     - [ ] Manual verification

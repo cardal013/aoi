@@ -374,6 +374,7 @@ class MangaViewModel(
                     defaultCategory != null -> {
                         val result = updateManga.awaitUpdateFavorite(manga.id, true)
                         if (!result) return@launchIO
+                        updateManga.await(MangaUpdate(id = manga.id, readingStatus = ReadingStatus.READING))
                         moveMangaToCategory(defaultCategory)
                     }
 
@@ -381,6 +382,7 @@ class MangaViewModel(
                     defaultCategoryId == 0L || categories.isEmpty() -> {
                         val result = updateManga.awaitUpdateFavorite(manga.id, true)
                         if (!result) return@launchIO
+                        updateManga.await(MangaUpdate(id = manga.id, readingStatus = ReadingStatus.READING))
                         moveMangaToCategory(null)
                     }
 

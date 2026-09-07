@@ -107,7 +107,6 @@ class MangaScreen(
         MangaScreen(
             state = successState,
             snackbarHostState = viewModel.snackbarHostState,
-            nextUpdate = successState.manga.expectedNextUpdate,
             isTabletUi = isTabletUi(),
             chapterSwipeStartAction = viewModel.chapterSwipeStartAction,
             chapterSwipeEndAction = viewModel.chapterSwipeEndAction,
@@ -149,9 +148,6 @@ class MangaScreen(
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },
             onDownloadActionClicked = viewModel::runDownloadAction.takeIf { !successState.source.isLocalOrStub() },
             onEditCategoryClicked = viewModel::showChangeCategoryDialog.takeIf { successState.manga.favorite },
-            onEditFetchIntervalClicked = viewModel::showSetFetchIntervalDialog.takeIf {
-                successState.manga.favorite
-            },
             onMigrateClicked = {
                 navigator.push(MigrationConfigScreen(successState.manga.id))
             }.takeIf { successState.manga.favorite },
@@ -274,7 +270,6 @@ class MangaScreen(
             }
             is MangaViewModel.Dialog.ReadingStatus -> {
                 ReadingStatusDialog(
-                    initialStatus = dialog.manga.readingStatus,
                     onDismissRequest = onDismissRequest,
                     onConfirmed = viewModel::setReadingStatus,
                 )

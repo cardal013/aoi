@@ -1,5 +1,5 @@
 -- Add reading_status column to mangas table
-ALTER TABLE mangas ADD COLUMN reading_status INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE mangas ADD COLUMN reading_status INTEGER NOT NULL DEFAULT 2;
 
 -- Add trigger to reset reading_status when favorite is set to 0
 CREATE TRIGGER reset_reading_status_on_unfavorite
@@ -7,5 +7,5 @@ AFTER UPDATE OF favorite ON mangas
 FOR EACH ROW
 WHEN NEW.favorite = 0
 BEGIN
-    UPDATE mangas SET reading_status = 1 WHERE _id = NEW._id;
+    UPDATE mangas SET reading_status = 2 WHERE _id = NEW._id;
 END;

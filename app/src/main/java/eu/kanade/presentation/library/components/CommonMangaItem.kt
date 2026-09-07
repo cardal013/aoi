@@ -85,35 +85,37 @@ fun MangaCompactGridItem(
         onClick = onClick,
         onLongClick = onLongClick,
     ) {
-        MangaGridCover(
-            cover = {
-                MangaCover.Book(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
-                    data = coverData,
-                )
-            },
-            badgesStart = coverBadgeStart,
-            badgesEnd = coverBadgeEnd,
-            content = {
-                if (title != null) {
-                    CoverTextOverlay(
-                        title = title,
-                        onClickContinueReading = onClickContinueReading,
-                    )
-                } else if (onClickContinueReading != null) {
-                    ContinueReadingButton(
-                        size = ContinueReadingButtonSizeLarge,
-                        iconSize = ContinueReadingButtonIconSizeLarge,
-                        onClick = onClickContinueReading,
+        Box {
+            MangaGridCover(
+                cover = {
+                    MangaCover.Book(
                         modifier = Modifier
-                            .padding(ContinueReadingButtonGridPadding)
-                            .align(Alignment.BottomEnd),
+                            .fillMaxWidth()
+                            .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
+                        data = coverData,
                     )
-                }
-            },
-        )
+                },
+                badgesStart = coverBadgeStart,
+                badgesEnd = coverBadgeEnd,
+                content = {
+                    if (title != null) {
+                        CoverTextOverlay(
+                            title = title,
+                        )
+                    }
+                },
+            )
+            if (onClickContinueReading != null) {
+                ContinueReadingButton(
+                    size = ContinueReadingButtonSizeSmall,
+                    iconSize = ContinueReadingButtonIconSizeSmall,
+                    onClick = onClickContinueReading,
+                    modifier = Modifier
+                        .padding(ContinueReadingButtonGridPadding + 4.dp)
+                        .align(Alignment.BottomEnd),
+                )
+            }
+        }
     }
 }
 
@@ -123,7 +125,6 @@ fun MangaCompactGridItem(
 @Composable
 private fun BoxScope.CoverTextOverlay(
     title: String,
-    onClickContinueReading: (() -> Unit)? = null,
 ) {
     Box(
         modifier = Modifier
@@ -139,8 +140,10 @@ private fun BoxScope.CoverTextOverlay(
             .align(Alignment.BottomCenter),
     )
     Row(
-        modifier = Modifier.align(Alignment.BottomStart),
-        verticalAlignment = Alignment.Bottom,
+        modifier = Modifier
+            .align(Alignment.BottomStart)
+            .padding(bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         GridItemTitle(
             modifier = Modifier
@@ -156,17 +159,6 @@ private fun BoxScope.CoverTextOverlay(
             ),
             minLines = 1,
         )
-        if (onClickContinueReading != null) {
-            ContinueReadingButton(
-                size = ContinueReadingButtonSizeSmall,
-                iconSize = ContinueReadingButtonIconSizeSmall,
-                onClick = onClickContinueReading,
-                modifier = Modifier.padding(
-                    end = ContinueReadingButtonGridPadding,
-                    bottom = ContinueReadingButtonGridPadding,
-                ),
-            )
-        }
     }
 }
 
@@ -192,30 +184,30 @@ fun MangaComfortableGridItem(
         onLongClick = onLongClick,
     ) {
         Column {
-            MangaGridCover(
-                cover = {
-                    MangaCover.Book(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
-                        data = coverData,
-                    )
-                },
-                badgesStart = coverBadgeStart,
-                badgesEnd = coverBadgeEnd,
-                content = {
-                    if (onClickContinueReading != null) {
-                        ContinueReadingButton(
-                            size = ContinueReadingButtonSizeLarge,
-                            iconSize = ContinueReadingButtonIconSizeLarge,
-                            onClick = onClickContinueReading,
+            Box {
+                MangaGridCover(
+                    cover = {
+                        MangaCover.Book(
                             modifier = Modifier
-                                .padding(ContinueReadingButtonGridPadding)
-                                .align(Alignment.BottomEnd),
+                                .fillMaxWidth()
+                                .alpha(if (isSelected) GRID_SELECTED_COVER_ALPHA else coverAlpha),
+                            data = coverData,
                         )
-                    }
-                },
-            )
+                    },
+                    badgesStart = coverBadgeStart,
+                    badgesEnd = coverBadgeEnd,
+                )
+                if (onClickContinueReading != null) {
+                    ContinueReadingButton(
+                        size = ContinueReadingButtonSizeLarge,
+                        iconSize = ContinueReadingButtonIconSizeLarge,
+                        onClick = onClickContinueReading,
+                        modifier = Modifier
+                            .padding(ContinueReadingButtonGridPadding + 4.dp)
+                            .align(Alignment.BottomEnd),
+                    )
+                }
+            }
             GridItemTitle(
                 modifier = Modifier.padding(4.dp),
                 title = title,
@@ -389,7 +381,7 @@ private fun ContinueReadingButton(
             onClick = onClick,
             shape = MaterialTheme.shapes.small,
             colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.9f),
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
                 contentColor = contentColorFor(MaterialTheme.colorScheme.primaryContainer),
             ),
             modifier = Modifier.size(size),

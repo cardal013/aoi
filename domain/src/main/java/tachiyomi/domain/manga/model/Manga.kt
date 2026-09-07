@@ -137,7 +137,7 @@ data class Manga(
             lastModifiedAt = 0L,
             favoriteModifiedAt = null,
             version = 0L,
-            readingStatus = ReadingStatus.PLAN_TO_READ,
+            readingStatus = ReadingStatus.READING,
             notes = "",
             memo = JsonObject.EMPTY,
         )

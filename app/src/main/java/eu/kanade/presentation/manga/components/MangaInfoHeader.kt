@@ -80,7 +80,6 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.AttachMoney
 import mihon.icons.materialsymbols.rounded.Block
-import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.Brush
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Done
@@ -93,6 +92,7 @@ import mihon.icons.materialsymbols.rounded.Public
 import mihon.icons.materialsymbols.rounded.Schedule
 import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.rounded.Warning
+import mihon.icons.materialsymbols.roundedfilled.Bookmark
 import mihon.icons.materialsymbols.roundedfilled.Favorite
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
@@ -176,29 +176,16 @@ fun MangaInfoBox(
 fun MangaActionRow(
     favorite: Boolean,
     trackingCount: Int,
-    nextUpdate: Instant?,
-    isUserIntervalMode: Boolean,
     onAddToLibraryClicked: () -> Unit,
     onWebViewClicked: (() -> Unit)?,
     onWebViewLongClicked: (() -> Unit)?,
     onTrackingClicked: () -> Unit,
-    onEditIntervalClicked: (() -> Unit)?,
     onEditCategory: (() -> Unit)?,
     onReadingStatusClicked: () -> Unit,
     readingStatus: ReadingStatus,
     modifier: Modifier = Modifier,
 ) {
     val defaultActionButtonColor = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
-
-    // TODO: show something better when using custom interval
-    val nextUpdateDays = remember(nextUpdate) {
-        return@remember if (nextUpdate != null) {
-            val now = Clock.System.now()
-            now.daysUntil(nextUpdate, TimeZone.currentSystemDefault()).coerceAtLeast(0)
-        } else {
-            null
-        }
-    }
 
     Row(modifier = modifier.padding(start = 16.dp, top = 8.dp, end = 16.dp)) {
         MangaActionButton(
@@ -212,20 +199,20 @@ fun MangaActionRow(
             onClick = onAddToLibraryClicked,
             onLongClick = onEditCategory,
         )
-        MangaActionButton(
-            title = when (nextUpdateDays) {
-                null -> stringResource(MR.strings.not_applicable)
-                0 -> stringResource(MR.strings.manga_interval_expected_update_soon)
-                else -> pluralStringResource(
-                    MR.plurals.day,
-                    count = nextUpdateDays,
-                    nextUpdateDays,
-                )
-            },
-            icon = MaterialSymbols.Rounded.HourglassEmpty,
-            color = if (isUserIntervalMode) MaterialTheme.colorScheme.primary else defaultActionButtonColor,
-            onClick = { onEditIntervalClicked?.invoke() },
-        )
+        if (favorite) {
+            val statusName = when (readingStatus) {
+                ReadingStatus.PLAN_TO_READ -> stringResource(MR.strings.reading_status_plan_to_read)
+                ReadingStatus.READING -> stringResource(MR.strings.reading_status_reading)
+                ReadingStatus.COMPLETED -> stringResource(MR.strings.reading_status_completed)
+                ReadingStatus.DROPPED -> stringResource(MR.strings.reading_status_dropped)
+            }
+            MangaActionButton(
+                title = statusName,
+                icon = MaterialSymbols.RoundedFilled.Bookmark,
+                color = MaterialTheme.colorScheme.primary,
+                onClick = onReadingStatusClicked,
+            )
+        }
         MangaActionButton(
             title = if (trackingCount == 0) {
                 stringResource(MR.strings.manga_tracking_tab)
@@ -236,20 +223,6 @@ fun MangaActionRow(
             color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
             onClick = onTrackingClicked,
         )
-        if (favorite) {
-            val statusName = when (readingStatus) {
-                ReadingStatus.PLAN_TO_READ -> stringResource(MR.strings.reading_status_plan_to_read)
-                ReadingStatus.READING -> stringResource(MR.strings.reading_status_reading)
-                ReadingStatus.COMPLETED -> stringResource(MR.strings.reading_status_completed)
-                ReadingStatus.DROPPED -> stringResource(MR.strings.reading_status_dropped)
-            }
-            MangaActionButton(
-                title = statusName,
-                icon = MaterialSymbols.Rounded.Bookmark,
-                color = MaterialTheme.colorScheme.primary,
-                onClick = onReadingStatusClicked,
-            )
-        }
         if (onWebViewClicked != null) {
             MangaActionButton(
                 title = stringResource(MR.strings.action_web_view),

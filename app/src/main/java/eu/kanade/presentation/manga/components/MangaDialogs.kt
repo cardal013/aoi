@@ -162,12 +162,9 @@ fun SetIntervalDialog(
 
 @Composable
 fun ReadingStatusDialog(
-    initialStatus: ReadingStatus,
     onDismissRequest: () -> Unit,
     onConfirmed: (ReadingStatus) -> Unit,
 ) {
-    var selectedStatus by remember { mutableStateOf(initialStatus) }
-
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = { Text(text = stringResource(MR.strings.action_reading_status)) },
@@ -185,36 +182,25 @@ fun ReadingStatusDialog(
                             .fillMaxWidth()
                             .height(48.dp)
                             .selectable(
-                                selected = (status == selectedStatus),
-                                onClick = { selectedStatus = status },
+                                selected = false,
+                                onClick = {
+                                    onConfirmed(status)
+                                    onDismissRequest()
+                                },
                                 role = Role.RadioButton,
                             )
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(
-                            selected = (status == selectedStatus),
-                            onClick = null,
-                        )
                         Text(
                             text = statusName,
                             style = MaterialTheme.typography.bodyLarge,
-                            modifier = Modifier.padding(start = 16.dp),
                         )
                     }
                 }
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onConfirmed(selectedStatus)
-                    onDismissRequest()
-                },
-            ) {
-                Text(text = stringResource(MR.strings.action_ok))
-            }
-        },
+        confirmButton = {},
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
                 Text(text = stringResource(MR.strings.action_cancel))

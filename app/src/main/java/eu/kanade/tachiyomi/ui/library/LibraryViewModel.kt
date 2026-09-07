@@ -829,7 +829,7 @@ class LibraryViewModel(
         val hasActiveFilters: Boolean = false,
         val showCategoryTabs: Boolean = false,
         val showMangaCount: Boolean = false,
-        val showMangaContinueButton: Boolean = false,
+        val showMangaContinueButton: Boolean = true,
         val dialog: Dialog? = null,
         val libraryData: LibraryData = LibraryData(),
         private val activeCategoryIndex: Int = 0,
