@@ -53,11 +53,11 @@ object CommonMangaItemDefaults {
     const val BrowseFavoriteCoverAlpha = 0.34f
 }
 
-private val ContinueReadingButtonSizeSmall = 28.dp
-private val ContinueReadingButtonSizeLarge = 32.dp
+private val ContinueReadingButtonSizeSmall = 32.dp
+private val ContinueReadingButtonSizeLarge = 36.dp
 
-private val ContinueReadingButtonIconSizeSmall = 16.dp
-private val ContinueReadingButtonIconSizeLarge = 20.dp
+private val ContinueReadingButtonIconSizeSmall = 20.dp
+private val ContinueReadingButtonIconSizeLarge = 24.dp
 
 private val ContinueReadingButtonGridPadding = 6.dp
 private val ContinueReadingButtonListSpacing = 8.dp

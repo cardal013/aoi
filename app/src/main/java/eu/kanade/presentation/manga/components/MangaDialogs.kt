@@ -162,6 +162,7 @@ fun SetIntervalDialog(
 
 @Composable
 fun ReadingStatusDialog(
+    initialStatus: ReadingStatus,
     onDismissRequest: () -> Unit,
     onConfirmed: (ReadingStatus) -> Unit,
 ) {
@@ -182,7 +183,7 @@ fun ReadingStatusDialog(
                             .fillMaxWidth()
                             .height(48.dp)
                             .selectable(
-                                selected = false,
+                                selected = (status == initialStatus),
                                 onClick = {
                                     onConfirmed(status)
                                     onDismissRequest()
@@ -192,9 +193,14 @@ fun ReadingStatusDialog(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        RadioButton(
+                            selected = (status == initialStatus),
+                            onClick = null,
+                        )
                         Text(
                             text = statusName,
                             style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 16.dp),
                         )
                     }
                 }

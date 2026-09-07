@@ -270,6 +270,7 @@ class MangaScreen(
             }
             is MangaViewModel.Dialog.ReadingStatus -> {
                 ReadingStatusDialog(
+                    initialStatus = dialog.initialStatus,
                     onDismissRequest = onDismissRequest,
                     onConfirmed = viewModel::setReadingStatus,
                 )

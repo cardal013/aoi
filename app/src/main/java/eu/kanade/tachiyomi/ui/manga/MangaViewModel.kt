@@ -1089,7 +1089,7 @@ class MangaViewModel(
         data class DuplicateManga(val manga: Manga, val duplicates: List<MangaWithChapterCount>) : Dialog
         data class Migrate(val target: Manga, val current: Manga) : Dialog
         data class SetFetchInterval(val manga: Manga) : Dialog
-        data class ReadingStatus(val manga: Manga) : Dialog
+        data class ReadingStatus(val initialStatus: tachiyomi.domain.manga.model.ReadingStatus) : Dialog
         data object SettingsSheet : Dialog
         data object TrackSheet : Dialog
         data object FullCover : Dialog
@@ -1101,7 +1101,7 @@ class MangaViewModel(
 
     fun showReadingStatusDialog() {
         val manga = successState?.manga ?: return
-        updateSuccessState { it.copy(dialog = Dialog.ReadingStatus(manga)) }
+        updateSuccessState { it.copy(dialog = Dialog.ReadingStatus(manga.readingStatus)) }
     }
 
     fun showDeleteChapterDialog(chapters: List<Chapter>) {
