@@ -25,6 +25,7 @@ data class MangaUpdate(
     val updateStrategy: UpdateStrategy? = null,
     val initialized: Boolean? = null,
     val version: Long? = null,
+    val readingStatus: ReadingStatus? = null,
     val notes: String? = null,
     val memo: JsonObject? = null,
 )
@@ -52,6 +53,7 @@ fun Manga.toMangaUpdate(): MangaUpdate {
         updateStrategy = updateStrategy,
         initialized = initialized,
         version = version,
+        readingStatus = readingStatus,
         notes = notes,
         memo = memo,
     )

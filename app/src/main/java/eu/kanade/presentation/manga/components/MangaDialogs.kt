@@ -2,27 +2,35 @@ package eu.kanade.presentation.manga.components
 
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.daysUntil
 import tachiyomi.domain.manga.interactor.FetchInterval
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.WheelTextPicker
 import tachiyomi.presentation.core.components.material.padding
@@ -147,6 +155,69 @@ fun SetIntervalDialog(
                 onDismissRequest()
             }) {
                 Text(text = stringResource(MR.strings.action_ok))
+            }
+        },
+    )
+}
+
+@Composable
+fun ReadingStatusDialog(
+    initialStatus: ReadingStatus,
+    onDismissRequest: () -> Unit,
+    onConfirmed: (ReadingStatus) -> Unit,
+) {
+    var selectedStatus by remember { mutableStateOf(initialStatus) }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(text = stringResource(MR.strings.action_reading_status)) },
+        text = {
+            Column(Modifier.selectableGroup()) {
+                ReadingStatus.entries.forEach { status ->
+                    val statusName = when (status) {
+                        ReadingStatus.PLAN_TO_READ -> stringResource(MR.strings.reading_status_plan_to_read)
+                        ReadingStatus.READING -> stringResource(MR.strings.reading_status_reading)
+                        ReadingStatus.COMPLETED -> stringResource(MR.strings.reading_status_completed)
+                        ReadingStatus.DROPPED -> stringResource(MR.strings.reading_status_dropped)
+                    }
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .selectable(
+                                selected = (status == selectedStatus),
+                                onClick = { selectedStatus = status },
+                                role = Role.RadioButton,
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(
+                            selected = (status == selectedStatus),
+                            onClick = null,
+                        )
+                        Text(
+                            text = statusName,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.padding(start = 16.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    onConfirmed(selectedStatus)
+                    onDismissRequest()
+                },
+            ) {
+                Text(text = stringResource(MR.strings.action_ok))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text(text = stringResource(MR.strings.action_cancel))
             }
         },
     )

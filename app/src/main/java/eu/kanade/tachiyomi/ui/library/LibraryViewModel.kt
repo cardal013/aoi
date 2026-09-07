@@ -58,6 +58,7 @@ import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.history.interactor.GetNextChapters
 import tachiyomi.domain.library.model.LibraryDisplayMode
+import tachiyomi.domain.library.model.LibraryGrouping
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.model.sort
@@ -65,7 +66,9 @@ import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.manga.model.applyFilter
+import tachiyomi.domain.manga.model.categoryId
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracksPerManga
 import tachiyomi.domain.track.model.Track
@@ -130,12 +133,20 @@ class LibraryViewModel(
     // Shared separately so search, selection and dialog changes still reach [state] before the
     // first query result, and so returning to the tab doesn't flash empty while it restarts.
     private val library = combine(
-        searchQuery.debounce(0.25.seconds),
-        getCategories.subscribe(),
-        getFavoritesFlow(),
-        combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
-        getLibraryItemPreferencesFlow(),
-    ) { searchQuery, categories, favorites, (tracksMap, trackingFilters), itemPreferences ->
+        combine(
+            searchQuery.debounce(0.25.seconds),
+            getCategories.subscribe(),
+            getFavoritesFlow(),
+            ::Triple,
+        ),
+        combine(
+            combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
+            getLibraryItemPreferencesFlow(),
+            libraryPreferences.groupLibraryBy.changes(),
+            ::Triple,
+        ),
+    ) { (searchQuery, categories, favorites), (tracksAndFilters, itemPreferences, groupingMode) ->
+        val (tracksMap, trackingFilters) = tracksAndFilters
         val showSystemCategory = favorites.any { it.libraryManga.categories.contains(0) }
         val filteredFavorites = favorites
             .applyFilters(tracksMap, trackingFilters, itemPreferences)
@@ -155,6 +166,7 @@ class LibraryViewModel(
             favorites = filteredFavorites,
             tracksMap = tracksMap,
             loggedInTrackerIds = trackingFilters.keys,
+            groupingMode = groupingMode,
         )
     }
         .distinctUntilChanged()
@@ -162,7 +174,7 @@ class LibraryViewModel(
             Library(
                 data = data,
                 groupedFavorites = data.favorites
-                    .applyGrouping(data.categories, data.showSystemCategory)
+                    .applyGrouping(data.categories, data.showSystemCategory, data.groupingMode)
                     .applySort(data.favoritesById, data.tracksMap, data.loggedInTrackerIds),
             )
         }
@@ -274,7 +286,20 @@ class LibraryViewModel(
     private fun List<LibraryItem>.applyGrouping(
         categories: List<Category>,
         showSystemCategory: Boolean,
+        groupingMode: LibraryGrouping,
     ): Map<Category, List</* LibraryItem */ Long>> {
+        if (groupingMode == LibraryGrouping.BY_STATUS) {
+            val statusCategories = ReadingStatus.entries.map { status ->
+                Category(id = status.categoryId, name = "", order = status.ordinal.toLong(), flags = 0)
+            }
+            val groupCache = mutableMapOf<Long, MutableList<Long>>()
+            forEach { item ->
+                val status = item.libraryManga.manga.readingStatus
+                groupCache.getOrPut(status.categoryId) { mutableListOf() }.add(item.id)
+            }
+            return statusCategories.associateWith { groupCache[it.id]?.toList().orEmpty() }
+        }
+
         val groupCache = mutableMapOf</* Category */ Long, MutableList</* LibraryItem */ Long>>()
         forEach { item ->
             item.libraryManga.categories.forEach { categoryId ->
@@ -790,6 +815,7 @@ class LibraryViewModel(
         val favorites: List<LibraryItem> = emptyList(),
         val tracksMap: Map</* Manga */ Long, List<Track>> = emptyMap(),
         val loggedInTrackerIds: Set<Long> = emptySet(),
+        val groupingMode: LibraryGrouping = LibraryGrouping.default,
     ) {
         val favoritesById by lazy { favorites.associateBy { it.id } }
     }
@@ -840,13 +866,10 @@ class LibraryViewModel(
 
         fun getToolbarTitle(
             defaultTitle: String,
-            defaultCategoryTitle: String,
             page: Int,
+            categoryName: String,
         ): LibraryToolbarTitle {
             val category = displayedCategories.getOrNull(page) ?: return LibraryToolbarTitle(defaultTitle)
-            val categoryName = category.let {
-                if (it.isSystemCategory) defaultCategoryTitle else it.name
-            }
             val title = if (showCategoryTabs) defaultTitle else categoryName
             val count = when {
                 !showMangaCount -> null

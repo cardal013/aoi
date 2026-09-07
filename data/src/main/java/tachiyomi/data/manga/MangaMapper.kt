@@ -5,6 +5,7 @@ import kotlinx.serialization.json.JsonObject
 import tachiyomi.domain.library.model.LibraryManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
+import tachiyomi.domain.manga.model.ReadingStatus
 
 object MangaMapper {
     @Suppress("UNUSED_PARAMETER")
@@ -35,6 +36,7 @@ object MangaMapper {
         isSyncing: Long,
         notes: String,
         memo: JsonObject,
+        readingStatus: Long,
     ): Manga = Manga(
         id = id,
         source = source,
@@ -59,6 +61,7 @@ object MangaMapper {
         lastModifiedAt = lastModifiedAt,
         favoriteModifiedAt = favoriteModifiedAt,
         version = version,
+        readingStatus = ReadingStatus.fromInt(readingStatus),
         notes = notes,
         memo = memo,
     )
@@ -90,6 +93,7 @@ object MangaMapper {
         isSyncing: Long,
         notes: String,
         memo: JsonObject,
+        readingStatus: Long,
         totalCount: Long,
         readCount: Double,
         latestUpload: Long,
@@ -125,6 +129,7 @@ object MangaMapper {
             isSyncing,
             notes,
             memo,
+            readingStatus,
         ),
         categories = categories.split(",").map { it.toLong() },
         totalChapters = totalCount,
@@ -162,6 +167,7 @@ object MangaMapper {
         isSyncing: Long,
         notes: String,
         memo: JsonObject,
+        readingStatus: Long,
         totalCount: Long,
     ): MangaWithChapterCount = MangaWithChapterCount(
         manga = mapManga(
@@ -191,6 +197,7 @@ object MangaMapper {
             isSyncing,
             notes,
             memo,
+            readingStatus,
         ),
         chapterCount = totalCount,
     )

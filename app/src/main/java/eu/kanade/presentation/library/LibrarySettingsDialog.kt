@@ -24,6 +24,7 @@ import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.library.model.LibraryDisplayMode
+import tachiyomi.domain.library.model.LibraryGrouping
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.library.model.sort
 import tachiyomi.domain.library.service.LibraryPreferences
@@ -228,6 +229,20 @@ private val displayModes = listOf(
 private fun ColumnScope.DisplayPage(
     viewModel: LibrarySettingsViewModel,
 ) {
+    val groupingMode by viewModel.libraryPreferences.groupLibraryBy.collectAsState()
+    SettingsChipRow(MR.strings.pref_library_group_by) {
+        listOf(
+            MR.strings.pref_library_group_by_category to LibraryGrouping.BY_CATEGORY,
+            MR.strings.pref_library_group_by_status to LibraryGrouping.BY_STATUS,
+        ).map { (titleRes, mode) ->
+            FilterChip(
+                selected = groupingMode == mode,
+                onClick = { viewModel.libraryPreferences.groupLibraryBy.set(mode) },
+                label = { Text(stringResource(titleRes)) },
+            )
+        }
+    }
+
     val displayMode by viewModel.libraryPreferences.displayMode.collectAsState()
     SettingsChipRow(MR.strings.action_display_mode) {
         displayModes.map { (titleRes, mode) ->

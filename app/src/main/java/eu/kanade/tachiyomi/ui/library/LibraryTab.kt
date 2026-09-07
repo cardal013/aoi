@@ -26,6 +26,7 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
+import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.LibraryContent
@@ -108,10 +109,12 @@ data object LibraryTab : Tab {
 
         Scaffold(
             topBar = { scrollBehavior ->
+                val activeCategory = state.activeCategory
+                val categoryName = activeCategory?.visualName ?: stringResource(MR.strings.label_default)
                 val title = state.getToolbarTitle(
                     defaultTitle = stringResource(MR.strings.label_library),
-                    defaultCategoryTitle = stringResource(MR.strings.label_default),
                     page = state.coercedActiveCategoryIndex,
+                    categoryName = categoryName,
                 )
                 LibraryToolbar(
                     hasActiveFilters = state.hasActiveFilters,

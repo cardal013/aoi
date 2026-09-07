@@ -8,6 +8,7 @@ import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.preference.getEnum
 import tachiyomi.domain.library.model.LibraryDisplayMode
+import tachiyomi.domain.library.model.LibraryGrouping
 import tachiyomi.domain.library.model.LibrarySort
 import tachiyomi.domain.manga.model.Manga
 
@@ -36,6 +37,11 @@ class LibraryPreferences(
     val portraitColumns: Preference<Int> = preferenceStore.getInt("pref_library_columns_portrait_key", 0)
 
     val landscapeColumns: Preference<Int> = preferenceStore.getInt("pref_library_columns_landscape_key", 0)
+
+    val groupLibraryBy: Preference<LibraryGrouping> = preferenceStore.getEnum(
+        "library_group_by",
+        LibraryGrouping.default,
+    )
 
     val lastUpdatedTimestamp: Preference<Long> = preferenceStore.getLong(
         Preference.appStateKey("library_update_last_timestamp"),

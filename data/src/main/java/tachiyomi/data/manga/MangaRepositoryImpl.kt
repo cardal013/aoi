@@ -179,6 +179,7 @@ class MangaRepositoryImpl(
                     updateStrategy = it.updateStrategy,
                     version = it.version,
                     memo = it.memo,
+                    readingStatus = it.readingStatus.value,
                     updateTitle = it.title.isNotBlank(),
                     updateCover = !it.thumbnailUrl.isNullOrBlank(),
                     updateDetails = it.initialized,
@@ -217,6 +218,7 @@ class MangaRepositoryImpl(
                     isSyncing = 0,
                     notes = value.notes,
                     memo = value.memo?.let(MemoColumnAdapter::encode),
+                    readingStatus = value.readingStatus?.value
                 )
             }
         }

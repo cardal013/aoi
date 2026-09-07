@@ -80,6 +80,7 @@ import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.AttachMoney
 import mihon.icons.materialsymbols.rounded.Block
+import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.Brush
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Done
@@ -97,6 +98,7 @@ import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.findChildOfType
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.DISABLED_ALPHA
 import tachiyomi.presentation.core.components.material.TextButton
@@ -182,6 +184,8 @@ fun MangaActionRow(
     onTrackingClicked: () -> Unit,
     onEditIntervalClicked: (() -> Unit)?,
     onEditCategory: (() -> Unit)?,
+    onReadingStatusClicked: () -> Unit,
+    readingStatus: ReadingStatus,
     modifier: Modifier = Modifier,
 ) {
     val defaultActionButtonColor = MaterialTheme.colorScheme.onSurface.copy(alpha = DISABLED_ALPHA)
@@ -232,6 +236,20 @@ fun MangaActionRow(
             color = if (trackingCount == 0) defaultActionButtonColor else MaterialTheme.colorScheme.primary,
             onClick = onTrackingClicked,
         )
+        if (favorite) {
+            val statusName = when (readingStatus) {
+                ReadingStatus.PLAN_TO_READ -> stringResource(MR.strings.reading_status_plan_to_read)
+                ReadingStatus.READING -> stringResource(MR.strings.reading_status_reading)
+                ReadingStatus.COMPLETED -> stringResource(MR.strings.reading_status_completed)
+                ReadingStatus.DROPPED -> stringResource(MR.strings.reading_status_dropped)
+            }
+            MangaActionButton(
+                title = statusName,
+                icon = MaterialSymbols.Rounded.Bookmark,
+                color = MaterialTheme.colorScheme.primary,
+                onClick = onReadingStatusClicked,
+            )
+        }
         if (onWebViewClicked != null) {
             MangaActionButton(
                 title = stringResource(MR.strings.action_web_view),

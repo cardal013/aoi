@@ -104,6 +104,9 @@ fun MangaScreen(
     // For cover dialog
     onCoverClicked: () -> Unit,
 
+    // For Reading Status
+    onReadingStatusClicked: () -> Unit,
+
     // For top action menu
     onShareClicked: (() -> Unit)?,
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
@@ -154,6 +157,7 @@ fun MangaScreen(
             onContinueReading = onContinueReading,
             onSearch = onSearch,
             onCoverClicked = onCoverClicked,
+            onReadingStatusClicked = onReadingStatusClicked,
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
             onEditCategoryClicked = onEditCategoryClicked,
@@ -190,6 +194,7 @@ fun MangaScreen(
             onContinueReading = onContinueReading,
             onSearch = onSearch,
             onCoverClicked = onCoverClicked,
+            onReadingStatusClicked = onReadingStatusClicked,
             onShareClicked = onShareClicked,
             onDownloadActionClicked = onDownloadActionClicked,
             onEditCategoryClicked = onEditCategoryClicked,
@@ -234,6 +239,9 @@ private fun MangaScreenSmallImpl(
 
     // For cover dialog
     onCoverClicked: () -> Unit,
+
+    // For Reading Status
+    onReadingStatusClicked: () -> Unit,
 
     // For top action menu
     onShareClicked: (() -> Unit)?,
@@ -400,6 +408,8 @@ private fun MangaScreenSmallImpl(
                             onTrackingClicked = onTrackingClicked,
                             onEditIntervalClicked = onEditIntervalClicked,
                             onEditCategory = onEditCategoryClicked,
+                            onReadingStatusClicked = onReadingStatusClicked,
+                            readingStatus = state.manga.readingStatus,
                         )
                     }
 
@@ -476,6 +486,9 @@ fun MangaScreenLargeImpl(
 
     // For cover dialog
     onCoverClicked: () -> Unit,
+
+    // For Reading Status
+    onReadingStatusClicked: () -> Unit,
 
     // For top action menu
     onShareClicked: (() -> Unit)?,
@@ -630,6 +643,8 @@ fun MangaScreenLargeImpl(
                             onTrackingClicked = onTrackingClicked,
                             onEditIntervalClicked = onEditIntervalClicked,
                             onEditCategory = onEditCategoryClicked,
+                            onReadingStatusClicked = onReadingStatusClicked,
+                            readingStatus = state.manga.readingStatus,
                         )
                         ExpandableMangaDescription(
                             defaultExpandState = true,

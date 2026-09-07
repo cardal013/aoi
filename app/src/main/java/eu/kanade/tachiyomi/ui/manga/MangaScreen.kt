@@ -31,6 +31,7 @@ import eu.kanade.presentation.manga.EditCoverAction
 import eu.kanade.presentation.manga.MangaScreen
 import eu.kanade.presentation.manga.components.DeleteChaptersDialog
 import eu.kanade.presentation.manga.components.MangaCoverDialog
+import eu.kanade.presentation.manga.components.ReadingStatusDialog
 import eu.kanade.presentation.manga.components.ScanlatorFilterDialog
 import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.util.AssistContentScreen
@@ -144,6 +145,7 @@ class MangaScreen(
             onContinueReading = { continueReading(context, viewModel.getNextUnreadChapter()) },
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = viewModel::showCoverDialog,
+            onReadingStatusClicked = viewModel::showReadingStatusDialog,
             onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },
             onDownloadActionClicked = viewModel::runDownloadAction.takeIf { !successState.source.isLocalOrStub() },
             onEditCategoryClicked = viewModel::showChangeCategoryDialog.takeIf { successState.manga.favorite },
@@ -268,6 +270,13 @@ class MangaScreen(
                     onDismissRequest = onDismissRequest,
                     onValueChanged = { interval: Int -> viewModel.setFetchInterval(dialog.manga, interval) }
                         .takeIf { viewModel.isUpdateIntervalEnabled },
+                )
+            }
+            is MangaViewModel.Dialog.ReadingStatus -> {
+                ReadingStatusDialog(
+                    initialStatus = dialog.manga.readingStatus,
+                    onDismissRequest = onDismissRequest,
+                    onConfirmed = viewModel::setReadingStatus,
                 )
             }
         }

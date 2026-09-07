@@ -134,6 +134,7 @@ class MangaRestorer(
             isSyncing = 1,
             notes = manga.notes,
             memo = manga.memo.let(MemoColumnAdapter::encode),
+            readingStatus = manga.readingStatus.value,
         )
         return manga
     }
@@ -266,6 +267,7 @@ class MangaRestorer(
             version = manga.version,
             notes = manga.notes,
             memo = manga.memo,
+            readingStatus = manga.readingStatus.value,
         )
             .awaitAsOne()
     }

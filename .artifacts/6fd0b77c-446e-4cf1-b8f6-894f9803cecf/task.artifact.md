@@ -1,2 +1,24 @@
-- [x] Update `AccountScreenContent.kt` to add AppBar and navigation actions
-- [x] Verify changes on device
+- [x] **Domain Layer**
+    - [x] Create `ReadingStatus.kt`
+    - [x] Create `LibraryGrouping.kt`
+    - [x] Update `Manga.kt`
+    - [x] Update `MangaUpdate.kt`
+    - [x] Update `LibraryPreferences.kt`
+- [x] **Data Layer**
+    - [x] Create migration `15.sqm`
+    - [x] Update `mangas.sq`
+    - [x] Update `MangaMapper.kt`
+    - [x] Update `MangaRepositoryImpl.kt`
+    - [x] Fix `MangaRestorer.kt` (Restore/Backup)
+- [x] **UI Layer - Manga Details**
+    - [x] Update `MangaViewModel.kt`
+    - [x] Create `ReadingStatusDialog` in `MangaDialogs.kt`
+    - [x] Add status selector to `MangaInfoHeader.kt`
+- [x] **UI Layer - Library**
+    - [x] Update `LibraryViewModel.kt` for status grouping
+    - [x] Add "Group by" to `LibrarySettingsDialog.kt`
+- [x] **Resources**
+    - [x] Add strings to `strings.xml`
+- [x] **Verification**
+    - [x] Add unit test for status reset
+    - [ ] Manual verification
