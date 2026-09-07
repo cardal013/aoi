@@ -1,11 +1,2 @@
-- [x] Implementar popup "Importar extensões" (Movido para Definições)
-- [x] Implementar popup "Downloads apenas com Wi-Fi"
-- [x] Correção Estrutural da Splash Screen (Samsung/Android 12)
-- [x] Reposição do logótipo "Aoi" real
-    - [x] Remover vetor antigo (`ic_mihon.xml`)
-    - [x] Colocar logo em `res/drawable-xxxhdpi/` para escala correta
-    - [x] Sincronizar temas (`values`, `v31`, `night-v31`)
-- [x] Melhorar logging de importação de extensões (Tag: `AOI_IMPORT`)
-- [x] Corrigir tradução do botão "Não" no popup Wi-Fi
-- [x] Gerar novo build `app:assembleDebug`
-- [x] Verificar e gerar walkthrough final
+- [x] Update `AccountScreenContent.kt` to add AppBar and navigation actions
+- [x] Verify changes on device

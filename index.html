@@ -654,13 +654,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       <ul class="nav-links">
         <li><a href="#top">Home</a></li>
         <li><a href="#features">Features</a></li>
-        <li><a href="#extensions">Extensions</a></li>
-        <li><a href="#docs">Documentation</a></li>
       </ul>
     </nav>
 
     <div class="nav-right">
-      <a class="icon-btn" href="https://github.com/cardal013/Peak-Engineering" target="_blank" rel="noopener" aria-label="Aoi on GitHub">
+      <a class="icon-btn" href="https://github.com/cardal013/aoi" target="_blank" rel="noopener" aria-label="Aoi on GitHub">
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.73.5.5 5.73.5 12a11.5 11.5 0 0 0 7.86 10.93c.58.1.79-.25.79-.56v-2.1c-3.2.7-3.87-1.36-3.87-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.05-.72.08-.7.08-.7 1.17.08 1.78 1.2 1.78 1.2 1.03 1.77 2.71 1.26 3.37.96.1-.75.4-1.26.73-1.55-2.56-.29-5.25-1.28-5.25-5.7 0-1.26.45-2.29 1.19-3.09-.12-.29-.52-1.47.11-3.06 0 0 .97-.31 3.18 1.18a11 11 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.64 1.59.24 2.77.12 3.06.74.8 1.19 1.83 1.19 3.09 0 4.43-2.7 5.4-5.27 5.69.42.36.78 1.07.78 2.16v3.2c0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.73 18.27.5 12 .5z"/></svg>
       </a>
       <span class="auth-buttons" id="authButtons" style="display:inline-flex; gap:8px; align-items:center;">
@@ -692,8 +690,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 <div class="mobile-panel" id="mobilePanel">
   <a href="#top">Home</a>
   <a href="#features">Features</a>
-  <a href="#extensions">Extensions</a>
-  <a href="#docs">Documentation</a>
   <div class="mobile-cta" id="mobileAuthButtons">
     <button class="btn btn-ghost" id="openLoginModalMobile" style="flex:1" type="button">Login</button>
     <button class="btn btn-primary" id="openSignupModalMobile" style="flex:1" type="button">Create Account</button>
@@ -717,10 +713,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <span class="eyebrow">Android · Open source</span>
         <h1>Aoi</h1>
         <p class="hero-sub">A modern manga &amp; manhwa reader for Android.</p>
-        <p class="hero-desc">Aoi is designed to provide a clean, fast and flexible reading experience with support for multiple sources through extensions.</p>
+        <p class="hero-desc">Built on Mihon, with an account system and per-manga reading categories — Reading, Completed, Dropped, and Plan to Read.</p>
         <div class="hero-actions">
-          <a href="https://github.com/cardal013/Peak-Engineering" target="_blank" rel="noopener" class="btn btn-primary">Download Aoi</a>
-          <a href="https://github.com/cardal013/Peak-Engineering" target="_blank" rel="noopener" class="btn btn-ghost">View on GitHub</a>
+          <a href="https://github.com/cardal013/aoi" target="_blank" rel="noopener" class="btn btn-primary">Download Aoi</a>
+          <a href="https://github.com/cardal013/aoi" target="_blank" rel="noopener" class="btn btn-ghost">View on GitHub</a>
         </div>
         <div class="hero-note"><span class="dot"></span> Currently in active development</div>
       </div>
@@ -761,25 +757,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       <div class="section-head reveal">
         <span class="eyebrow">Features</span>
         <h2>Built for reading.</h2>
-        <p>Every part of Aoi is shaped around the act of reading — finding a title, opening a chapter, and staying in it.</p>
+        <p>Aoi is built on Mihon, with an account system and reading categories layered on top.</p>
       </div>
 
       <div class="feature-grid reveal">
-        <article class="feature-card">
-          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h6v14H4zM14 5h6v14h-6z"/></svg></div>
-          <h3>Multiple Sources</h3>
-          <p>Access manga and manhwa through a flexible extension-based source system.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg></div>
-          <h3>Fast Search</h3>
-          <p>Search across multiple sources in parallel.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 3v9l6 3"/></svg></div>
-          <h3>Smart Caching</h3>
-          <p>Repeated searches can load from local cache for a faster experience.</p>
-        </article>
         <article class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
           <h3>Clean Reader</h3>
@@ -787,125 +768,14 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         </article>
         <article class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.4"/><rect x="14" y="3" width="7" height="7" rx="1.4"/><rect x="3" y="14" width="7" height="7" rx="1.4"/><rect x="14" y="14" width="7" height="7" rx="1.4"/></svg></div>
-          <h3>Extensions</h3>
-          <p>Enable or disable individual sources according to the user's preferences.</p>
+          <h3>Reading Categories</h3>
+          <p>Save each manga as Reading, Completed, Dropped, or Plan to Read.</p>
         </article>
         <article class="feature-card">
-          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3 6 6.5 1-4.7 4.6 1.1 6.4-5.9-3-5.9 3 1.1-6.4L2.5 9l6.5-1z"/></svg></div>
-          <h3>Open Architecture</h3>
-          <p>Designed around a modular extension architecture.</p>
+          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
+          <h3>Accounts</h3>
+          <p>Sign in and keep your library and reading status tied to your profile.</p>
         </article>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       EXTENSIONS
-  ============================================================ -->
-  <section id="extensions">
-    <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">Extensions</span>
-        <h2>Your sources. Your choice.</h2>
-        <p>Aoi can use multiple manga sources through extensions — small, independent packages you choose to enable. A typical setup runs five or six of them side by side.</p>
-      </div>
-
-      <div class="ext-layout">
-        <div class="ext-tiles reveal">
-          <div class="ext-tile">
-            <div class="ext-tile-top"><div class="ext-glyph">MD</div><span class="ext-status">Example</span></div>
-            <div><div class="ext-name">MangaDex</div><div class="ext-sub">Community-run source</div></div>
-          </div>
-          <div class="ext-tile">
-            <div class="ext-tile-top"><div class="ext-glyph">MF</div><span class="ext-status">Example</span></div>
-            <div><div class="ext-name">MangaFire</div><div class="ext-sub">Community-run source</div></div>
-          </div>
-          <div class="ext-tile">
-            <div class="ext-tile-top"><div class="ext-glyph">MH</div><span class="ext-status">Example</span></div>
-            <div><div class="ext-name">MangaHub</div><div class="ext-sub">Community-run source</div></div>
-          </div>
-          <div class="ext-tile">
-            <div class="ext-tile-top"><div class="ext-glyph">WC</div><span class="ext-status">Example</span></div>
-            <div><div class="ext-name">WeebCentral</div><div class="ext-sub">Community-run source</div></div>
-          </div>
-          <div class="ext-tile ext-tile-slot">
-            <div class="ext-tile-top"><div class="ext-glyph">05</div><span class="ext-status">Slot</span></div>
-            <div><div class="ext-name">Extension 5</div><div class="ext-sub">Open slot</div></div>
-          </div>
-          <div class="ext-tile ext-tile-slot">
-            <div class="ext-tile-top"><div class="ext-glyph">06</div><span class="ext-status">Slot</span></div>
-            <div><div class="ext-name">Extension 6</div><div class="ext-sub">Open slot</div></div>
-          </div>
-        </div>
-
-        <div class="search-demo reveal" aria-hidden="true">
-          <div class="search-demo-head">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/></svg>
-            <span>naruto</span>
-          </div>
-          <div class="search-row"><span class="name">MangaDex</span><span class="count">720 ch.</span></div>
-          <div class="search-row"><span class="name">MangaHub</span><span class="count">588 ch.</span></div>
-          <div class="search-row"><span class="name">WeebCentral</span><span class="count">402 ch.</span></div>
-          <div class="search-row"><span class="name">MangaFire</span><span class="count">366 ch.</span></div>
-          <p class="search-demo-caption">Results aren't ordered by extension name — they're sorted by chapter count, top to bottom. The source with the most chapters for that title appears first.</p>
-        </div>
-      </div>
-
-      <div class="ext-note reveal">
-        <strong>Extensions are independent sources</strong> that allow Aoi to retrieve manga and manhwa from different platforms. The examples shown here are illustrative only — Aoi is not affiliated with, endorsed by, or officially connected to any of these services.
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       HOW IT WORKS
-  ============================================================ -->
-  <section id="docs">
-    <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">How it works</span>
-        <h2>From install to reading, in three steps.</h2>
-      </div>
-
-      <div class="steps reveal">
-        <div class="step">
-          <svg class="step-mark" viewBox="0 0 40 40" aria-hidden="true"><circle class="enso-mark" cx="20" cy="20" r="16" stroke-dasharray="100" stroke-dashoffset="76" transform="rotate(-90 20 20)"/></svg>
-          <span class="step-index">01</span>
-          <h3>Install Aoi</h3>
-          <p>Get the Aoi app onto your Android device and open it for the first time.</p>
-        </div>
-        <div class="step">
-          <svg class="step-mark" viewBox="0 0 40 40" aria-hidden="true"><circle class="enso-mark" cx="20" cy="20" r="16" stroke-dasharray="100" stroke-dashoffset="50" transform="rotate(-90 20 20)"/></svg>
-          <span class="step-index">02</span>
-          <h3>Choose your extensions</h3>
-          <p>Enable the sources you want to read from. Nothing is turned on by default.</p>
-        </div>
-        <div class="step">
-          <svg class="step-mark" viewBox="0 0 40 40" aria-hidden="true"><circle class="enso-mark" cx="20" cy="20" r="16" stroke-dasharray="100" stroke-dashoffset="8" transform="rotate(-90 20 20)"/></svg>
-          <span class="step-index">03</span>
-          <h3>Search and read</h3>
-          <p>Find a title across your enabled sources and drop straight into the reader.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       BUG REPORT
-  ============================================================ -->
-  <section id="bug-report">
-    <div class="container bug-layout">
-      <div class="bug-copy reveal">
-        <span class="eyebrow">Feedback</span>
-        <h2>Something not working?</h2>
-        <p><strong style="color:var(--text)">Help make Aoi better.</strong> Report bugs and problems you run into so they can be looked at and fixed.</p>
-        <button class="btn btn-primary" id="openBugModal" type="button">Report a Bug</button>
-      </div>
-      <div class="bug-visual reveal" aria-hidden="true">
-        <div class="line"><span class="tag">title</span><span>Chapter fails to load</span></div>
-        <div class="line"><span class="tag">category</span><span>Reader</span></div>
-        <div class="line"><span class="tag">diagnostics</span><span>included</span></div>
-        <div class="line"><span class="tag">status</span><span>queued for review</span></div>
       </div>
     </div>
   </section>
@@ -928,19 +798,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       <div class="footer-links">
         <div class="footer-col">
           <h4>Project</h4>
-          <a href="https://github.com/cardal013/Peak-Engineering" target="_blank" rel="noopener">GitHub</a>
-          <a href="#docs">Documentation</a>
-        </div>
-        <div class="footer-col">
-          <h4>Support</h4>
-          <a href="#bug-report">Report a Bug</a>
-          <a href="https://github.com/cardal013/Peak-Engineering" target="_blank" rel="noopener">Download</a>
+          <a href="https://github.com/cardal013/aoi" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/cardal013/aoi" target="_blank" rel="noopener">Download</a>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
       <span>© 2026 Aoi</span>
-      <span>Not affiliated with MangaDex, MangaFire, MangaHub, or WeebCentral</span>
     </div>
   </div>
 </footer>
@@ -954,7 +818,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <div class="app-tabs-bar">
     <div class="container app-tabs" id="appTabs">
       <button type="button" data-app-view="library" class="active">Library</button>
-      <button type="button" data-app-view="reports">Reports</button>
       <button type="button" data-app-view="profile">Profile</button>
     </div>
   </div>
@@ -982,20 +845,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div class="empty-state" id="libraryEmpty" style="display:none;">
       <h3>Nothing here yet</h3>
       <p>No titles match this tab.</p>
-    </div>
-  </section>
-
-  <!-- REPORTS -->
-  <section id="app-view-reports" class="container">
-    <div class="app-view-head">
-      <h1>Reports</h1>
-      <button type="button" class="btn btn-primary" id="openNewReport">New report</button>
-    </div>
-    <div class="section-sub"><h2>Your reports</h2></div>
-    <div class="report-list" id="myReportList"></div>
-    <div class="empty-state" id="myReportsEmpty" style="display:none;">
-      <h3>No reports yet</h3>
-      <p>Reports you submit will show up here with their status.</p>
     </div>
   </section>
 
@@ -1052,48 +901,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </button>
     </div>
     <div class="status-options" id="statusOptions"></div>
-  </div>
-</div>
-
-<!-- ============================================================
-     MODAL — NEW REPORT
-============================================================ -->
-<div class="modal-scrim" id="reportScrim">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
-    <div class="modal-head">
-      <div>
-        <h3 id="reportModalTitle">New report</h3>
-        <p>Not sent anywhere yet.</p>
-      </div>
-      <button type="button" class="modal-close" id="closeReportModal" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <form id="reportForm" novalidate>
-      <div class="field">
-        <label for="reportCategory">Category</label>
-        <select id="reportCategory">
-          <option value="bug">Bug</option>
-          <option value="content">Content issue</option>
-          <option value="suggestion">Suggestion</option>
-          <option value="other">Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="reportTitle">Title</label>
-        <input type="text" id="reportTitle" required placeholder="Short summary">
-        <div class="field-error" id="reportTitleError">Enter a title.</div>
-      </div>
-      <div class="field">
-        <label for="reportDesc">Description</label>
-        <textarea id="reportDesc" required placeholder="Describe what happened"></textarea>
-        <div class="field-error" id="reportDescError">Describe the issue.</div>
-      </div>
-      <div class="modal-foot" style="display:flex; gap:10px; margin-top:6px;">
-        <button type="button" class="btn btn-ghost" id="cancelReportModal" style="flex:1">Cancel</button>
-        <button type="submit" class="btn btn-primary" style="flex:1">Submit</button>
-      </div>
-    </form>
   </div>
 </div>
 
@@ -1228,88 +1035,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   </div>
 </div>
 
-<!-- ============================================================
-     BUG REPORT MODAL
-============================================================ -->
-<div class="modal-scrim" id="bugScrim">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="bugModalTitle">
-    <div id="formView">
-      <div class="modal-head">
-        <div>
-          <h3 id="bugModalTitle">Report a Bug</h3>
-          <p>This form doesn't send anything yet — it will be connected soon.</p>
-        </div>
-        <button class="modal-close" id="closeBugModal" type="button" aria-label="Close">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-        </button>
-      </div>
-
-      <form id="bugForm" novalidate>
-        <div class="field">
-          <label for="bugName">Name or Username <span class="opt">(optional)</span></label>
-          <input type="text" id="bugName" name="name" autocomplete="name">
-        </div>
-        <div class="field">
-          <label for="bugEmail">Contact email <span class="opt">(optional)</span></label>
-          <input type="email" id="bugEmail" name="email" autocomplete="email" placeholder="you@example.com">
-        </div>
-        <div class="field">
-          <label for="bugVersion">Aoi Version</label>
-          <input type="text" id="bugVersion" name="version" required placeholder="e.g. 1.0.2">
-          <div class="field-error" id="versionError">Please specify the app version.</div>
-        </div>
-        <div class="field">
-          <label for="bugExtension">Related Extension <span class="opt">(optional)</span></label>
-          <input type="text" id="bugExtension" name="extension" placeholder="e.g. MangaDex">
-        </div>
-        <div class="field">
-          <label for="bugCategory">Type of Problem</label>
-          <select id="bugCategory" name="category" required>
-            <option value="" disabled selected>Select a category</option>
-            <option>Search</option>
-            <option>Reader</option>
-            <option>Extension</option>
-            <option>Library</option>
-            <option>Settings</option>
-            <option>Performance</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="bugTitle">Problem Title</label>
-          <input type="text" id="bugTitle" name="title" required autocomplete="off" placeholder="Short summary">
-          <div class="field-error" id="titleError">A short title helps a lot — please add one.</div>
-        </div>
-        <div class="field">
-          <label for="bugDesc">Detailed Description</label>
-          <textarea id="bugDesc" name="description" required placeholder="What happened, and what did you expect instead?"></textarea>
-          <div class="field-error" id="descError">A quick description of what happened would help.</div>
-        </div>
-        <div class="field">
-          <label for="bugSteps">Steps to Reproduce</label>
-          <textarea id="bugSteps" name="steps" required placeholder="1. Search for...&#10;2. Open...&#10;3. Tap..."></textarea>
-          <div class="field-error" id="stepsError">Knowing how it happened helps us fix it.</div>
-        </div>
-        <div class="field">
-          <label for="bugAdditional">Additional Information <span class="opt">(optional)</span></label>
-          <textarea id="bugAdditional" name="additional" placeholder="Any other details or logs?"></textarea>
-        </div>
-        <div class="check-row">
-          <input type="checkbox" id="bugDiagnostics" name="diagnostics" checked>
-          <label for="bugDiagnostics">Include diagnostic information</label>
-        </div>
-        <button type="submit" class="btn btn-primary" style="width:100%;">Submit report</button>
-      </form>
-    </div>
-
-    <div id="confirmView" class="confirm" style="display:none;">
-      <div class="check-circle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 13l4 4 10-10"/></svg></div>
-      <h3>Thank you</h3>
-      <p>Bug reporting will be connected soon. Thank you for helping improve Aoi.</p>
-      <button class="btn btn-ghost" id="confirmClose" type="button">Close</button>
-    </div>
-  </div>
-</div>
 
 <!-- ============================================================
      SCRIPT
@@ -1396,61 +1121,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (openScrim && MODAL_REGISTRY[openScrim.id]) MODAL_REGISTRY[openScrim.id]();
   });
 
-  /* Bug report modal */
-  var bugScrim = document.getElementById('bugScrim');
-  var openBtn = document.getElementById('openBugModal');
-  var closeBtn = document.getElementById('closeBugModal');
-  var confirmCloseBtn = document.getElementById('confirmClose');
-  var formView = document.getElementById('formView');
-  var confirmView = document.getElementById('confirmView');
-  var form = document.getElementById('bugForm');
-
-  function openBugModal(){
-    openModal(bugScrim, { restoreFocus: true, focusEl: document.getElementById('bugTitle') });
-  }
-  function closeBugModal(){
-    closeModal(bugScrim, { onClosed: function(){
-      formView.style.display = '';
-      confirmView.style.display = 'none';
-      form.reset();
-      document.getElementById('titleError').classList.remove('show');
-      document.getElementById('descError').classList.remove('show');
-    }});
-  }
-
-  openBtn.addEventListener('click', openBugModal);
-  closeBtn.addEventListener('click', closeBugModal);
-  confirmCloseBtn.addEventListener('click', closeBugModal);
-  registerModal(bugScrim, closeBugModal);
-
-  form.addEventListener('submit', function(e){
-    e.preventDefault();
-    var title = document.getElementById('bugTitle');
-    var desc = document.getElementById('bugDesc');
-    var version = document.getElementById('bugVersion');
-    var steps = document.getElementById('bugSteps');
-
-    var titleErr = document.getElementById('titleError');
-    var descErr = document.getElementById('descError');
-    var versionErr = document.getElementById('versionError');
-    var stepsErr = document.getElementById('stepsError');
-
-    var valid = true;
-
-    if (!title.value.trim()){ titleErr.classList.add('show'); valid = false; } else { titleErr.classList.remove('show'); }
-    if (!desc.value.trim()){ descErr.classList.add('show'); valid = false; } else { descErr.classList.remove('show'); }
-    if (!version.value.trim()){ versionErr.classList.add('show'); valid = false; } else { versionErr.classList.remove('show'); }
-    if (!steps.value.trim()){ stepsErr.classList.add('show'); valid = false; } else { stepsErr.classList.remove('show'); }
-
-    if (!valid) return;
-
-    /* No backend yet — this intentionally sends nothing anywhere. */
-    formView.style.display = 'none';
-    confirmView.style.display = 'flex';
-  });
-
   /* ============================================================
-     AUTH + APP LOGIC (login, signup, library, reports, profile)
+     AUTH + APP LOGIC (login, signup, library, profile)
   ============================================================ */
   var STATUSES = ["reading","planned","completed","dropped"];
   var STATUS_LABEL = { reading:"Reading", planned:"Planned", completed:"Completed", dropped:"Dropped" };
@@ -1470,8 +1142,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       { id:5, title:"Frieren",        status:"planned" },
       { id:6, title:"Gantz",          status:"dropped" }
     ],
-    myReports: [],
-    reportIdCounter: 1,
     libraryFilter: "reading",
     librarySearchOpen: false,
     librarySearchQuery: ""
@@ -1698,53 +1368,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   });
 
   /* ============================================================
-     REPORTS
-  ============================================================ */
-  var myReportList = qs('myReportList');
-  var myReportsEmpty = qs('myReportsEmpty');
-  function reportRowHTML(r){
-    return '<div class="report-row">' +
-      '<div class="rmain">' +
-        '<div class="rtitle">' + r.title + '</div>' +
-        '<div class="rmeta">' + r.date + '</div>' +
-      '</div>' +
-      '<div class="rcat">' + r.category.charAt(0).toUpperCase() + r.category.slice(1) + '</div>' +
-      '<span class="badge badge-' + r.status + '">' + (r.status === 'open' ? 'Open' : 'Resolved') + '</span>' +
-    '</div>';
-  }
-  function renderMyReports(){
-    myReportList.innerHTML = state.myReports.map(reportRowHTML).join('');
-    myReportsEmpty.style.display = state.myReports.length ? 'none' : 'block';
-  }
-  var reportScrim = qs('reportScrim');
-  function closeReportModal(){ closeModal(reportScrim); }
-  qs('openNewReport').addEventListener('click', function(){ openModal(reportScrim); });
-  qs('closeReportModal').addEventListener('click', closeReportModal);
-  qs('cancelReportModal').addEventListener('click', closeReportModal);
-  registerModal(reportScrim, closeReportModal);
-  qs('reportForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    var title = qs('reportTitle');
-    var desc = qs('reportDesc');
-    var titleErr = qs('reportTitleError');
-    var descErr = qs('reportDescError');
-    var valid = true;
-    if (!title.value.trim()){ titleErr.classList.add('show'); valid = false; } else { titleErr.classList.remove('show'); }
-    if (!desc.value.trim()){ descErr.classList.add('show'); valid = false; } else { descErr.classList.remove('show'); }
-    if (!valid) return;
-    state.myReports.unshift({
-      id: 'r' + (state.reportIdCounter++),
-      title: title.value.trim(),
-      category: qs('reportCategory').value,
-      status: 'open',
-      date: 'Just now'
-    });
-    this.reset();
-    closeReportModal();
-    renderMyReports();
-  });
-
-  /* ============================================================
      PROFILE
   ============================================================ */
   var passwordVisible = false;
@@ -1817,7 +1440,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   /* Initial render (data is ready even before login) */
   renderLibrary();
-  renderMyReports();
 
 })();
 </script>

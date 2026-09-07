@@ -7,6 +7,13 @@ import java.io.FileInputStream
 import java.util.Properties
 import kotlin.io.encoding.Base64
 
+val ignorancePropertiesFile = rootProject.file("ignorance/local.properties")
+val ignoranceProperties = Properties().apply {
+    if (ignorancePropertiesFile.exists()) {
+        ignorancePropertiesFile.inputStream().use { load(it) }
+    }
+}
+
 plugins {
     alias(mihonx.plugins.android.application)
     alias(mihonx.plugins.compose)
@@ -41,6 +48,9 @@ android {
         buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
         buildConfigField("boolean", "TELEMETRY_INCLUDED", "${Config.includeTelemetry}")
         buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
+
+        buildConfigField("String", "SUPABASE_URL", "\"${ignoranceProperties.getProperty("SUPABASE_URL") ?: ""}\"")
+        buildConfigField("String", "SUPABASE_ANON_KEY", "\"${ignoranceProperties.getProperty("SUPABASE_ANON_KEY") ?: ""}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -320,6 +330,13 @@ dependencies {
 
     // Logging
     implementation(libs.logcat)
+
+    // Supabase
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.kt)
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.okhttp)
 
     // Shizuku
     implementation(libs.bundles.shizuku)

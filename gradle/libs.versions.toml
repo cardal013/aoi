@@ -50,6 +50,7 @@ kotlinx-coroutines = "1.11.0"
 kotlinx-datetime = "0.8.0"
 kotlinx-serialization = "1.11.0"
 ktlint = "1.8.0"
+ktor = "3.0.1"
 leakCanary = "2.14"
 logcat = "0.4"
 markdown = "0.43.0"
@@ -72,6 +73,7 @@ sqldelight = "2.3.2"
 sqldelight-androidx-driver = "0637a964a1"
 stringSimilarity = "0.1.0"
 subsamplingScaleImageView = "94915e6f73"
+supabase = "3.8.0"
 swipe = "1.3.0"
 tapmoc = "0.4.2"
 unifile = "08f224c8f9"
@@ -157,6 +159,8 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-jsonOkio = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json-okio", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-protobuf = { module = "org.jetbrains.kotlinx:kotlinx-serialization-protobuf", version.ref = "kotlinx-serialization" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 ktlint-bom = { module = "com.pinterest.ktlint:ktlint-bom", version.ref = "ktlint" }
 leakCanary-core = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakCanary" }
 leakCanary-plumber = { module = "com.squareup.leakcanary:plumber-android", version.ref = "leakCanary" }
@@ -191,6 +195,10 @@ sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", 
 sqldelight-sqliteDialect338 = { module = "app.cash.sqldelight:sqlite-3-38-dialect", version.ref = "sqldelight" }
 stringSimilarity = { module = "com.aallam.similarity:string-similarity-kotlin", version.ref = "stringSimilarity" }
 subsamplingScaleImageView = { module = "com.github.mihonapp:subsampling-scale-image-view", version.ref = "subsamplingScaleImageView" }
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-kt = { module = "io.github.jan-tennert.supabase:supabase-kt" }
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
+supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
 swipe = { module = "me.saket.swipe:swipe", version.ref = "swipe" }
 tapmoc-gradle = { module = "com.gradleup.tapmoc:tapmoc-gradle-plugin", version.ref = "tapmoc" }
 unifile = { module = "com.github.mihon:unifile", version.ref = "unifile" }

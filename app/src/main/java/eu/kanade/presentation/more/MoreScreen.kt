@@ -72,6 +72,13 @@ fun MoreScreen(
                     onCheckedChanged = onIncognitoModeChange,
                 )
             }
+            item {
+                TextPreferenceWidget(
+                    title = "Account",
+                    icon = MaterialSymbols.Rounded.Person,
+                    onPreferenceClick = onClickAccount,
+                )
+            }
 
             item { HorizontalDivider() }
 
@@ -127,14 +134,6 @@ fun MoreScreen(
             }
 
             item { HorizontalDivider() }
-
-            item {
-                TextPreferenceWidget(
-                    title = "Account",
-                    icon = MaterialSymbols.Rounded.Person,
-                    onPreferenceClick = onClickAccount,
-                )
-            }
 
             item {
                 TextPreferenceWidget(
