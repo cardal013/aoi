@@ -499,6 +499,10 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .check-row label{ font-size:13.5px; color:var(--text-muted); }
 .field-error{ color:var(--accent); font-size:12px; margin-top:6px; display:none; }
 .field-error.show{ display:block; }
+.field-pass-wrap{ position:relative; }
+.field-pass-wrap input{ padding-right:44px !important; }
+.field-pass-toggle{ position:absolute; right:6px; top:50%; transform:translateY(-50%); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--text-muted); background:transparent; border:none; }
+.field-pass-toggle:hover{ color:var(--text); background:var(--bg-elevated-2); }
 
 /* ============================================================
    AUTH: avatar / user dropdown menu
@@ -763,6 +767,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
       <div class="feature-grid reveal">
         <article class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5,19c2.5,0,4.5-2,4.5-4.5c0-2.3-1.8-4.2-4.1-4.5c-0.8-3.4-3.9-6-7.4-6c-2.9,0-5.4,1.8-6.6,4.3C1.8,9,0,11,0,13.5C0,16.5,2.5,19,5.5,19h12z" stroke="var(--accent)" fill="none" stroke-width="1.7"/></svg></div>
+          <h3>Cloud Sync</h3>
+          <p>Seamlessly upload and import your library via the cloud. Bidirectional sync between app and website.</p>
+        </article>
+        <article class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg></div>
           <h3>Clean Reader</h3>
           <p>A focused reading experience without unnecessary interface clutter.</p>
@@ -776,11 +785,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg></div>
           <h3>Accounts</h3>
           <p>Sign in and keep your library and reading status tied to your profile.</p>
-        </article>
-        <article class="feature-card">
-          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5,19c2.5,0,4.5-2,4.5-4.5c0-2.3-1.8-4.2-4.1-4.5c-0.8-3.4-3.9-6-7.4-6c-2.9,0-5.4,1.8-6.6,4.3C1.8,9,0,11,0,13.5C0,16.5,2.5,19,5.5,19h12z" stroke="var(--accent)" fill="none" stroke-width="1.7"/></svg></div>
-          <h3>Cloud Sync</h3>
-          <p>Seamlessly upload and import your library via the cloud. Bidirectional sync between app and website.</p>
         </article>
       </div>
     </div>
@@ -877,9 +881,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <div class="k">Password</div>
           <div class="v">
             <span class="mono" id="profilePasswordMask">••••••••</span>
-            <button type="button" class="icon-btn" id="togglePasswordVisibility" aria-label="Show password" style="width:28px;height:28px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="15" height="15"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
-            </button>
           </div>
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="openChangePassword">Change Password</button>
@@ -949,16 +950,31 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <form id="passwordForm" novalidate>
       <div class="field">
         <label for="currentPassword">Current password</label>
-        <input type="password" id="currentPassword" required>
+        <div class="field-pass-wrap">
+          <input type="password" id="currentPassword" required>
+          <button type="button" class="field-pass-toggle" data-toggle-for="currentPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <div class="field-error" id="currentPasswordError">That's not your current password.</div>
       </div>
       <div class="field">
         <label for="newPassword">New password</label>
-        <input type="password" id="newPassword" required>
+        <div class="field-pass-wrap">
+          <input type="password" id="newPassword" required>
+          <button type="button" class="field-pass-toggle" data-toggle-for="newPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
       <div class="field">
         <label for="confirmPassword">Confirm new password</label>
-        <input type="password" id="confirmPassword" required>
+        <div class="field-pass-wrap">
+          <input type="password" id="confirmPassword" required>
+          <button type="button" class="field-pass-toggle" data-toggle-for="confirmPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <div class="field-error" id="confirmPasswordError">Passwords don't match.</div>
       </div>
       <div class="modal-foot" style="display:flex; gap:10px; margin-top:6px;">
@@ -991,7 +1007,12 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </div>
       <div class="field">
         <label for="loginPassword">Password</label>
-        <input type="password" id="loginPassword" required autocomplete="current-password">
+        <div class="field-pass-wrap">
+          <input type="password" id="loginPassword" required autocomplete="current-password">
+          <button type="button" class="field-pass-toggle" data-toggle-for="loginPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <div class="field-error" id="loginPasswordError">Incorrect username or password.</div>
       </div>
       <button type="submit" class="btn btn-primary btn-block">Log in</button>
@@ -1025,11 +1046,21 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </div>
       <div class="field">
         <label for="signupPassword">Password</label>
-        <input type="password" id="signupPassword" required autocomplete="new-password">
+        <div class="field-pass-wrap">
+          <input type="password" id="signupPassword" required autocomplete="new-password">
+          <button type="button" class="field-pass-toggle" data-toggle-for="signupPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
       </div>
       <div class="field">
         <label for="signupConfirmPassword">Confirm password</label>
-        <input type="password" id="signupConfirmPassword" required autocomplete="new-password">
+        <div class="field-pass-wrap">
+          <input type="password" id="signupConfirmPassword" required autocomplete="new-password">
+          <button type="button" class="field-pass-toggle" data-toggle-for="signupConfirmPassword" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
         <div class="field-error" id="signupConfirmError">Passwords don't match.</div>
       </div>
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
@@ -1228,6 +1259,35 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   qs('mobileLogoutBtn').onclick = logOut;
   qs('logoutBtnProfile').onclick = logOut;
 
+  // --- USER MENU DROPDOWN (was missing: avatar click never opened it) ---
+  var userMenuBtn = qs('userMenuBtn');
+  var userMenu = qs('userMenu');
+  if (userMenuBtn && userMenu) {
+    userMenuBtn.addEventListener('click', function(e){
+      e.stopPropagation();
+      var isOpen = userMenu.classList.toggle('open');
+      userMenuBtn.setAttribute('aria-expanded', String(isOpen));
+    });
+    document.addEventListener('click', function(e){
+      if (!userMenu.classList.contains('open')) return;
+      if (userMenu.contains(e.target) || userMenuBtn.contains(e.target)) return;
+      userMenu.classList.remove('open');
+      userMenuBtn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  // --- PASSWORD SHOW/HIDE TOGGLES (login, signup, change password) ---
+  document.querySelectorAll('.field-pass-toggle').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var input = qs(btn.dataset.toggleFor);
+      if (!input) return;
+      var showing = input.type === 'text';
+      input.type = showing ? 'password' : 'text';
+      btn.setAttribute('aria-label', showing ? 'Show password' : 'Hide password');
+      btn.classList.toggle('active', !showing);
+    });
+  });
+
   // --- APP VIEWS ---
   function showAppView(view){
     document.querySelectorAll('#appSite > section').forEach(s => s.classList.remove('active'));
@@ -1244,7 +1304,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // --- LIBRARY RENDERING ---
   function mangaCardHTML(m){
     const cover = m.thumbnailUrl ?
-      `<img src="${m.thumbnailUrl}" class="manga-cover" alt="" style="object-fit:cover;">` :
+      `<img src="${m.thumbnailUrl}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy" onerror="this.outerHTML='<div class=&quot;manga-cover&quot;>${BOOK_ICON.replace(/"/g, '&quot;')}</div>';">` :
       `<div class="manga-cover">${BOOK_ICON}</div>`;
     return `<button type="button" class="manga-card" data-id="${m.mangaId}">${cover}<div class="title">${m.title}</div></button>`;
   }
@@ -1267,6 +1327,26 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (state.librarySearchOpen) qs('librarySearch').focus();
   };
   qs('librarySearch').oninput = (e) => { state.librarySearchQuery = e.target.value; renderLibrary(); };
+
+  // --- REVEAL-ON-SCROLL (was missing entirely: .reveal elements never got
+  // the .in class, so they stayed at opacity:0 forever — this is why the
+  // Features section always looked "empty") ---
+  var revealEls = document.querySelectorAll('.reveal');
+  if (revealEls.length) {
+    if ('IntersectionObserver' in window) {
+      var revealObserver = new IntersectionObserver(function(entries){
+        entries.forEach(function(entry){
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in');
+            revealObserver.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+      revealEls.forEach(function(el){ revealObserver.observe(el); });
+    } else {
+      revealEls.forEach(function(el){ el.classList.add('in'); });
+    }
+  }
 
   // --- STATUS MODAL ---
   var statusScrim = qs('statusScrim');
