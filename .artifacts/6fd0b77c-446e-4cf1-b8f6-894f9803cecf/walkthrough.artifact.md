@@ -1,25 +1,23 @@
-# Walkthrough - Sync Options UI Redesign
+# Walkthrough - Library Sorting Fix
 
-I have redesigned the "Update Account" selection menu to provide a more modern and intuitive experience.
+I have fixed the issue where selecting sorting options in the Library menu had no effect on the displayed list, especially when using the new "Reading Status" tabs.
 
 ## Changes Made
 
-### 1. New Sync Options Bottom Sheet
-- **Container**: Replaced the standard `AlertDialog` with a `ModalBottomSheet` for a better mobile-first feel.
-- **Header**: Added a clear "Sync Library" title and a descriptive subtitle to guide the user.
-- **Option Cards**: Replaced simple text buttons with rich clickable cards (`SyncOptionCard`).
-    - **Import**: Features a `Download` icon and explains that it replaces the local library.
-    - **Upload**: Features an `ArrowUpward` icon and explains that it replaces the cloud library.
-- **Visual Styling**:
-    - Cards use the `surfaceVariant` background for clear clickability.
-    - Rounded corners (12dp for cards, 16dp for the sheet) match the app's modern design language.
-    - Generous padding and spacing for improved readability.
+### 1. Fixed Sorting for Status Tabs
+- **Problem**: The new "Reading Status" tabs (Reading, Completed, etc.) were using virtual categories that had their internal sort flags hardcoded to `0`. This forced an alphabetical sort regardless of what the user selected in the menu.
+- **Solution**: Updated `LibraryViewModel.kt` to dynamically assign the **global sort flags** to these virtual categories during the grouping process.
+
+### 2. Reactive Sorting Updates
+- **Problem**: The Library list was not observing changes to the global `sortingMode` preference. Even if the preference was updated in the database, the UI flow wouldn't re-emit to trigger a re-sort.
+- **Solution**: Modified the main `library` Flow in `LibraryViewModel` to include `libraryPreferences.sortingMode.changes()`.
+- **Result**: Selecting any sorting option (Alphabetical, Last Read, Total Chapters, etc.) now triggers an **immediate re-ordering** of the library list.
 
 ## Verification Results
 
 ### Automated Tests
-- Verified successful compilation with `:app:compileDebugKotlin`.
+- Verified compilation with `:app:compileDebugKotlin` (Success).
 
 ### Manual Logic Verification
-- **User Flow**: Clicking a card correctly dismisses the sheet and triggers the existing `SyncConfirmationDialog`.
-- **Theme Consistency**: The new UI correctly uses `MaterialTheme.colorScheme`, ensuring full support for dark mode and dynamic colors.
+- **Instant Feedback**: Confirmed that the `library` flow now reacts to global sort preference changes.
+- **Status Tab Consistency**: Verified that virtual categories now correctly inherit and apply the active sort criteria.

@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.setting
 
+import android.os.Build
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -36,11 +37,14 @@ class SettingsViewModel(
 
     val state: StateFlow<State> = combine(
         downloadPreferences.wifiDownloadPromptShown.changes(),
+        sourcePreferences.notificationPromptShown.changes(),
         sourcePreferences.extensionRepoImportPromptShown.changes(),
-    ) { wifiPromptShown, extensionPromptShown ->
+    ) { wifiPromptShown, notificationPromptShown, extensionPromptShown ->
+        val showNotification = wifiPromptShown && !notificationPromptShown && Build.VERSION.SDK_INT >= 33
         State(
             showWifiPrompt = !wifiPromptShown,
-            showExtensionPrompt = wifiPromptShown && !extensionPromptShown,
+            showNotificationPrompt = showNotification,
+            showExtensionPrompt = wifiPromptShown && (notificationPromptShown || Build.VERSION.SDK_INT < 33) && !extensionPromptShown,
         )
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())
@@ -48,6 +52,15 @@ class SettingsViewModel(
     fun onDismissWifiPrompt(onlyOnWifi: Boolean) {
         downloadPreferences.downloadOnlyOverWifi.set(onlyOnWifi)
         downloadPreferences.wifiDownloadPromptShown.set(true)
+    }
+
+    fun onDismissNotificationPrompt() {
+        sourcePreferences.notificationPromptShown.set(true)
+    }
+
+    fun onNotificationPermissionRequested() {
+        sourcePreferences.notificationPermissionRequested.set(true)
+        onDismissNotificationPrompt()
     }
 
     fun onDismissExtensionPrompt() {
@@ -77,6 +90,7 @@ class SettingsViewModel(
     @Immutable
     data class State(
         val showWifiPrompt: Boolean = false,
+        val showNotificationPrompt: Boolean = false,
         val showExtensionPrompt: Boolean = false,
     )
 }

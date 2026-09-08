@@ -1,5 +1,14 @@
 package eu.kanade.presentation.more.settings.screen
 
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.padding
@@ -24,6 +33,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.ColorUtils
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -39,6 +49,7 @@ import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.presentation.util.LocalBackPress
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.setting.SettingsViewModel
+import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.ChromeReaderMode
 import mihon.icons.materialsymbols.rounded.Code
@@ -173,6 +184,13 @@ object SettingsMainScreen : Screen() {
             )
         }
 
+        if (state.showNotificationPrompt) {
+            NotificationPermissionPrompt(
+                onConfirm = viewModel::onNotificationPermissionRequested,
+                onDismiss = viewModel::onDismissNotificationPrompt,
+            )
+        }
+
         if (state.showExtensionPrompt) {
             ExtensionImportPrompt(
                 onConfirm = viewModel::importDefaultRepositories,
@@ -193,6 +211,70 @@ object SettingsMainScreen : Screen() {
             confirmButton = {
                 TextButton(onClick = onConfirm) {
                     Text(text = stringResource(MR.strings.action_yes))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(MR.strings.action_no))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun NotificationPermissionPrompt(
+        onConfirm: () -> Unit,
+        onDismiss: () -> Unit,
+    ) {
+        val context = LocalContext.current
+        val activity = context as? Activity
+        val permissionRequester = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.RequestPermission(),
+            onResult = { onConfirm() },
+        )
+
+        val isPermanentlyDenied = remember {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = context.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+                val showRationale = activity?.shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) ?: false
+                // If not granted and no rationale, it could be the first time OR permanently denied.
+                // We use our preference to distinguish.
+                !granted && !showRationale && context.appGraph.sourcePreferences.notificationPermissionRequested.get()
+            } else {
+                false
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(text = stringResource(MR.strings.onboarding_permission_notifications)) },
+            text = { Text(text = stringResource(MR.strings.onboarding_permission_notifications_description)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (isPermanentlyDenied) {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                            onDismiss()
+                        } else {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                permissionRequester.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                onConfirm()
+                            }
+                        }
+                    },
+                ) {
+                    Text(
+                        text = if (isPermanentlyDenied) {
+                            stringResource(MR.strings.action_settings)
+                        } else {
+                            stringResource(MR.strings.onboarding_permission_action_grant)
+                        },
+                    )
                 }
             },
             dismissButton = {

@@ -142,11 +142,16 @@ class LibraryViewModel(
         combine(
             combine(getTracksPerManga.subscribe(), getTrackingFiltersFlow(), ::Pair),
             getLibraryItemPreferencesFlow(),
-            libraryPreferences.groupLibraryBy.changes(),
+            combine(
+                libraryPreferences.groupLibraryBy.changes(),
+                libraryPreferences.sortingMode.changes(),
+                ::Pair,
+            ),
             ::Triple,
         ),
-    ) { (searchQuery, categories, favorites), (tracksAndFilters, itemPreferences, groupingMode) ->
+    ) { (searchQuery, categories, favorites), (tracksAndFilters, itemPreferences, groupingAndSort) ->
         val (tracksMap, trackingFilters) = tracksAndFilters
+        val (groupingMode, globalSort) = groupingAndSort
         val showSystemCategory = favorites.any { it.libraryManga.categories.contains(0) }
         val filteredFavorites = favorites
             .applyFilters(tracksMap, trackingFilters, itemPreferences)
@@ -167,6 +172,7 @@ class LibraryViewModel(
             tracksMap = tracksMap,
             loggedInTrackerIds = trackingFilters.keys,
             groupingMode = groupingMode,
+            globalSort = globalSort,
         )
     }
         .distinctUntilChanged()
@@ -174,7 +180,7 @@ class LibraryViewModel(
             Library(
                 data = data,
                 groupedFavorites = data.favorites
-                    .applyGrouping(data.categories, data.showSystemCategory, data.groupingMode)
+                    .applyGrouping(data.categories, data.showSystemCategory, data.groupingMode, data.globalSort)
                     .applySort(data.favoritesById, data.tracksMap, data.loggedInTrackerIds),
             )
         }
@@ -287,10 +293,11 @@ class LibraryViewModel(
         categories: List<Category>,
         showSystemCategory: Boolean,
         groupingMode: LibraryGrouping,
+        globalSort: LibrarySort,
     ): Map<Category, List</* LibraryItem */ Long>> {
         if (groupingMode == LibraryGrouping.BY_STATUS) {
             val statusCategories = ReadingStatus.entries.map { status ->
-                Category(id = status.categoryId, name = "", order = status.ordinal.toLong(), flags = 0)
+                Category(id = status.categoryId, name = "", order = status.ordinal.toLong(), flags = globalSort.flag)
             }
             val groupCache = mutableMapOf<Long, MutableList<Long>>()
             forEach { item ->
@@ -816,6 +823,7 @@ class LibraryViewModel(
         val tracksMap: Map</* Manga */ Long, List<Track>> = emptyMap(),
         val loggedInTrackerIds: Set<Long> = emptySet(),
         val groupingMode: LibraryGrouping = LibraryGrouping.default,
+        val globalSort: LibrarySort = LibrarySort.default,
     ) {
         val favoritesById by lazy { favorites.associateBy { it.id } }
     }

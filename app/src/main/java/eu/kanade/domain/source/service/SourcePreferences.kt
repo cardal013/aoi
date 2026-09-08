@@ -64,6 +64,16 @@ class SourcePreferences(
         false,
     )
 
+    val notificationPromptShown: Preference<Boolean> = preferenceStore.getBoolean(
+        "notification_prompt_shown",
+        false,
+    )
+
+    val notificationPermissionRequested: Preference<Boolean> = preferenceStore.getBoolean(
+        "notification_permission_requested",
+        false,
+    )
+
     val trustedExtensions: Preference<Set<String>> = preferenceStore.getStringSet(
         Preference.appStateKey("trusted_extensions"),
         emptySet(),

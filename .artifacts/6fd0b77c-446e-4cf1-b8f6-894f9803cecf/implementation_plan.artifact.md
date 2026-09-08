@@ -1,53 +1,49 @@
-# Implementation Plan - UI Cleanup & Backup Shortcut Relocation
+# Implementation Plan - Notification Permission Prompt in Settings
 
-Relocate the "Import backup" button to the main "More" tab for better visibility and remove the recently added "Grid size" (columns) customization from the Library.
+Add a third popup to the first-entry sequence in the Settings screen to request notification permissions on Android 13+.
+
+## User Review Required
+
+> [!IMPORTANT]
+> **Sequence Order**: The prompts will appear in this order:
+> 1. Wi-Fi Downloads
+> 2. **Notification Permission** (Android 13+ only)
+> 3. Extension Repos
+>
+> **Smart Detection**: If the user has already permanently denied the permission, the button will automatically change to **"Abrir Definições"** and lead to the system settings page instead of trying to show the permission dialog.
 
 ## Proposed Changes
 
-### 1. Relocate "Import backup" Button
-- **Source**: Currently in `AccountScreen`.
-- **Destination**: Main `MoreTab`, positioned between "Account" and "Download queue".
+### Domain Layer - Preferences
 
-#### [MODIFY] [AccountScreenContent.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/account/AccountScreenContent.kt)
-- Remove `onImportBackup` parameter.
-- Remove "Import backup" `ProfileActionButton` from the UI.
+#### [MODIFY] [SourcePreferences.kt](file:///C:/aoi/app/src/main/java/eu/kanade/domain/source/service/SourcePreferences.kt)
+- [NEW] `notificationPromptShown`: Tracks if the Aoi prompt was displayed.
+- [NEW] `notificationPermissionRequested`: Tracks if the system permission dialog was ever launched.
 
-#### [MODIFY] [AccountScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountScreen.kt)
-- Cleanup: Remove backup file picker logic, `chooseBackup` launcher, and all related imports.
-- Remove `onImportBackup` callback passing.
+### UI Layer - ViewModel
 
-#### [MODIFY] [MoreScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/MoreScreen.kt)
-- Add `onClickImportBackup` callback.
-- Insert a `TextPreferenceWidget` for "Import backup" (with `Storage` icon) before the `HorizontalDivider` that leads to the Download Queue.
+#### [MODIFY] [SettingsViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/setting/SettingsViewModel.kt)
+- Update `state` Flow logic to chain the prompts:
+    - `showWifiPrompt`: `!wifiShown`
+    - `showNotificationPrompt`: `wifiShown && !notifShown && API >= 33`
+    - `showExtensionPrompt`: `wifiShown && (notifShown || API < 33) && !extShown`
+- Add `onDismissNotificationPrompt()` and `onNotificationPermissionRequested()`.
 
-#### [MODIFY] [MoreTab.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/MoreTab.kt)
-- Implement the `chooseBackup` launcher logic (reusing standard Mihon restore flow).
-- Add navigation to `RestoreBackupScreen`.
+### UI Layer - Presentation
+
+#### [MODIFY] [SettingsMainScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsMainScreen.kt)
+- Implement `NotificationPermissionPrompt` using `AlertDialog`.
+- Add logic to detect `isPermanentlyDenied` using `shouldShowRequestPermissionRationale` and the new preference flags.
+- Implement intent to open `ACTION_APPLICATION_DETAILS_SETTINGS`.
 
 ---
-
-### 2. Remove "Grid size" Customization
-- Revert all changes related to the custom number of columns per row.
-
-#### [MODIFY] [LibraryToolbar.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/library/components/LibraryToolbar.kt)
-- Remove `onClickGridSize` and the corresponding overflow menu item.
-
-#### [MODIFY] [LibraryViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/library/LibraryViewModel.kt)
-- Remove `showGridSizeDialog`, `setGridSize`, and `Dialog.GridSize`.
-
-#### [MODIFY] [LibraryTab.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/library/LibraryTab.kt)
-- Remove dialog handling for `GridSize`.
-
-#### [MODIFY] [MangaDialogs.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/manga/components/MangaDialogs.kt)
-- Delete the `GridSizeDialog` composable.
-
-#### [MODIFY] [CommonMangaItem.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/library/components/CommonMangaItem.kt)
-- Revert adaptive button size logic.
-- Standardize "Play" button size to `32.dp`.
 
 ## Verification Plan
 
 ### Manual Verification
-- **More Tab**: Verify "Import backup" is visible and functional between "Account" and "Download queue".
-- **Library**: Verify the "Grid size" / "Items per row" option is removed from the menu.
-- **Library**: Verify the "Play" button size is back to normal.
+1.  **First Entry**: Confirm Wi-Fi, then confirm/deny Notifications, then confirm Extensions.
+2.  **Permanently Denied**:
+    - Deny notifications once in system dialog.
+    - Re-enter Settings.
+    - Verify the button now says "Abrir Definições" (or equivalent).
+3.  **Android < 13**: Verify the prompt is skipped entirely.

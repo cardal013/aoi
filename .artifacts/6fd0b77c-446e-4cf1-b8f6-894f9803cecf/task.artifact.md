@@ -1,8 +1,7 @@
-- [x] **Sync Options Redesign**
-    - [x] Replace `SyncOptionsDialog` with `SyncOptionsBottomSheet` in `AccountScreen.kt`.
-    - [x] Implement `SyncOptionCard` component.
-    - [x] Update `Content()` to manage bottom sheet state.
+- [x] **Fix Library Sorting Bug**
+    - [x] Identify cause: Virtual status categories ignoring global sort flags.
+    - [x] Observe global `sortingMode` in `LibraryViewModel`.
+    - [x] Pass global sort flags to virtual categories in `applyGrouping`.
 - [x] **Verification**
     - [x] Build project.
-    - [x] Verify visual style and layout (cards, icons, spacing).
-    - [x] Verify redirection to `SyncConfirmationDialog`.
+    - [x] Verify list reorders immediately upon sort selection.
