@@ -1465,34 +1465,51 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('passwordForm').onsubmit = async (e) => {
     e.preventDefault();
-    const currentPassword = qs('currentPassword').value;
-    const newPassword = qs('newPassword').value;
-    const confirmPassword = qs('confirmPassword').value;
-    qs('currentPasswordError').classList.remove('show');
-    qs('confirmPasswordError').classList.remove('show');
+    console.log('[change-password] submit disparado');
+    try {
+      const currentPassword = qs('currentPassword').value;
+      const newPassword = qs('newPassword').value;
+      const confirmPassword = qs('confirmPassword').value;
+      console.log('[change-password] currentUser.email usado para verificar:', currentUser.email);
+      console.log('[change-password] currentUser completo:', currentUser);
 
-    if (newPassword !== confirmPassword) {
-      qs('confirmPasswordError').classList.add('show');
-      return;
-    }
+      qs('currentPasswordError').classList.remove('show');
+      qs('confirmPasswordError').classList.remove('show');
 
-    // Verify the current password by re-authenticating before changing it.
-    const { error: verifyError } = await supabase.auth.signInWithPassword({
-      email: currentUser.email,
-      password: currentPassword
-    });
-    if (verifyError) {
-      qs('currentPasswordError').classList.add('show');
-      return;
-    }
+      if (newPassword !== confirmPassword) {
+        console.log('[change-password] abortado: passwords novas não coincidem');
+        qs('confirmPasswordError').classList.add('show');
+        return;
+      }
 
-    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-    if (updateError) {
-      alert(updateError.message);
-      return;
+      console.log('[change-password] a verificar password atual via signInWithPassword...');
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: currentPassword
+      });
+      console.log('[change-password] resultado verificação:', verifyError);
+
+      if (verifyError) {
+        console.error('[change-password] verificação falhou:', verifyError.message, verifyError.status);
+        qs('currentPasswordError').classList.add('show');
+        return;
+      }
+
+      console.log('[change-password] verificação ok, a atualizar password...');
+      const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+      console.log('[change-password] resultado update:', updateError);
+
+      if (updateError) {
+        alert(updateError.message);
+        return;
+      }
+      console.log('[change-password] sucesso!');
+      closeModal(passwordScrim);
+    } catch (err) {
+      console.error('[change-password] EXCEÇÃO NÃO APANHADA:', err);
     }
-    closeModal(passwordScrim);
   };
+
 
   // --- INITIAL CHECK ---
   supabase.auth.getSession().then(({ data: { session } }) => { if (session) logIn(session.user); });
