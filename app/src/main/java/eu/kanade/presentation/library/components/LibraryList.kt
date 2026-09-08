@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.ui.library.LibraryItem
@@ -24,6 +25,14 @@ internal fun LibraryList(
     searchQuery: String?,
     onGlobalSearchClicked: () -> Unit,
 ) {
+    val onClickContinueReadingItem = remember(onClickContinueReading) {
+        if (onClickContinueReading != null) {
+            { manga: LibraryManga -> onClickContinueReading(manga) }
+        } else {
+            null
+        }
+    }
+
     FastScrollLazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = contentPadding + PaddingValues(vertical = 8.dp),
@@ -40,6 +49,7 @@ internal fun LibraryList(
 
         items(
             items = items,
+            key = { it.libraryManga.manga.id },
             contentType = { "library_list_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga
@@ -63,10 +73,8 @@ internal fun LibraryList(
                 },
                 onLongClick = { onLongClick(libraryItem.libraryManga) },
                 onClick = { onClick(libraryItem.libraryManga) },
-                onClickContinueReading = if (onClickContinueReading != null && libraryItem.unreadCount > 0) {
-                    { onClickContinueReading(libraryItem.libraryManga) }
-                } else {
-                    null
+                onClickContinueReading = onClickContinueReadingItem?.takeIf { libraryItem.unreadCount > 0 }?.let {
+                    { onClickContinueReadingItem(libraryItem.libraryManga) }
                 },
             )
         }

@@ -62,6 +62,8 @@ import mihon.icons.materialsymbols.rounded.Search
 import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.Sync
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -178,6 +180,7 @@ object SettingsMainScreen : Screen() {
         )
 
         if (state.showWifiPrompt) {
+            logcat(LogPriority.DEBUG) { "DEBUG_UI: Showing wifi prompt" }
             WifiDownloadPrompt(
                 onConfirm = { viewModel.onDismissWifiPrompt(true) },
                 onDismiss = { viewModel.onDismissWifiPrompt(false) },
@@ -185,6 +188,7 @@ object SettingsMainScreen : Screen() {
         }
 
         if (state.showNotificationPrompt) {
+            logcat(LogPriority.DEBUG) { "DEBUG_UI: Showing notification prompt" }
             NotificationPermissionPrompt(
                 onConfirm = viewModel::onNotificationPermissionRequested,
                 onDismiss = viewModel::onDismissNotificationPrompt,
@@ -192,6 +196,7 @@ object SettingsMainScreen : Screen() {
         }
 
         if (state.showExtensionPrompt) {
+            logcat(LogPriority.DEBUG) { "DEBUG_UI: Showing extension prompt" }
             ExtensionImportPrompt(
                 onConfirm = viewModel::importDefaultRepositories,
                 onDismiss = viewModel::onDismissExtensionPrompt,
@@ -272,7 +277,7 @@ object SettingsMainScreen : Screen() {
                         text = if (isPermanentlyDenied) {
                             stringResource(MR.strings.action_settings)
                         } else {
-                            stringResource(MR.strings.onboarding_permission_action_grant)
+                            stringResource(MR.strings.action_yes)
                         },
                     )
                 }

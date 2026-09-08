@@ -1,7 +1,9 @@
 package eu.kanade.tachiyomi.ui.library
 
+import androidx.compose.runtime.Immutable
 import tachiyomi.domain.library.model.LibraryManga
 
+@Immutable
 data class LibraryItem(
     val libraryManga: LibraryManga,
     val downloadCount: Int,

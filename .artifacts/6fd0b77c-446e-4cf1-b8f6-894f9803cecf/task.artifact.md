@@ -1,7 +1,10 @@
-- [x] **Fix Library Sorting Bug**
-    - [x] Identify cause: Virtual status categories ignoring global sort flags.
-    - [x] Observe global `sortingMode` in `LibraryViewModel`.
-    - [x] Pass global sort flags to virtual categories in `applyGrouping`.
-- [x] **Verification**
-    - [x] Build project.
-    - [x] Verify list reorders immediately upon sort selection.
+- [ ] **Website Integration (Supabase)**
+    - [ ] Update `index.html` with Supabase SDK and UI features.
+    - [ ] Implement real Auth (Sign up / Login).
+    - [ ] Implement real Library fetching from Supabase.
+- [ ] **Android App Redirection**
+    - [ ] Update `AccountScreen.kt` to open browser for "My Cloud Library".
+    - [ ] Delete `CloudLibraryScreen.kt` and `CloudLibraryViewModel.kt`.
+- [ ] **Verification**
+    - [ ] Build Android app.
+    - [ ] Verify browser redirection.

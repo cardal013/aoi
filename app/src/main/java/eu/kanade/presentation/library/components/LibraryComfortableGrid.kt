@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import eu.kanade.tachiyomi.ui.library.LibraryItem
 import tachiyomi.domain.library.model.LibraryManga
@@ -21,6 +22,14 @@ internal fun LibraryComfortableGrid(
     searchQuery: String?,
     onGlobalSearchClicked: () -> Unit,
 ) {
+    val onClickContinueReadingItem = remember(onClickContinueReading) {
+        if (onClickContinueReading != null) {
+            { manga: LibraryManga -> onClickContinueReading(manga) }
+        } else {
+            null
+        }
+    }
+
     LazyLibraryGrid(
         modifier = Modifier.fillMaxSize(),
         columns = columns,
@@ -30,6 +39,7 @@ internal fun LibraryComfortableGrid(
 
         items(
             items = items,
+            key = { it.libraryManga.manga.id },
             contentType = { "library_comfortable_grid_item" },
         ) { libraryItem ->
             val manga = libraryItem.libraryManga.manga
@@ -55,10 +65,8 @@ internal fun LibraryComfortableGrid(
                 },
                 onLongClick = { onLongClick(libraryItem.libraryManga) },
                 onClick = { onClick(libraryItem.libraryManga) },
-                onClickContinueReading = if (onClickContinueReading != null && libraryItem.unreadCount > 0) {
-                    { onClickContinueReading(libraryItem.libraryManga) }
-                } else {
-                    null
+                onClickContinueReading = onClickContinueReadingItem?.takeIf { libraryItem.unreadCount > 0 }?.let {
+                    { onClickContinueReadingItem(libraryItem.libraryManga) }
                 },
             )
         }

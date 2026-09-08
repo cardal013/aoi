@@ -37,14 +37,20 @@ class SettingsViewModel(
 
     val state: StateFlow<State> = combine(
         downloadPreferences.wifiDownloadPromptShown.changes(),
-        sourcePreferences.notificationPromptShown.changes(),
         sourcePreferences.extensionRepoImportPromptShown.changes(),
-    ) { wifiPromptShown, notificationPromptShown, extensionPromptShown ->
-        val showNotification = wifiPromptShown && !notificationPromptShown && Build.VERSION.SDK_INT >= 33
+        sourcePreferences.notificationPromptShown.changes(),
+    ) { wifiPromptShown, extensionPromptShown, notificationPromptShown ->
+        val showExtension = wifiPromptShown && !extensionPromptShown
+        val showNotification = wifiPromptShown && extensionPromptShown && !notificationPromptShown
+
+        logcat(LogPriority.DEBUG) {
+            "DEBUG_PROMPTS: wifi=$wifiPromptShown, ext=$extensionPromptShown, notif=$notificationPromptShown, api=${Build.VERSION.SDK_INT}, showNotif=$showNotification"
+        }
+
         State(
             showWifiPrompt = !wifiPromptShown,
+            showExtensionPrompt = showExtension,
             showNotificationPrompt = showNotification,
-            showExtensionPrompt = wifiPromptShown && (notificationPromptShown || Build.VERSION.SDK_INT < 33) && !extensionPromptShown,
         )
     }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5.seconds), State())

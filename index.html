@@ -17,6 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 /* ============================================================
    DESIGN TOKENS
@@ -776,6 +777,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <h3>Accounts</h3>
           <p>Sign in and keep your library and reading status tied to your profile.</p>
         </article>
+        <article class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5,19c2.5,0,4.5-2,4.5-4.5c0-2.3-1.8-4.2-4.1-4.5c-0.8-3.4-3.9-6-7.4-6c-2.9,0-5.4,1.8-6.6,4.3C1.8,9,0,11,0,13.5C0,16.5,2.5,19,5.5,19h12z" stroke="var(--accent)" fill="none" stroke-width="1.7"/></svg></div>
+          <h3>Cloud Sync</h3>
+          <p>Seamlessly upload and import your library via the cloud. No manual backups required.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -1043,74 +1049,62 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 (function(){
   "use strict";
 
-  /* Theme — defaults to the visitor's OS preference, in-memory only */
+  // --- SUPABASE CONFIG ---
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+  const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // --- APP CONSTANTS ---
+  const STATUSES = ["reading","planned","completed","dropped"];
+  const STATUS_LABEL = { reading:"Reading", planned:"Planned", completed:"Completed", dropped:"Dropped" };
+  const STATUS_DOT_VAR = { reading:"var(--accent)", planned:"#8D8B93", completed:"#1E9E6B", dropped:"#D6455D" };
+  const STATUS_MAP = { READING:'reading', PLAN_TO_READ:'planned', COMPLETED:'completed', DROPPED:'dropped' };
+  const REV_STATUS_MAP = { reading:'READING', planned:'PLAN_TO_READ', completed:'COMPLETED', dropped:'DROPPED' };
+  const BOOK_ICON = '<svg viewBox="0 0 32 32"><path d="M6 6h13a4 4 0 0 1 4 4v16H10a4 4 0 0 1-4-4V6z"/><path d="M6 24a4 4 0 0 1 4-4h13"/><path d="M11 12h8M11 16h8"/></svg>';
+
+  // --- STATE ---
+  var currentUser = null;
+  var state = {
+    library: [],
+    libraryFilter: "reading",
+    librarySearchOpen: false,
+    librarySearchQuery: ""
+  };
+
+  function initials(name){ return (name || "?").trim().slice(0,2).toUpperCase(); }
+  function qs(id){ return document.getElementById(id); }
+
   var root = document.body;
-  var themeToggle = document.getElementById('themeToggle');
+  var publicSite = qs('publicSite');
+  var appSite = qs('appSite');
+  var authButtons = qs('authButtons');
+  var userMenuArea = qs('userMenuArea');
+  var mobileAuthButtons = qs('mobileAuthButtons');
+  var mobileUserButtons = qs('mobileUserButtons');
+
+  // --- THEME ---
+  var themeToggle = qs('themeToggle');
   var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
   root.setAttribute('data-theme', prefersLight ? 'light' : 'dark');
-
   themeToggle.addEventListener('click', function(){
     var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
     root.setAttribute('data-theme', next);
   });
 
-  /* Mobile nav */
-  var hamburgerBtn = document.getElementById('hamburgerBtn');
-  var mobilePanel = document.getElementById('mobilePanel');
-
-  function closeMobile(){
-    mobilePanel.classList.remove('open');
-    hamburgerBtn.setAttribute('aria-expanded', 'false');
-  }
+  // --- MOBILE NAV ---
+  var hamburgerBtn = qs('hamburgerBtn');
+  var mobilePanel = qs('mobilePanel');
+  function closeMobile(){ mobilePanel.classList.remove('open'); hamburgerBtn.setAttribute('aria-expanded', 'false'); }
   hamburgerBtn.addEventListener('click', function(){
     var open = mobilePanel.classList.toggle('open');
     hamburgerBtn.setAttribute('aria-expanded', String(open));
   });
-  mobilePanel.querySelectorAll('a, button').forEach(function(el){
-    el.addEventListener('click', closeMobile);
-  });
+  mobilePanel.querySelectorAll('a, button').forEach(function(el){ el.addEventListener('click', closeMobile); });
 
-  /* Scroll reveal */
-  var revealEls = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window){
-    var io = new IntersectionObserver(function(entries){
-      entries.forEach(function(entry){
-        if (entry.isIntersecting){
-          entry.target.classList.add('in');
-          io.unobserve(entry.target);
-        }
-      });
-    }, { threshold: .12 });
-    revealEls.forEach(function(el){ io.observe(el); });
-  } else {
-    revealEls.forEach(function(el){ el.classList.add('in'); });
-  }
-
-  /* ============================================================
-     MODAL SYSTEM — single reusable open/close used by every
-     .modal-scrim in the page (bug report, login, signup, status,
-     new report, change username, change password). Esc and
-     click-outside are wired once per modal via registerModal().
-  ============================================================ */
-  var MODAL_REGISTRY = {};   /* scrim id -> its close function */
-  var MODAL_LAST_FOCUSED = {}; /* scrim id -> element to refocus on close (opt-in) */
-
-  function openModal(scrim, opts){
-    opts = opts || {};
-    if (opts.restoreFocus) MODAL_LAST_FOCUSED[scrim.id] = document.activeElement;
-    scrim.classList.add('open');
-    document.body.style.overflow = 'hidden';
-    if (opts.focusEl) opts.focusEl.focus();
-  }
-  function closeModal(scrim, opts){
-    opts = opts || {};
-    scrim.classList.remove('open');
-    document.body.style.overflow = '';
-    var toFocus = MODAL_LAST_FOCUSED[scrim.id];
-    if (toFocus){ toFocus.focus(); delete MODAL_LAST_FOCUSED[scrim.id]; }
-    if (opts.onClosed) setTimeout(opts.onClosed, 250);
-  }
-  /* Registers click-outside-to-close and makes the modal reachable by Esc. */
+  // --- MODALS ---
+  var MODAL_REGISTRY = {};
+  function openModal(scrim){ scrim.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  function closeModal(scrim){ scrim.classList.remove('open'); document.body.style.overflow = ''; }
   function registerModal(scrim, closeFn){
     MODAL_REGISTRY[scrim.id] = closeFn;
     scrim.addEventListener('click', function(e){ if (e.target === scrim) closeFn(); });
@@ -1121,81 +1115,40 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (openScrim && MODAL_REGISTRY[openScrim.id]) MODAL_REGISTRY[openScrim.id]();
   });
 
-  /* ============================================================
-     AUTH + APP LOGIC (login, signup, library, profile)
-  ============================================================ */
-  var STATUSES = ["reading","planned","completed","dropped"];
-  var STATUS_LABEL = { reading:"Reading", planned:"Planned", completed:"Completed", dropped:"Dropped" };
-  var STATUS_DOT_VAR = { reading:"var(--accent)", planned:"#8D8B93", completed:"#1E9E6B", dropped:"#D6455D" };
-  var BOOK_ICON = '<svg viewBox="0 0 32 32"><path d="M6 6h13a4 4 0 0 1 4 4v16H10a4 4 0 0 1-4-4V6z"/><path d="M6 24a4 4 0 0 1 4-4h13"/><path d="M11 12h8M11 16h8"/></svg>';
+  // --- AUTH LOGIC ---
+  async function fetchLibrary(){
+    if (!currentUser) return;
+    const { data, error } = await supabase
+      .from('user_library')
+      .select('*, manga(*)')
+      .eq('user_id', currentUser.id);
 
-  /* In-memory "database" — no backend, resets on page reload */
-  var users = {}; /* username(lowercase) -> { username, password } */
-  var currentUser = null;
+    if (error) { console.error(error); return; }
+    state.library = data.map(entry => ({
+      mangaId: entry.manga_id,
+      title: entry.manga.title,
+      thumbnailUrl: entry.manga.thumbnail_url,
+      status: STATUS_MAP[entry.status.toUpperCase()] || 'reading'
+    }));
+    renderLibrary();
+  }
 
-  var state = {
-    library: [
-      { id:1, title:"Vagabond",       status:"reading" },
-      { id:2, title:"Solo Leveling",  status:"reading" },
-      { id:3, title:"Vinland Saga",   status:"completed" },
-      { id:4, title:"Chainsaw Man",   status:"planned" },
-      { id:5, title:"Frieren",        status:"planned" },
-      { id:6, title:"Gantz",          status:"dropped" }
-    ],
-    libraryFilter: "reading",
-    librarySearchOpen: false,
-    librarySearchQuery: ""
-  };
-
-  function initials(name){ return (name || "?").trim().slice(0,2).toUpperCase(); }
-  function qs(id){ return document.getElementById(id); }
-
-  var publicSite = qs('publicSite');
-  var appSite = qs('appSite');
-  var authButtons = qs('authButtons');
-  var userMenuArea = qs('userMenuArea');
-  var mobileAuthButtons = qs('mobileAuthButtons');
-  var mobileUserButtons = qs('mobileUserButtons');
-
-  /* ============================================================
-     LOGIN / SIGNUP MODALS
-  ============================================================ */
-  var loginScrim = qs('loginScrim');
-  var signupScrim = qs('signupScrim');
-
-  function closeLoginModal(){ closeModal(loginScrim); }
-  function closeSignupModal(){ closeModal(signupScrim); }
-
-  qs('openLoginModal').addEventListener('click', function(){ openModal(loginScrim); });
-  qs('openSignupModal').addEventListener('click', function(){ openModal(signupScrim); });
-  qs('openLoginModalMobile').addEventListener('click', function(){ openModal(loginScrim); });
-  qs('openSignupModalMobile').addEventListener('click', function(){ openModal(signupScrim); });
-  qs('closeLoginModal').addEventListener('click', closeLoginModal);
-  qs('closeSignupModal').addEventListener('click', closeSignupModal);
-  registerModal(loginScrim, closeLoginModal);
-  registerModal(signupScrim, closeSignupModal);
-
-  qs('switchToSignup').addEventListener('click', function(e){
-    e.preventDefault(); closeLoginModal(); openModal(signupScrim);
-  });
-  qs('switchToLogin').addEventListener('click', function(e){
-    e.preventDefault(); closeSignupModal(); openModal(loginScrim);
-  });
-
-  function logIn(user){
-    currentUser = user;
+  function logIn(sessionUser){
+    currentUser = sessionUser;
     authButtons.style.display = 'none';
     userMenuArea.style.display = '';
     mobileAuthButtons.style.display = 'none';
     mobileUserButtons.style.display = '';
-    qs('navAvatar').textContent = initials(user.username);
+    qs('navAvatar').textContent = initials(currentUser.email);
     renderProfile();
     publicSite.style.display = 'none';
     appSite.style.display = 'block';
     showAppView('library');
+    fetchLibrary();
   }
 
-  function logOut(){
+  async function logOut(){
+    await supabase.auth.signOut();
     currentUser = null;
     authButtons.style.display = '';
     userMenuArea.style.display = 'none';
@@ -1203,243 +1156,123 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     mobileUserButtons.style.display = 'none';
     appSite.style.display = 'none';
     publicSite.style.display = '';
-    userMenu.classList.remove('open');
+    qs('userMenu').classList.remove('open');
     window.scrollTo({ top:0 });
   }
 
-  /* Signup */
-  qs('signupForm').addEventListener('submit', function(e){
+  // --- FORMS ---
+  var loginScrim = qs('loginScrim');
+  var signupScrim = qs('signupScrim');
+  registerModal(loginScrim, () => closeModal(loginScrim));
+  registerModal(signupScrim, () => closeModal(signupScrim));
+
+  qs('openLoginModal').onclick = () => openModal(loginScrim);
+  qs('openSignupModal').onclick = () => openModal(signupScrim);
+  qs('openLoginModalMobile').onclick = () => openModal(loginScrim);
+  qs('openSignupModalMobile').onclick = () => openModal(signupScrim);
+  qs('closeLoginModal').onclick = () => closeModal(loginScrim);
+  qs('closeSignupModal').onclick = () => closeModal(signupScrim);
+  qs('switchToSignup').onclick = (e) => { e.preventDefault(); closeModal(loginScrim); openModal(signupScrim); };
+  qs('switchToLogin').onclick = (e) => { e.preventDefault(); closeModal(signupScrim); openModal(loginScrim); };
+
+  qs('signupForm').onsubmit = async (e) => {
     e.preventDefault();
-    var username = qs('signupUsername').value.trim();
-    var password = qs('signupPassword').value;
-    var confirm = qs('signupConfirmPassword').value;
-    var usernameErr = qs('signupUsernameError');
-    var confirmErr = qs('signupConfirmError');
-    var valid = true;
+    const email = qs('signupUsername').value; // Using email as username
+    const password = qs('signupPassword').value;
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) { alert(error.message); return; }
+    closeModal(signupScrim);
+    if (data.user) logIn(data.user);
+  };
 
-    if (!username || users[username.toLowerCase()]){ usernameErr.classList.add('show'); valid = false; }
-    else { usernameErr.classList.remove('show'); }
-
-    if (!password || password !== confirm){ confirmErr.classList.add('show'); valid = false; }
-    else { confirmErr.classList.remove('show'); }
-
-    if (!valid) return;
-
-    var user = { username: username, password: password };
-    users[username.toLowerCase()] = user;
-    this.reset();
-    closeSignupModal();
-    logIn(user);
-  });
-
-  /* Login */
-  qs('loginForm').addEventListener('submit', function(e){
+  qs('loginForm').onsubmit = async (e) => {
     e.preventDefault();
-    var username = qs('loginUsername').value.trim();
-    var password = qs('loginPassword').value;
-    var usernameErr = qs('loginUsernameError');
-    var passwordErr = qs('loginPasswordError');
-    var valid = true;
+    const email = qs('loginUsername').value;
+    const password = qs('loginPassword').value;
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) { alert(error.message); return; }
+    closeModal(loginScrim);
+    if (data.user) logIn(data.user);
+  };
 
-    if (!username){ usernameErr.classList.add('show'); valid = false; }
-    else { usernameErr.classList.remove('show'); }
-    if (!valid) return;
+  qs('menuLogoutBtn').onclick = logOut;
+  qs('mobileLogoutBtn').onclick = logOut;
+  qs('logoutBtnProfile').onclick = logOut;
 
-    var existing = users[username.toLowerCase()];
-    if (!existing || existing.password !== password){
-      passwordErr.classList.add('show');
-      return;
-    }
-    passwordErr.classList.remove('show');
-    this.reset();
-    closeLoginModal();
-    logIn(existing);
-  });
-
-  /* ============================================================
-     USER MENU (avatar dropdown) + MOBILE MENU
-  ============================================================ */
-  var userMenuBtn = qs('userMenuBtn');
-  var userMenu = qs('userMenu');
-  userMenuBtn.addEventListener('click', function(){
-    var open = userMenu.classList.toggle('open');
-    userMenuBtn.setAttribute('aria-expanded', String(open));
-  });
-  document.addEventListener('click', function(e){
-    if (!userMenu.contains(e.target) && !userMenuBtn.contains(e.target)) userMenu.classList.remove('open');
-  });
-
-  qs('menuProfileBtn').addEventListener('click', function(){ userMenu.classList.remove('open'); showAppView('profile'); });
-  qs('menuLibraryBtn').addEventListener('click', function(){ userMenu.classList.remove('open'); showAppView('library'); });
-  qs('menuLogoutBtn').addEventListener('click', logOut);
-  qs('mobileProfileBtn').addEventListener('click', function(){ showAppView('profile'); });
-  qs('mobileLibraryBtn').addEventListener('click', function(){ showAppView('library'); });
-  qs('mobileLogoutBtn').addEventListener('click', logOut);
-  qs('logoutBtnProfile').addEventListener('click', logOut);
-
-  /* ============================================================
-     APP NAVIGATION (Library / Reports / Profile tabs)
-  ============================================================ */
+  // --- APP VIEWS ---
   function showAppView(view){
-    document.querySelectorAll('#appSite > section').forEach(function(s){ s.classList.remove('active'); });
+    document.querySelectorAll('#appSite > section').forEach(s => s.classList.remove('active'));
     qs('app-view-' + view).classList.add('active');
-    document.querySelectorAll('#appTabs [data-app-view]').forEach(function(b){
-      b.classList.toggle('active', b.dataset.appView === view);
-    });
+    document.querySelectorAll('#appTabs [data-app-view]').forEach(b => b.classList.toggle('active', b.dataset.appView === view));
     window.scrollTo({ top:0 });
   }
-  qs('appTabs').addEventListener('click', function(e){
-    var btn = e.target.closest('button[data-app-view]');
-    if (btn) showAppView(btn.dataset.appView);
-  });
+  qs('appTabs').onclick = (e) => { const btn = e.target.closest('button[data-app-view]'); if (btn) showAppView(btn.dataset.appView); };
+  qs('menuProfileBtn').onclick = () => showAppView('profile');
+  qs('menuLibraryBtn').onclick = () => showAppView('library');
+  qs('mobileProfileBtn').onclick = () => showAppView('profile');
+  qs('mobileLibraryBtn').onclick = () => showAppView('library');
 
-  /* ============================================================
-     LIBRARY
-  ============================================================ */
-  var mangaGrid = qs('mangaGrid');
-  var libraryEmpty = qs('libraryEmpty');
-  var libraryTabs = qs('libraryTabs');
-  var searchToggle = qs('searchToggle');
-  var librarySearchField = qs('librarySearchField');
-  var librarySearch = qs('librarySearch');
-
+  // --- LIBRARY RENDERING ---
   function mangaCardHTML(m){
-    return '<button type="button" class="manga-card" data-id="' + m.id + '">' +
-      '<div class="manga-cover">' + BOOK_ICON + '</div>' +
-      '<div class="title">' + m.title + '</div>' +
-    '</button>';
+    const cover = m.thumbnailUrl ?
+      `<img src="${m.thumbnailUrl}" class="manga-cover" alt="" style="object-fit:cover;">` :
+      `<div class="manga-cover">${BOOK_ICON}</div>`;
+    return `<button type="button" class="manga-card" data-id="${m.mangaId}">${cover}<div class="title">${m.title}</div></button>`;
   }
   function renderLibrary(){
-    var filtered = state.library.filter(function(m){
-      var matchesStatus = m.status === state.libraryFilter;
-      var matchesSearch = m.title.toLowerCase().indexOf(state.librarySearchQuery.toLowerCase()) !== -1;
-      return matchesStatus && matchesSearch;
-    });
-    mangaGrid.innerHTML = filtered.map(mangaCardHTML).join('');
-    libraryEmpty.style.display = filtered.length ? 'none' : 'block';
+    const filtered = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(state.librarySearchQuery.toLowerCase())));
+    qs('mangaGrid').innerHTML = filtered.map(mangaCardHTML).join('');
+    qs('libraryEmpty').style.display = filtered.length ? 'none' : 'block';
   }
-  libraryTabs.addEventListener('click', function(e){
-    var btn = e.target.closest('button[data-status]');
+  qs('libraryTabs').onclick = (e) => {
+    const btn = e.target.closest('button[data-status]');
     if (!btn) return;
-    libraryTabs.querySelectorAll('button').forEach(function(b){ b.classList.toggle('active', b === btn); });
+    qs('libraryTabs').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
     state.libraryFilter = btn.dataset.status;
     renderLibrary();
-  });
-  searchToggle.addEventListener('click', function(){
+  };
+  qs('searchToggle').onclick = () => {
     state.librarySearchOpen = !state.librarySearchOpen;
-    librarySearchField.classList.toggle('open', state.librarySearchOpen);
-    searchToggle.classList.toggle('active', state.librarySearchOpen);
-    if (state.librarySearchOpen) librarySearch.focus();
-  });
-  librarySearch.addEventListener('input', function(){
-    state.librarySearchQuery = librarySearch.value;
-    renderLibrary();
-  });
+    qs('librarySearchField').classList.toggle('open', state.librarySearchOpen);
+    qs('searchToggle').classList.toggle('active', state.librarySearchOpen);
+    if (state.librarySearchOpen) qs('librarySearch').focus();
+  };
+  qs('librarySearch').oninput = (e) => { state.librarySearchQuery = e.target.value; renderLibrary(); };
 
+  // --- STATUS MODAL ---
   var statusScrim = qs('statusScrim');
-  var statusOptions = qs('statusOptions');
-  var statusModalTitle = qs('statusModalTitle');
   var activeMangaId = null;
   function openStatusModal(id){
-    var manga = state.library.find(function(m){ return m.id === Number(id); });
+    const manga = state.library.find(m => m.mangaId === id);
     if (!manga) return;
-    activeMangaId = manga.id;
-    statusModalTitle.textContent = manga.title;
-    statusOptions.innerHTML = STATUSES.map(function(s){
-      return '<button type="button" class="status-option' + (s === manga.status ? ' current' : '') + '" data-status="' + s + '">' +
-        '<span class="dot" style="background:' + STATUS_DOT_VAR[s] + '"></span>' + STATUS_LABEL[s] +
-      '</button>';
-    }).join('');
+    activeMangaId = id;
+    qs('statusModalTitle').textContent = manga.title;
+    qs('statusOptions').innerHTML = STATUSES.map(s => `<button type="button" class="status-option ${s===manga.status?'current':''}" data-status="${s}"><span class="dot" style="background:${STATUS_DOT_VAR[s]}"></span>${STATUS_LABEL[s]}</button>`).join('');
     openModal(statusScrim);
   }
-  function closeStatusModal(){ closeModal(statusScrim); }
-  qs('closeStatusModal').addEventListener('click', closeStatusModal);
-  registerModal(statusScrim, closeStatusModal);
-  mangaGrid.addEventListener('click', function(e){
-    var card = e.target.closest('.manga-card');
-    if (card) openStatusModal(card.dataset.id);
-  });
-  statusOptions.addEventListener('click', function(e){
-    var opt = e.target.closest('.status-option');
-    if (!opt) return;
-    var manga = state.library.find(function(m){ return m.id === activeMangaId; });
-    if (manga){ manga.status = opt.dataset.status; renderLibrary(); }
-    closeStatusModal();
-  });
+  registerModal(statusScrim, () => closeModal(statusScrim));
+  qs('closeStatusModal').onclick = () => closeModal(statusScrim);
+  qs('mangaGrid').onclick = (e) => { const card = e.target.closest('.manga-card'); if (card) openStatusModal(card.dataset.id); };
+  qs('statusOptions').onclick = async (e) => {
+    const opt = e.target.closest('.status-option');
+    if (!opt || !currentUser) return;
+    const newStatus = opt.dataset.status;
+    const { error } = await supabase.from('user_library').update({ status: REV_STATUS_MAP[newStatus] }).eq('user_id', currentUser.id).eq('manga_id', activeMangaId);
+    if (error) { alert(error.message); return; }
+    fetchLibrary();
+    closeModal(statusScrim);
+  };
 
-  /* ============================================================
-     PROFILE
-  ============================================================ */
-  var passwordVisible = false;
-  qs('togglePasswordVisibility').addEventListener('click', function(){
-    if (!currentUser) return;
-    passwordVisible = !passwordVisible;
-    qs('profilePasswordMask').textContent = passwordVisible ? currentUser.password : '•'.repeat(currentUser.password.length);
-  });
+  // --- PROFILE ---
   function renderProfile(){
     if (!currentUser) return;
-    qs('profileAvatar').textContent = initials(currentUser.username);
-    qs('profileName').textContent = currentUser.username;
-    qs('profileUsername').textContent = currentUser.username;
-    passwordVisible = false;
-    qs('profilePasswordMask').textContent = '•'.repeat(currentUser.password.length);
+    qs('profileAvatar').textContent = initials(currentUser.email);
+    qs('profileName').textContent = currentUser.email.split('@')[0];
+    qs('profileUsername').textContent = currentUser.email;
   }
 
-  var usernameScrim = qs('usernameScrim');
-  function closeUsernameModal(){ closeModal(usernameScrim); }
-  qs('openChangeUsername').addEventListener('click', function(){
-    qs('newUsername').value = currentUser.username;
-    qs('usernameError').classList.remove('show');
-    openModal(usernameScrim);
-  });
-  qs('closeUsernameModal').addEventListener('click', closeUsernameModal);
-  qs('cancelUsernameModal').addEventListener('click', closeUsernameModal);
-  registerModal(usernameScrim, closeUsernameModal);
-  qs('usernameForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    var input = qs('newUsername');
-    var err = qs('usernameError');
-    var value = input.value.trim();
-    var taken = users[value.toLowerCase()] && value.toLowerCase() !== currentUser.username.toLowerCase();
-    if (!value || taken){ err.classList.add('show'); return; }
-    err.classList.remove('show');
-    delete users[currentUser.username.toLowerCase()];
-    currentUser.username = value;
-    users[value.toLowerCase()] = currentUser;
-    qs('navAvatar').textContent = initials(currentUser.username);
-    renderProfile();
-    closeUsernameModal();
-  });
-
-  var passwordScrim = qs('passwordScrim');
-  function closePasswordModal(){ closeModal(passwordScrim); }
-  qs('openChangePassword').addEventListener('click', function(){
-    qs('passwordForm').reset();
-    qs('currentPasswordError').classList.remove('show');
-    qs('confirmPasswordError').classList.remove('show');
-    openModal(passwordScrim);
-  });
-  qs('closePasswordModal').addEventListener('click', closePasswordModal);
-  qs('cancelPasswordModal').addEventListener('click', closePasswordModal);
-  registerModal(passwordScrim, closePasswordModal);
-  qs('passwordForm').addEventListener('submit', function(e){
-    e.preventDefault();
-    var current = qs('currentPassword').value;
-    var next = qs('newPassword').value;
-    var confirm = qs('confirmPassword').value;
-    var currentErr = qs('currentPasswordError');
-    var confirmErr = qs('confirmPasswordError');
-    var valid = true;
-    if (current !== currentUser.password){ currentErr.classList.add('show'); valid = false; } else { currentErr.classList.remove('show'); }
-    if (!next || next !== confirm){ confirmErr.classList.add('show'); valid = false; } else { confirmErr.classList.remove('show'); }
-    if (!valid) return;
-    currentUser.password = next;
-    renderProfile();
-    closePasswordModal();
-  });
-
-  /* Initial render (data is ready even before login) */
-  renderLibrary();
+  // --- INITIAL CHECK ---
+  supabase.auth.getSession().then(({ data: { session } }) => { if (session) logIn(session.user); });
 
 })();
 </script>

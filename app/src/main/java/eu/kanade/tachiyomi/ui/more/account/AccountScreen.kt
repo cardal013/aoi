@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -38,7 +39,6 @@ import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.more.account.AccountScreenContent
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.ui.more.account.AccountViewModel
-import eu.kanade.tachiyomi.ui.more.account.CloudLibraryScreen
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.ArrowUpward
 import mihon.icons.materialsymbols.rounded.Download
@@ -48,6 +48,7 @@ class AccountScreen : Screen() {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val uriHandler = LocalUriHandler.current
         val viewModel = metroViewModel<AccountViewModel>()
         val state by viewModel.state.collectAsState()
 
@@ -57,7 +58,7 @@ class AccountScreen : Screen() {
         AccountScreenContent(
             state = state,
             onNavigateBack = navigator::pop,
-            onNavigateToCloudLibrary = { navigator.push(CloudLibraryScreen()) },
+            onNavigateToCloudLibrary = { uriHandler.openUri("https://aoi-mangas.vercel.app/") },
             onUpdateAccount = { showUpdateDialog = true },
             onLogin = viewModel::login,
             onSignUp = viewModel::signUp,

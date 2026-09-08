@@ -1,49 +1,41 @@
-# Implementation Plan - Notification Permission Prompt in Settings
+# Plan: Supabase Integration for Aoi Website & App Shortcut
 
-Add a third popup to the first-entry sequence in the Settings screen to request notification permissions on Android 13+.
+This plan outlines the steps to integrate the real Supabase backend into the Aoi website and update the Android app to point to the web library.
 
-## User Review Required
+## Website Changes (index.html)
 
-> [!IMPORTANT]
-> **Sequence Order**: The prompts will appear in this order:
-> 1. Wi-Fi Downloads
-> 2. **Notification Permission** (Android 13+ only)
-> 3. Extension Repos
->
-> **Smart Detection**: If the user has already permanently denied the permission, the button will automatically change to **"Abrir Definições"** and lead to the system settings page instead of trying to show the permission dialog.
+### 1. Feature Section Update
+- **[MODIFY]** Add a new feature card to the "Features" section:
+    - **Icon**: Cloud icon (SVG).
+    - **Title**: Cloud Sync.
+    - **Description**: Seamlessly upload and import your library via the cloud. No manual backups required.
 
-## Proposed Changes
+### 2. Supabase Integration
+- **[MODIFY]** Include the Supabase JS SDK via CDN.
+- **[MODIFY]** Initialize the Supabase client using the same Project URL and Anon Key used in the Android app.
+- **[MODIFY]** Replace the in-memory `users` and `state.library` logic with real Supabase calls:
+    - **Signup**: Use `supabase.auth.signUp({ email, password })`.
+    - **Login**: Use `supabase.auth.signInWithPassword({ email, password })`.
+    - **Library Fetch**: Query the `user_library` table joined with the `manga` table.
+- **[MODIFY]** Update the library UI to use the 4 official statuses: `READING`, `COMPLETED`, `DROPPED`, `PLAN_TO_READ`.
 
-### Domain Layer - Preferences
+## Android App Changes
 
-#### [MODIFY] [SourcePreferences.kt](file:///C:/aoi/app/src/main/java/eu/kanade/domain/source/service/SourcePreferences.kt)
-- [NEW] `notificationPromptShown`: Tracks if the Aoi prompt was displayed.
-- [NEW] `notificationPermissionRequested`: Tracks if the system permission dialog was ever launched.
-
-### UI Layer - ViewModel
-
-#### [MODIFY] [SettingsViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/setting/SettingsViewModel.kt)
-- Update `state` Flow logic to chain the prompts:
-    - `showWifiPrompt`: `!wifiShown`
-    - `showNotificationPrompt`: `wifiShown && !notifShown && API >= 33`
-    - `showExtensionPrompt`: `wifiShown && (notifShown || API < 33) && !extShown`
-- Add `onDismissNotificationPrompt()` and `onNotificationPermissionRequested()`.
-
-### UI Layer - Presentation
-
-#### [MODIFY] [SettingsMainScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/settings/screen/SettingsMainScreen.kt)
-- Implement `NotificationPermissionPrompt` using `AlertDialog`.
-- Add logic to detect `isPermanentlyDenied` using `shouldShowRequestPermissionRationale` and the new preference flags.
-- Implement intent to open `ACTION_APPLICATION_DETAILS_SETTINGS`.
+### 1. External Library Shortcut
+- **[MODIFY] [AccountScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountScreen.kt)**:
+    - Replace the internal `navigator.push(CloudLibraryScreen())` with an external browser call to `https://aoi-mangas.vercel.app/` using `LocalUriHandler`.
+- **[DELETE] [CloudLibraryScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/CloudLibraryScreen.kt)**: This screen is no longer needed as the library is now managed via the website.
 
 ---
 
-## Verification Plan
+## Technical Details: Schema Mapping
 
-### Manual Verification
-1.  **First Entry**: Confirm Wi-Fi, then confirm/deny Notifications, then confirm Extensions.
-2.  **Permanently Denied**:
-    - Deny notifications once in system dialog.
-    - Re-enter Settings.
-    - Verify the button now says "Abrir Definições" (or equivalent).
-3.  **Android < 13**: Verify the prompt is skipped entirely.
+The website will query the following Supabase structure:
+- **Table**: `user_library`
+- **Columns**: `status` (Uppercase), `manga_id` (FK to `manga`).
+- **Join**: `manga(*)` to get titles and thumbnails.
+
+## Open Questions
+- **Auth Credentials**: Since I cannot see the actual Project URL and Key (they are likely in `local.properties`), I will use placeholders like `CONFIG_SUPABASE_URL` and `CONFIG_SUPABASE_KEY` which you should replace with your real values.
+
+Aguardo a tua aprovação para prosseguir.
