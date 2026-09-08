@@ -1,27 +1,25 @@
-# Walkthrough - Notifications Fix & Safe Sync
+# Walkthrough - Sync Options UI Redesign
 
-I have fixed the issue where notifications were not appearing for the new Reading Status tabs and implemented a safer library import process.
+I have redesigned the "Update Account" selection menu to provide a more modern and intuitive experience.
 
 ## Changes Made
 
-### 1. Fixed Notifications (Library Update)
-- **Problem**: The `LibraryUpdateJob` was ignoring the new "Reading Status" tabs because they use negative virtual IDs (-101 to -104) which don't exist as real categories in the database.
-- **Solution**: Updated `LibraryUpdateJob.kt` to explicitly handle these negative IDs. When a status tab is refreshed (pull-to-refresh), the job now correctly filters the library by the corresponding `ReadingStatus`.
-- **Result**: Manual refreshes on status tabs now trigger the update process, show the progress bar, and fire notifications for new chapters.
-
-### 2. Safer Cloud Import
-- **Problem**: The previous import logic removed all local favorites *before* starting the restore. If the process failed midway, the user would lose their library.
-- **Solution**: Refactored `AccountViewModel.kt` to:
-    1.  Restore/Update all remote items first.
-    2.  Identify local favorites that are **not** present in the cloud data.
-    3.  Only then, remove the favorite status from those specific local-only items.
-- **Result**: Data loss prevention. The library is only "cleaned up" after the cloud data has been successfully processed.
+### 1. New Sync Options Bottom Sheet
+- **Container**: Replaced the standard `AlertDialog` with a `ModalBottomSheet` for a better mobile-first feel.
+- **Header**: Added a clear "Sync Library" title and a descriptive subtitle to guide the user.
+- **Option Cards**: Replaced simple text buttons with rich clickable cards (`SyncOptionCard`).
+    - **Import**: Features a `Download` icon and explains that it replaces the local library.
+    - **Upload**: Features an `ArrowUpward` icon and explains that it replaces the cloud library.
+- **Visual Styling**:
+    - Cards use the `surfaceVariant` background for clear clickability.
+    - Rounded corners (12dp for cards, 16dp for the sheet) match the app's modern design language.
+    - Generous padding and spacing for improved readability.
 
 ## Verification Results
 
 ### Automated Tests
-- Verified compilation with `:app:compileDebugKotlin` (Success).
+- Verified successful compilation with `:app:compileDebugKotlin`.
 
 ### Manual Logic Verification
-- **Status Tab Refresh**: Verified that `addMangaToQueue` now correctly maps virtual IDs to `readingStatus` filtering.
-- **Safe Restore**: Verified the logic ensures local items are preserved if the cloud restoration fails.
+- **User Flow**: Clicking a card correctly dismisses the sheet and triggers the existing `SyncConfirmationDialog`.
+- **Theme Consistency**: The new UI correctly uses `MaterialTheme.colorScheme`, ensuring full support for dark mode and dynamic colors.

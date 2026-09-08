@@ -1,10 +1,8 @@
-- [x] **Fix Notifications (LibraryUpdateJob)**
-    - [x] Handle negative category IDs in `addMangaToQueue`.
-    - [x] Map -101..-104 to ReadingStatus filtering.
-- [x] **Safe Cloud Import (AccountViewModel)**
-    - [x] Restore remote items first.
-    - [x] Only unfavorite local items that are not in the remote list.
+- [x] **Sync Options Redesign**
+    - [x] Replace `SyncOptionsDialog` with `SyncOptionsBottomSheet` in `AccountScreen.kt`.
+    - [x] Implement `SyncOptionCard` component.
+    - [x] Update `Content()` to manage bottom sheet state.
 - [x] **Verification**
     - [x] Build project.
-    - [ ] Verify manual refresh on status tabs.
-    - [ ] Verify safe import behavior.
+    - [x] Verify visual style and layout (cards, icons, spacing).
+    - [x] Verify redirection to `SyncConfirmationDialog`.
