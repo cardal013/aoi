@@ -1,50 +1,42 @@
-# Implementation Plan - Auth Compatibility & Features Restoration
+# Implementation Plan - Fix Username Change Logic (v2)
 
-Align the website's authentication logic with the Android app (Username-to-Mock-Email conversion) using Unicode-aware filtering, and ensure the Features section correctly represents all core capabilities.
+Correct the "Change Username" bug by shifting from email-based authentication updates to a metadata-based display name approach. This maintains app compatibility and avoids Supabase's secure email change errors.
 
 ## User Review Required
 
 > [!IMPORTANT]
-> The website will now automatically convert usernames into mock emails (e.g., `usr_test@aoi-app.com`) using a Unicode-aware filter to match the Android app's `isLetterOrDigit()` logic exactly. This ensures compatibility for usernames with accents or special characters.
+> The "Change Username" feature will now only update the `user_metadata` and the `profiles` table. The internal authentication email remains fixed to ensure the Android app (which derives the username from the email) continues to work.
+>
+> **Note**: A username changed on the website will not reflect in the Android app; the app will always show the username used during the initial signup.
+
+> [!CAUTION]
+> This plan relies on a `UNIQUE` constraint on the `username` column in the `profiles` table to detect duplicates (error code `23505`). If this constraint is not present, the system will allow duplicate usernames silently. Please ensure this constraint exists in your Supabase DB.
 
 ## Proposed Changes
 
 ### [Website] [index.html](file:///C:/aoi/index.html)
 
-#### 1. Authentication Logic (Compatible with App)
-- **[NEW]** Implement `formatInternalEmail(username)` in JavaScript:
-  ```javascript
-  function formatInternalEmail(username) {
-    // Replicates Kotlin: username.trim().lowercase().filter { it.isLetterOrDigit() }
-    const normalized = username.trim().toLowerCase()
-      .split('')
-      .filter(char => /\p{L}|\p{N}/u.test(char))
-      .join('');
-    return `usr_${normalized}@aoi-app.com`;
-  }
-  ```
-- **[MODIFY]** Update `signupForm.onsubmit`:
-  - Generate the internal email using `formatInternalEmail(username.value)`.
-  - Pass the original (trimmed) username in `options.data: { username: username.value.trim() }`.
-- **[MODIFY]** Update `loginForm.onsubmit`:
-  - Generate the internal email from the entered username.
-  - Perform `signInWithPassword` using that email.
+#### 1. "Change Username" Implementation
+- **[MODIFY]** Implement the `usernameForm.onsubmit` handler:
+  - **Divergence Comment**: Add a clear comment about the app deriving username from email while web uses metadata.
+  - **Atomic Update**: Attempt to update the `profiles` table first.
+  - **Unique Violation Catch**: If an error with code `23505` occurs, show the error using `qs('usernameError').classList.add('show')`.
+  - **Metadata Sync**: If the DB update succeeds, proceed to call `supabase.auth.updateUser({ data: { username: newUsername } })`.
+  - **Cleanup**: Ensure `usernameError` is hidden (`classList.remove('show')`) at the start of a new submission.
 
-#### 2. Features Section (Restoration)
-- **[MODIFY]** Update the `feature-grid` to include exactly these 4 cards:
-  1. **Clean Reader**: Focused experience.
-  2. **Reading Categories**: Status tracking (Reading, Completed, etc.).
-  3. **Accounts**: Sync tied to profile.
-  4. **Cloud Sync**: Mention bidirectional sync between the Android app and the cloud library.
+#### 2. UI Consistency & Triggers
+- **[MODIFY]** Update `renderProfile` and header logic to prioritize `user_metadata.username` over the email prefix.
+- **[MODIFY]** Use `classList.add('show')` and `classList.remove('show')` for all error feedback to maintain consistency with existing CSS.
+- **[NEW]** Wire up the triggers to open and close the "Change Username" modal.
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Signup Compatibility**:
-   - Create an account with username `João123`.
-   - Verify (via console or DB) that the internal email is `usr_joão123@aoi-app.com`.
-2. **Login Compatibility**:
-   - Logout and log back in using `João123`.
-   - Verify success.
-3. **Features Display**:
-   - Confirm all 4 cards (Clean Reader, Reading Categories, Accounts, Cloud Sync) appear in the grid.
+1. **Uniqueness**:
+   - Try to change a username to one that already exists.
+   - Verify that the error message "This username is already taken." appears with the correct styling.
+2. **Persistence**:
+   - Change a username successfully.
+   - Refresh the page and confirm the new name is still displayed in the header and profile.
+3. **Modal Behavior**:
+   - Confirm "Cancel" and the "X" button correctly close the modal and clear any previous error states.

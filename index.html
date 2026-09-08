@@ -828,7 +828,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <div class="app-tabs-bar">
     <div class="container app-tabs" id="appTabs">
       <button type="button" data-app-view="library" class="active">Library</button>
-      <button type="button" data-app-view="profile">Profile</button>
     </div>
   </div>
 
@@ -1205,8 +1204,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // --- FORMS ---
   var loginScrim = qs('loginScrim');
   var signupScrim = qs('signupScrim');
+  var usernameScrim = qs('usernameScrim');
+  var passwordScrim = qs('passwordScrim');
+
   if (loginScrim) registerModal(loginScrim, () => closeModal(loginScrim));
   if (signupScrim) registerModal(signupScrim, () => closeModal(signupScrim));
+  if (usernameScrim) registerModal(usernameScrim, () => closeModal(usernameScrim));
+  if (passwordScrim) registerModal(passwordScrim, () => closeModal(passwordScrim));
 
   var btnLogin = qs('openLoginModal');
   var btnSignup = qs('openSignupModal');
@@ -1222,6 +1226,15 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   if (qs('closeSignupModal')) qs('closeSignupModal').onclick = () => closeModal(signupScrim);
   if (qs('switchToSignup')) qs('switchToSignup').onclick = (e) => { e.preventDefault(); closeModal(loginScrim); openModal(signupScrim); };
   if (qs('switchToLogin')) qs('switchToLogin').onclick = (e) => { e.preventDefault(); closeModal(signupScrim); openModal(loginScrim); };
+
+  if (qs('openChangeUsername')) qs('openChangeUsername').onclick = () => {
+    qs('newUsername').value = currentUser.user_metadata?.username || "";
+    qs('usernameError').classList.remove('show');
+    openModal(usernameScrim);
+  };
+  if (qs('closeUsernameModal')) qs('closeUsernameModal').onclick = () => closeModal(usernameScrim);
+  if (qs('cancelUsernameModal')) qs('cancelUsernameModal').onclick = () => closeModal(usernameScrim);
+
 
 
   qs('signupForm').onsubmit = async (e) => {
@@ -1255,7 +1268,49 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (data.user) logIn(data.user);
   };
 
+  qs('usernameForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const newUsername = qs('newUsername').value.trim();
+    const errEl = qs('usernameError');
+    errEl.classList.remove('show');
+
+    if (!newUsername) return;
+    if (newUsername === currentUser.user_metadata?.username) { closeModal(usernameScrim); return; }
+
+    // NOTE: username mudado aqui só afeta o site (user_metadata + profiles table).
+    // A app Android deriva sempre o username do prefixo do email original do signup.
+    const { error: dbError } = await supabase
+      .from('profiles')
+      .update({ username: newUsername })
+      .eq('id', currentUser.id);
+
+    if (dbError) {
+      if (dbError.code === '23505') {
+        errEl.classList.add('show');
+      } else {
+        alert(dbError.message);
+      }
+      return;
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.updateUser({
+      data: { username: newUsername }
+    });
+
+    if (authError) {
+      alert(authError.message);
+      return;
+    }
+
+    currentUser = user;
+    renderProfile();
+    const displayName = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
+    qs('navAvatar').textContent = initials(displayName);
+    closeModal(usernameScrim);
+  };
+
   qs('menuLogoutBtn').onclick = logOut;
+
   qs('mobileLogoutBtn').onclick = logOut;
   qs('logoutBtnProfile').onclick = logOut;
 
@@ -1380,6 +1435,49 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('profileName').textContent = username;
     qs('profileUsername').textContent = username;
   }
+
+  // --- CHANGE PASSWORD ---
+  var passwordScrim = qs('passwordScrim');
+  if (passwordScrim) registerModal(passwordScrim, () => closeModal(passwordScrim));
+  if (qs('openChangePassword')) qs('openChangePassword').onclick = () => {
+    qs('passwordForm').reset();
+    qs('currentPasswordError').classList.remove('show');
+    qs('confirmPasswordError').classList.remove('show');
+    openModal(passwordScrim);
+  };
+  if (qs('cancelPasswordModal')) qs('cancelPasswordModal').onclick = () => closeModal(passwordScrim);
+  if (qs('closePasswordModal')) qs('closePasswordModal').onclick = () => closeModal(passwordScrim);
+
+  qs('passwordForm').onsubmit = async (e) => {
+    e.preventDefault();
+    const currentPassword = qs('currentPassword').value;
+    const newPassword = qs('newPassword').value;
+    const confirmPassword = qs('confirmPassword').value;
+    qs('currentPasswordError').classList.remove('show');
+    qs('confirmPasswordError').classList.remove('show');
+
+    if (newPassword !== confirmPassword) {
+      qs('confirmPasswordError').classList.add('show');
+      return;
+    }
+
+    // Verify the current password by re-authenticating before changing it.
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password: currentPassword
+    });
+    if (verifyError) {
+      qs('currentPasswordError').classList.add('show');
+      return;
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+    if (updateError) {
+      alert(updateError.message);
+      return;
+    }
+    closeModal(passwordScrim);
+  };
 
   // --- INITIAL CHECK ---
   supabase.auth.getSession().then(({ data: { session } }) => { if (session) logIn(session.user); });

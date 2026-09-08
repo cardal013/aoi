@@ -1,4 +1,5 @@
-- [x] Implement Unicode-aware `formatInternalEmail` in `index.html`
-- [x] Update Signup logic to use mock emails and metadata
-- [x] Update Login logic to use mock emails
+- [x] Implement `usernameForm` logic with uniqueness check in `index.html`
+- [x] Add divergence warning comment in JS auth logic
+- [x] Wire up "Change Username" modal UI triggers
+- [x] Update `renderProfile` to prioritize metadata
 - [x] Restore/update Features section in `index.html`

@@ -1,27 +1,25 @@
-# Walkthrough - Auth Compatibility & Features Restoration
+# Walkthrough - Username Change Fix & Consistency
 
-I have aligned the website's authentication system with the Android app's logic and restored the Features section.
+I have fixed the "Change Username" functionality to work with Supabase metadata while maintaining compatibility with the Android app.
 
 ## Changes Made
 
-### 1. Unified Authentication Logic
-- **Unicode-Aware Filtering**: Implemented `formatInternalEmail` in [index.html](file:///C:/aoi/index.html) using a Unicode property escape regex (`/\p{L}|\p{N}/u`). This exactly replicates the Kotlin `isLetterOrDigit()` logic used in the app, ensuring that usernames with accents (like "João") generate the same internal email (`usr_joão@aoi-app.com`) on both platforms.
-- **Username-Only Flow**: The UI remains focused on "Username". Emails are handled entirely behind the scenes.
-- **Metadata Persistence**: During signup, the original display username is stored in Supabase `user_metadata`. The website now prioritizes this metadata for display, falling back to the email prefix if necessary.
+### 1. Robust Username Change Logic
+- **Metadata-Driven**: Instead of updating the auth email (which caused errors due to the fake domain), the system now updates `user_metadata` and the `profiles` table.
+- **Uniqueness Check**: Implemented a database-level uniqueness check. The code now catches the Postgres error `23505` (Unique Violation) and displays the "This username is already taken." error message.
+- **UI Consistency**: Used `classList.add('show')` and `classList.remove('show')` for error reporting, ensuring it matches the existing CSS and other form behaviors.
+- **Divergence Documentation**: Added a code comment in [index.html](file:///C:/aoi/index.html) explaining that username changes on the web do not affect the Android app, which derives the name from the original signup email prefix.
 
-### 2. Features Section Restoration
-- **Full Grid**: Restored the 4 core feature cards:
-  - **Clean Reader**
-  - **Reading Categories**
-  - **Accounts**
-  - **Cloud Sync**: Updated description to emphasize **bidirectional sync** between the app and the website.
+### 2. UI Triggers & Priority
+- **Triggers**: Fully wired up the "Change Username" modal (open, close, cancel buttons).
+- **Display Priority**: Updated the profile and navigation header to prioritize `user_metadata.username` for display.
 
 ## Verification Results
 
 ### Manual Verification
-- **Auth Logic**: Verified that `formatInternalEmail(" João.123 ")` correctly results in `usr_joão123@aoi-app.com`.
-- **UI**: Confirmed the 4 feature cards are correctly displayed and formatted.
-- **Login/Signup**: Verified that the forms correctly handle the conversion and interaction with Supabase Auth.
+- **Unique Constraint**: Verified that attempting to change to an existing username triggers the correct error message.
+- **Immediate Update**: Verified that changing the username instantly updates the profile view and the navigation avatar initials.
+- **Persistence**: Confirmed that the name persists across page refreshes by fetching from the updated `user_metadata`.
 
-> [!TIP]
-> You can now create an account with any Unicode character (letters/numbers) on the site, and it will be perfectly compatible with your login on the Android app.
+> [!NOTE]
+> The internal authentication email remains fixed (e.g., `usr_original@aoi-app.com`), which is why the Android app will continue to show the original name. This is a known divergence documented in the code.
