@@ -27,7 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,17 +40,26 @@ import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.more.account.AccountViewModel
+import eu.kanade.tachiyomi.util.system.toast
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Bookmark
+import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
+import mihon.icons.materialsymbols.rounded.Security
+import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.rounded.Visibility
 import mihon.icons.materialsymbols.rounded.VisibilityOff
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.presentation.core.components.material.Scaffold
 
 @Composable
 fun AccountScreenContent(
     state: AccountViewModel.State,
     onNavigateBack: () -> Unit,
+    onNavigateToCloudLibrary: () -> Unit,
+    onUpdateAccount: () -> Unit,
     onLogin: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
     onLogout: () -> Unit,
@@ -74,6 +86,8 @@ fun AccountScreenContent(
                     username = state.email,
                     onLogout = onLogout,
                     onContinue = onNavigateBack,
+                    onCloudLibrary = onNavigateToCloudLibrary,
+                    onUpdateAccount = onUpdateAccount,
                 )
             } else {
                 AuthView(onLogin = onLogin, onSignUp = onSignUp)
@@ -87,6 +101,8 @@ private fun ProfileView(
     username: String,
     onLogout: () -> Unit,
     onContinue: () -> Unit,
+    onCloudLibrary: () -> Unit,
+    onUpdateAccount: () -> Unit,
 ) {
     Icon(
         painter = painterResource(R.drawable.ic_mihon),
@@ -102,15 +118,29 @@ private fun ProfileView(
     )
     Spacer(modifier = Modifier.height(48.dp))
 
-    Button(
-        onClick = onContinue,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Text("Continue to app")
-    }
+    ProfileActionButton(
+        text = "My Cloud Library",
+        icon = MaterialSymbols.Rounded.LocalLibrary,
+        onClick = onCloudLibrary
+    )
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(8.dp))
+
+    ProfileActionButton(
+        text = "Update Account",
+        icon = MaterialSymbols.Rounded.Sync,
+        onClick = onUpdateAccount
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    ProfileActionButton(
+        text = "Continue to app",
+        icon = MaterialSymbols.RoundedFilled.PlayArrow,
+        onClick = onContinue
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
 
     TextButton(
         onClick = onLogout,
@@ -118,16 +148,46 @@ private fun ProfileView(
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
     ) {
-        Text("Logout")
+        Icon(MaterialSymbols.Rounded.Close, null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.size(8.dp))
+        Text("Logout", fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun ProfileActionButton(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+    ) {
+        Icon(icon, null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.size(8.dp))
+        Text(text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
     }
 }
 
 @Composable
 private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, String) -> Unit) {
+    val context = LocalContext.current
     var selectedTab by remember { mutableStateOf(0) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    val onAction = {
+        if (password.length < 6) {
+            context.toast("Your password needs to be at least 6 characters")
+        } else {
+            if (selectedTab == 0) onLogin(username, password) else onSignUp(username, password)
+        }
+        Unit
+    }
 
     // Header
     Icon(
@@ -174,7 +234,8 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         placeholder = { Text("Username") },
         leadingIcon = { Icon(MaterialSymbols.Rounded.Person, null) },
         shape = RoundedCornerShape(12.dp),
-        singleLine = true
+        singleLine = true,
+        textStyle = TextStyle(fontSize = 20.sp)
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -194,14 +255,15 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         shape = RoundedCornerShape(12.dp),
-        singleLine = true
+        singleLine = true,
+        textStyle = TextStyle(fontSize = 20.sp)
     )
 
     Spacer(modifier = Modifier.height(32.dp))
 
     // Action Button
     Button(
-        onClick = { if (selectedTab == 0) onLogin(username, password) else onSignUp(username, password) },
+        onClick = onAction,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)

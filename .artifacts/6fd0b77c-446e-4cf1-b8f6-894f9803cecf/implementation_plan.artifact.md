@@ -1,53 +1,67 @@
-# Implementation Plan - Reading Status Refinements
+# Implementation Plan - Sync & UI Refinements
 
-This plan details the corrections to the Reading Status implementation, including reordering tabs, changing the default status, UI cleanup, and restoring the "Continue Reading" button.
+This plan addresses the UI refinements for the Account screen, fixes the Cloud Library navigation bug, and implements the new "Update Account" sync feature.
 
 ## User Review Required
 
-> [!NOTE]
-> **Default Status**: The default status for newly favorited mangas is now **Reading** (numerical value 2), as requested.
-> **Continue Reading Button**: I investigated the cause of its disappearance. It was primarily due to a check for `unreadCount > 0` in the library grid/list components. This prevented the button from showing on mangas in the "Completed" or "Dropped" tabs (which often have 0 unread chapters). I will remove this check to ensure the button is available in all status tabs, consistent with your request.
+> [!IMPORTANT]
+> **Sync Logic**: The "Import" and "Upload" features currently perform a **full overwrite** without merging.
+> - **Upload**: Clears your Supabase library and replaces it with your current local favorites.
+> - **Import (Cloud Restore)**: Clears your local favorites (sets `favorite = false`). For every manga in the cloud, it will either update the local favorite status or **create a new local entry** if it doesn't exist, using the stored source and URL metadata.
 
 ## Proposed Changes
 
-### Domain Layer
+### 1. UI Refinements (Profile Screen)
 
-#### [MODIFY] [ReadingStatus.kt](file:///C:/aoi/domain/src/main/java/tachiyomi/domain/manga/model/ReadingStatus.kt)
-- Reorder entries to: `READING(2L), COMPLETED(3L), DROPPED(4L), PLAN_TO_READ(1L)`.
-- Numerical values are preserved as requested.
-- Update `fromInt` to return `READING` as the default.
-- Update `categoryId` mapping to maintain the reserved IDs.
+#### [MODIFY] [AccountScreenContent.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/account/AccountScreenContent.kt)
+- **Buttons**:
+    - Convert "My Cloud Library" and "Continue to app" from `Button` to `TextButton`.
+    - Remove background colors.
+    - Set text color to white (`MaterialTheme.colorScheme.onSurface`).
+    - Keep "Logout" as a red `TextButton`.
+    - Add icons to make them more discoverable (e.g., `Cloud`, `ArrowForward`).
+- **"Update Account" Button**:
+    - Add a new `TextButton` labeled "Update Account".
+    - Opens a `SyncOptionsDialog` with two choices: "Import from cloud" and "Upload to cloud".
+- **Dialogs**:
+    - Implement `SyncOptionsDialog`.
+    - Implement `SyncConfirmationDialog` with the warning messages and Cancel/Confirm actions.
 
-### Data Layer
+### 2. Bug Fix: Cloud Library Navigation
 
-#### [MODIFY] [mangas.sq](file:///C:/aoi/data/src/main/sqldelight/tachiyomi/data/mangas.sq)
-- Update `reading_status` column definition to `DEFAULT 2`.
-- Update `reset_reading_status_on_unfavorite` trigger to set `reading_status = 2`.
+#### [MODIFY] [CloudLibraryScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/CloudLibraryScreen.kt)
+- Ensure `PrimaryTabRow` and `HorizontalPager` correctly share the same `pagerState`.
+- Verify `pagerState.currentPage` is used for `selectedTabIndex`.
+- Ensure `onClick` triggers `animateScrollToPage`.
 
-#### [MODIFY] [15.sqm](file:///C:/aoi/data/src/main/sqldelight/tachiyomi/migrations/15.sqm)
-- Update migration to use `DEFAULT 2` and reset to `2` in the trigger.
+### 3. Sync Feature (Data & Logic)
 
-### Presentation Layer - Manga Details
+#### [MODIFY] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)
+- Add `deleteAllLibrary(userId: String)` using `delete` filter on `user_library`.
+- Add `uploadLibrary(userId: String, items: List<Manga>)`:
+    - Handles inserting into `manga`, `manga_sources`, and `user_library` tables.
+- Add `fetchRemoteLibraryRaw(userId: String)` for import matching.
 
-#### [MODIFY] [MangaInfoHeader.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/manga/components/MangaInfoHeader.kt)
-- Remove the "Smart Update" (Hourglass) `MangaActionButton`.
-- Use `MaterialSymbols.RoundedFilled.Bookmark` for the reading status button to show a filled icon.
+#### [MODIFY] [AccountViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountViewModel.kt)
+- Implement `uploadToCloud()`:
+    - Fetch local favorites via `MangaRepository`.
+    - Call repository to replace remote library.
+- Implement `importFromCloud()`:
+    - Fetch remote items.
+    - Bulk update local `favorite` status.
 
-### Presentation Layer - Library
-
-#### [MODIFY] [LibraryCompactGrid.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/library/components/LibraryCompactGrid.kt), [LibraryComfortableGrid.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/library/components/LibraryComfortableGrid.kt), [LibraryList.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/library/components/LibraryList.kt)
-- Remove the `libraryItem.unreadCount > 0` condition for showing the "Continue Reading" button.
-- This allows the button to appear in all status tabs (if the global setting is enabled).
+---
 
 ## Verification Plan
 
-### Automated Tests
-- Update `ReadingStatusTest` to verify the new order and default value.
-- Run `:app:assembleDebug` to ensure compilation.
-
 ### Manual Verification
-1. **Library Tabs**: Verify order: Reading, Completed, Dropped, Plan to Read.
-2. **Manga Details**: Verify "Smart Update" is removed.
-3. **Manga Details**: Verify status button icon is a filled bookmark.
-4. **Library Covers**: Verify "Play" (Continue Reading) button appears on mangas even if they are in "Completed" or "Dropped" tabs (and have 0 unread chapters).
-5. **Default Status**: Add a new manga to favorites and verify it appears in the "Reading" tab by default.
+1.  **Profile UI**: Verify buttons are now text-only with correct colors and icons.
+2.  **Cloud Tabs**: Verify that clicking "Completed" or "Dropped" correctly scrolls the pager and shows the correct mangas.
+3.  **Upload to Cloud**:
+    - Add a new manga locally.
+    - Use "Upload to cloud".
+    - Check the Cloud Library screen to see if the manga appears there.
+4.  **Import from Cloud**:
+    - Clear local library.
+    - Use "Import from cloud".
+    - Verify that mangas from the cloud are now marked as favorites locally.

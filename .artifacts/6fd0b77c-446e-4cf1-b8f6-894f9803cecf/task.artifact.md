@@ -1,15 +1,16 @@
-- [ ] **Domain Layer**
-    - [ ] Update `ReadingStatus.kt` (reorder, change default to `READING`)
-- [ ] **Data Layer**
-    - [ ] Update migration `15.sqm` (default `2`, trigger reset to `2`)
-    - [ ] Update `mangas.sq` (default `2`, trigger reset to `2`)
-- [ ] **UI Layer - Manga Details**
-    - [ ] Remove "Smart Update" button in `MangaInfoHeader.kt`
-    - [ ] Use `RoundedFilled.Bookmark` in `MangaInfoHeader.kt`
-- [ ] **UI Layer - Library**
-    - [ ] Update `LibraryCompactGrid.kt` (restore "Continue Reading" button)
-    - [ ] Update `LibraryComfortableGrid.kt` (restore "Continue Reading" button)
-    - [ ] Update `LibraryList.kt` (restore "Continue Reading" button)
+- [x] **UI Refinements (Profile)**
+    - [x] Convert buttons to `TextButton` (White/onSurface).
+    - [x] Add icons to profile buttons.
+    - [x] Implement `Update Account` button and base dialog.
+- [x] **Sync Logic (Full Import/Upload)**
+    - [x] Update `LibrarySupabaseRepository.kt` with `deleteAllLibrary` and `uploadLibrary`.
+    - [x] Implement `Cloud Restore` logic (create local entries from remote URL/Source).
+    - [x] Implement full `Upload` logic.
+    - [x] Fix `extension_id` FK violation by upserting extensions first.
+    - [x] Fix UUID type errors by using deterministic UUIDs.
+    - [x] Fix `added_at` format (use ISO Instant string).
+- [x] **Cloud Library Fix**
+    - [x] Fix Pager/TabRow navigation in `CloudLibraryScreen.kt`.
 - [ ] **Verification**
-    - [ ] Update `ReadingStatusTest.kt`
-    - [ ] Manual verification
+    - [x] Verify build.
+    - [ ] Manual verification.

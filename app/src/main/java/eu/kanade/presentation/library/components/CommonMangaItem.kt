@@ -107,8 +107,8 @@ fun MangaCompactGridItem(
             )
             if (onClickContinueReading != null) {
                 ContinueReadingButton(
-                    size = ContinueReadingButtonSizeSmall,
-                    iconSize = ContinueReadingButtonIconSizeSmall,
+                    size = ContinueReadingButtonSizeLarge,
+                    iconSize = ContinueReadingButtonIconSizeLarge,
                     onClick = onClickContinueReading,
                     modifier = Modifier
                         .padding(ContinueReadingButtonGridPadding + 4.dp)
@@ -126,40 +126,6 @@ fun MangaCompactGridItem(
 private fun BoxScope.CoverTextOverlay(
     title: String,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(bottomStart = 4.dp, bottomEnd = 4.dp))
-            .background(
-                Brush.verticalGradient(
-                    0f to Color.Transparent,
-                    1f to Color(0xAA000000),
-                ),
-            )
-            .fillMaxHeight(0.33f)
-            .fillMaxWidth()
-            .align(Alignment.BottomCenter),
-    )
-    Row(
-        modifier = Modifier
-            .align(Alignment.BottomStart)
-            .padding(bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        GridItemTitle(
-            modifier = Modifier
-                .weight(1f)
-                .padding(8.dp),
-            title = title,
-            style = MaterialTheme.typography.titleSmall.copy(
-                color = Color.White,
-                shadow = Shadow(
-                    color = Color.Black,
-                    blurRadius = 4f,
-                ),
-            ),
-            minLines = 1,
-        )
-    }
 }
 
 /**

@@ -162,63 +162,46 @@ data object LibraryTab : Tab {
             },
             snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         ) { contentPadding ->
-            when {
-                state.isLoading -> {
-                    LoadingScreen(Modifier.padding(contentPadding))
-                }
-                state.searchQuery.isNullOrEmpty() && !state.hasActiveFilters && state.isLibraryEmpty -> {
-                    val handler = LocalUriHandler.current
-                    EmptyScreen(
-                        stringRes = MR.strings.information_empty_library,
-                        modifier = Modifier.padding(contentPadding),
-                        actions = listOf(
-                            EmptyScreenAction(
-                                stringRes = MR.strings.getting_started_guide,
-                                icon = MaterialSymbols.AutoMirroredRounded.Help,
-                                onClick = { handler.openUri(GETTING_STARTED_URL) },
-                            ),
-                        ),
-                    )
-                }
-                else -> {
-                    LibraryContent(
-                        categories = state.displayedCategories,
-                        searchQuery = state.searchQuery,
-                        selection = state.selection,
-                        contentPadding = contentPadding,
-                        currentPage = state.coercedActiveCategoryIndex,
-                        hasActiveFilters = state.hasActiveFilters,
-                        showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
-                        onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
-                        onClickManga = { navigator.push(MangaScreen(it)) },
-                        onContinueReadingClicked = { it: LibraryManga ->
-                            scope.launchIO {
-                                val chapter = viewModel.getNextUnreadChapter(it.manga)
-                                if (chapter != null) {
-                                    context.startActivity(
-                                        ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
-                                    )
-                                } else {
-                                    snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))
-                                }
+            if (state.isLoading) {
+                LoadingScreen(Modifier.padding(contentPadding))
+            } else {
+                LibraryContent(
+                    categories = state.displayedCategories,
+                    searchQuery = state.searchQuery,
+                    selection = state.selection,
+                    contentPadding = contentPadding,
+                    currentPage = state.coercedActiveCategoryIndex,
+                    hasActiveFilters = state.hasActiveFilters,
+                    showPageTabs = state.showCategoryTabs || !state.searchQuery.isNullOrEmpty(),
+                    onChangeCurrentPage = viewModel::updateActiveCategoryIndex,
+                    onClickManga = { navigator.push(MangaScreen(it)) },
+                    onContinueReadingClicked = { it: LibraryManga ->
+                        scope.launchIO {
+                            val chapter = viewModel.getNextUnreadChapter(it.manga)
+                            if (chapter != null) {
+                                context.startActivity(
+                                    ReaderActivity.newIntent(context, chapter.mangaId, chapter.id),
+                                )
+                            } else {
+                                snackbarHostState.showSnackbar(context.stringResource(MR.strings.no_next_chapter))
                             }
-                            Unit
-                        }.takeIf { state.showMangaContinueButton },
-                        onToggleSelection = viewModel::toggleSelection,
-                        onToggleRangeSelection = { category, manga ->
-                            viewModel.toggleRangeSelection(category, manga)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        },
-                        onRefresh = { onClickRefresh(state.activeCategory) },
-                        onGlobalSearchClicked = {
-                            navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
-                        },
-                        getItemCountForCategory = { state.getItemCountForCategory(it) },
-                        getDisplayMode = { viewModel.getDisplayMode() },
-                        getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
-                        getItemsForCategory = { state.getItemsForCategory(it) },
-                    )
-                }
+                        }
+                        Unit
+                    }.takeIf { state.showMangaContinueButton },
+                    onToggleSelection = viewModel::toggleSelection,
+                    onToggleRangeSelection = { category, manga ->
+                        viewModel.toggleRangeSelection(category, manga)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    },
+                    onRefresh = { onClickRefresh(state.activeCategory) },
+                    onGlobalSearchClicked = {
+                        navigator.push(GlobalSearchScreen(viewModel.state.value.searchQuery ?: ""))
+                    },
+                    getItemCountForCategory = { state.getItemCountForCategory(it) },
+                    getDisplayMode = { viewModel.getDisplayMode() },
+                    getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
+                    getItemsForCategory = { state.getItemsForCategory(it) },
+                )
             }
         }
 

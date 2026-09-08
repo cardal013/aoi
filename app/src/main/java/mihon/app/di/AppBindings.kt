@@ -11,6 +11,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.BindingContainer
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
+import io.github.jan.supabase.SupabaseClient
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.protobuf.ProtoBuf
 import nl.adaptivity.xmlutil.XmlDeclMode
@@ -59,6 +60,10 @@ object AppBindings {
             ),
         )
     }
+
+    @Provides
+    @SingleIn(AppScope::class)
+    fun providesSupabaseClient(): SupabaseClient = eu.kanade.tachiyomi.data.account.supabase
 
     @Provides
     @SingleIn(AppScope::class)
