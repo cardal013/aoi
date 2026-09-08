@@ -1270,42 +1270,58 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('usernameForm').onsubmit = async (e) => {
     e.preventDefault();
-    const newUsername = qs('newUsername').value.trim();
-    const errEl = qs('usernameError');
-    const btn = e.target.querySelector('button[type="submit"]');
-    errEl.classList.remove('show');
+    console.log('[change-username] submit disparado');
+    try {
+      const newUsername = qs('newUsername').value.trim();
+      const errEl = qs('usernameError');
+      const btn = e.target.querySelector('button[type="submit"]');
+      errEl.classList.remove('show');
 
-    if (!newUsername) return;
-    if (newUsername === currentUser.user_metadata?.username) { closeModal(usernameScrim); return; }
+      console.log('[change-username] user logado:', currentUser);
+      console.log('[change-username] newUsername:', newUsername, 'atual:', currentUser?.user_metadata?.username);
 
-    btn.disabled = true;
-    // NOTE: username mudado aqui através de Edge Function para permitir
-    // a alteração do email de auth sem o fluxo de confirmação (que falharia
-    // no domínio fictício).
-    const { data, error } = await supabase.functions.invoke('change-username', {
-      body: { newUsername: newUsername }
-    });
-    btn.disabled = false;
-
-    if (error || (data && data.error)) {
-      if (data?.error === 'username_taken' || (error && error.status === 409)) {
-        errEl.classList.add('show');
-      } else {
-        alert(error?.message || data?.error || 'Failed to update username');
+      if (!newUsername) { console.log('[change-username] abortado: vazio'); return; }
+      if (newUsername === currentUser?.user_metadata?.username) {
+        console.log('[change-username] abortado: igual ao atual');
+        closeModal(usernameScrim);
+        return;
       }
-      return;
+
+      btn.disabled = true;
+      console.log('[change-username] a chamar Edge Function...');
+
+      const { data, error } = await supabase.functions.invoke('change-username', {
+        body: { newUsername: newUsername }
+      });
+
+      btn.disabled = false;
+      console.log('[change-username] resposta:', { data, error });
+
+      if (error || (data && data.error)) {
+        console.error('[change-username] erro detetado:', error, data);
+        if (data?.error === 'username_taken' || (error && error.status === 409)) {
+          errEl.classList.add('show');
+        } else {
+          alert(error?.message || data?.error || 'Failed to update username');
+        }
+        return;
+      }
+
+      console.log('[change-username] sucesso, a fazer refresh da sessão...');
+      await supabase.auth.refreshSession();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      currentUser = user;
+      renderProfile();
+      const displayName = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
+      qs('navAvatar').textContent = initials(displayName);
+      closeModal(usernameScrim);
+      console.log('[change-username] concluído com sucesso');
+    } catch (err) {
+      console.error('[change-username] EXCEÇÃO NÃO APANHADA:', err);
     }
-
-    // Sucesso: Fazemos refresh à sessão para o cliente apanhar o novo email e metadados
-    await supabase.auth.refreshSession();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    currentUser = user;
-    renderProfile();
-    const displayName = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
-    qs('navAvatar').textContent = initials(displayName);
-    closeModal(usernameScrim);
   };
+
 
 
   qs('menuLogoutBtn').onclick = logOut;
