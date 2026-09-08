@@ -1,41 +1,50 @@
-# Plan: Supabase Integration for Aoi Website & App Shortcut
+# Implementation Plan - Auth Compatibility & Features Restoration
 
-This plan outlines the steps to integrate the real Supabase backend into the Aoi website and update the Android app to point to the web library.
+Align the website's authentication logic with the Android app (Username-to-Mock-Email conversion) using Unicode-aware filtering, and ensure the Features section correctly represents all core capabilities.
 
-## Website Changes (index.html)
+## User Review Required
 
-### 1. Feature Section Update
-- **[MODIFY]** Add a new feature card to the "Features" section:
-    - **Icon**: Cloud icon (SVG).
-    - **Title**: Cloud Sync.
-    - **Description**: Seamlessly upload and import your library via the cloud. No manual backups required.
+> [!IMPORTANT]
+> The website will now automatically convert usernames into mock emails (e.g., `usr_test@aoi-app.com`) using a Unicode-aware filter to match the Android app's `isLetterOrDigit()` logic exactly. This ensures compatibility for usernames with accents or special characters.
 
-### 2. Supabase Integration
-- **[MODIFY]** Include the Supabase JS SDK via CDN.
-- **[MODIFY]** Initialize the Supabase client using the same Project URL and Anon Key used in the Android app.
-- **[MODIFY]** Replace the in-memory `users` and `state.library` logic with real Supabase calls:
-    - **Signup**: Use `supabase.auth.signUp({ email, password })`.
-    - **Login**: Use `supabase.auth.signInWithPassword({ email, password })`.
-    - **Library Fetch**: Query the `user_library` table joined with the `manga` table.
-- **[MODIFY]** Update the library UI to use the 4 official statuses: `READING`, `COMPLETED`, `DROPPED`, `PLAN_TO_READ`.
+## Proposed Changes
 
-## Android App Changes
+### [Website] [index.html](file:///C:/aoi/index.html)
 
-### 1. External Library Shortcut
-- **[MODIFY] [AccountScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountScreen.kt)**:
-    - Replace the internal `navigator.push(CloudLibraryScreen())` with an external browser call to `https://aoi-mangas.vercel.app/` using `LocalUriHandler`.
-- **[DELETE] [CloudLibraryScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/CloudLibraryScreen.kt)**: This screen is no longer needed as the library is now managed via the website.
+#### 1. Authentication Logic (Compatible with App)
+- **[NEW]** Implement `formatInternalEmail(username)` in JavaScript:
+  ```javascript
+  function formatInternalEmail(username) {
+    // Replicates Kotlin: username.trim().lowercase().filter { it.isLetterOrDigit() }
+    const normalized = username.trim().toLowerCase()
+      .split('')
+      .filter(char => /\p{L}|\p{N}/u.test(char))
+      .join('');
+    return `usr_${normalized}@aoi-app.com`;
+  }
+  ```
+- **[MODIFY]** Update `signupForm.onsubmit`:
+  - Generate the internal email using `formatInternalEmail(username.value)`.
+  - Pass the original (trimmed) username in `options.data: { username: username.value.trim() }`.
+- **[MODIFY]** Update `loginForm.onsubmit`:
+  - Generate the internal email from the entered username.
+  - Perform `signInWithPassword` using that email.
 
----
+#### 2. Features Section (Restoration)
+- **[MODIFY]** Update the `feature-grid` to include exactly these 4 cards:
+  1. **Clean Reader**: Focused experience.
+  2. **Reading Categories**: Status tracking (Reading, Completed, etc.).
+  3. **Accounts**: Sync tied to profile.
+  4. **Cloud Sync**: Mention bidirectional sync between the Android app and the cloud library.
 
-## Technical Details: Schema Mapping
+## Verification Plan
 
-The website will query the following Supabase structure:
-- **Table**: `user_library`
-- **Columns**: `status` (Uppercase), `manga_id` (FK to `manga`).
-- **Join**: `manga(*)` to get titles and thumbnails.
-
-## Open Questions
-- **Auth Credentials**: Since I cannot see the actual Project URL and Key (they are likely in `local.properties`), I will use placeholders like `CONFIG_SUPABASE_URL` and `CONFIG_SUPABASE_KEY` which you should replace with your real values.
-
-Aguardo a tua aprovação para prosseguir.
+### Manual Verification
+1. **Signup Compatibility**:
+   - Create an account with username `João123`.
+   - Verify (via console or DB) that the internal email is `usr_joão123@aoi-app.com`.
+2. **Login Compatibility**:
+   - Logout and log back in using `João123`.
+   - Verify success.
+3. **Features Display**:
+   - Confirm all 4 cards (Clean Reader, Reading Categories, Accounts, Cloud Sync) appear in the grid.

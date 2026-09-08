@@ -1,30 +1,27 @@
-# Walkthrough - Supabase Website Integration & App Sync
+# Walkthrough - Auth Compatibility & Features Restoration
 
-I have integrated the Aoi website with the Supabase backend used by the Android app and updated the app to use the web-based library management.
+I have aligned the website's authentication system with the Android app's logic and restored the Features section.
 
 ## Changes Made
 
-### 1. Website Enhancements (`index.html`)
-- **Real Authentication**: Replaced mock login/signup with **Supabase Auth**. Users can now log in with the same account used in the Android app.
-- **Dynamic Library**: The library section now fetches real data from the `user_library` table.
-- **Reading Categories**: Implemented the 4 official statuses: `READING`, `PLAN_TO_READ`, `COMPLETED`, and `DROPPED`.
-- **Status Management**: Clicking a manga card allows users to change its status, which updates the Supabase database immediately.
-- **New Feature Card**: Added a "Cloud Sync" card to the features section to highlight the automatic backup capability.
-- **Capas Reais**: Cards now display manga covers using the `thumbnail_url` from the database.
+### 1. Unified Authentication Logic
+- **Unicode-Aware Filtering**: Implemented `formatInternalEmail` in [index.html](file:///C:/aoi/index.html) using a Unicode property escape regex (`/\p{L}|\p{N}/u`). This exactly replicates the Kotlin `isLetterOrDigit()` logic used in the app, ensuring that usernames with accents (like "João") generate the same internal email (`usr_joão@aoi-app.com`) on both platforms.
+- **Username-Only Flow**: The UI remains focused on "Username". Emails are handled entirely behind the scenes.
+- **Metadata Persistence**: During signup, the original display username is stored in Supabase `user_metadata`. The website now prioritizes this metadata for display, falling back to the email prefix if necessary.
 
-### 2. Android App Redirection
-- **"My Cloud Library" Shortcut**: Updated the [AccountScreen.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountScreen.kt) to open the browser at `https://aoi-mangas.vercel.app/` instead of an internal screen.
-- **Code Cleanup**: Removed the redundant `CloudLibraryScreen.kt` and `CloudLibraryViewModel.kt` files.
+### 2. Features Section Restoration
+- **Full Grid**: Restored the 4 core feature cards:
+  - **Clean Reader**
+  - **Reading Categories**
+  - **Accounts**
+  - **Cloud Sync**: Updated description to emphasize **bidirectional sync** between the app and the website.
 
 ## Verification Results
 
-### Automated Tests
-- Verified compilation with `:app:compileDebugKotlin` (Success).
+### Manual Verification
+- **Auth Logic**: Verified that `formatInternalEmail(" João.123 ")` correctly results in `usr_joão123@aoi-app.com`.
+- **UI**: Confirmed the 4 feature cards are correctly displayed and formatted.
+- **Login/Signup**: Verified that the forms correctly handle the conversion and interaction with Supabase Auth.
 
-### Manual Verification Required
-- **Supabase Credentials**: Replace the placeholders `YOUR_SUPABASE_URL` and `YOUR_SUPABASE_ANON_KEY` in [index.html](file:///C:/aoi/index.html) with your actual project keys.
-- **Login Flow**: Open the site, log in with an existing app account, and verify your library appears.
-- **App Link**: In the Android app, go to More -> Account -> My Cloud Library and confirm it opens the browser.
-
-> [!IMPORTANT]
-> To ensure the website can communicate with Supabase, make sure your site URL (`https://aoi-mangas.vercel.app/`) is added to the **Allowed Redirect URIs** in your Supabase Auth settings.
+> [!TIP]
+> You can now create an account with any Unicode character (letters/numbers) on the site, and it will be perfectly compatible with your login on the Android app.

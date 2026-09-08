@@ -1,10 +1,4 @@
-- [ ] **Website Integration (Supabase)**
-    - [ ] Update `index.html` with Supabase SDK and UI features.
-    - [ ] Implement real Auth (Sign up / Login).
-    - [ ] Implement real Library fetching from Supabase.
-- [ ] **Android App Redirection**
-    - [ ] Update `AccountScreen.kt` to open browser for "My Cloud Library".
-    - [ ] Delete `CloudLibraryScreen.kt` and `CloudLibraryViewModel.kt`.
-- [ ] **Verification**
-    - [ ] Build Android app.
-    - [ ] Verify browser redirection.
+- [x] Implement Unicode-aware `formatInternalEmail` in `index.html`
+- [x] Update Signup logic to use mock emails and metadata
+- [x] Update Login logic to use mock emails
+- [x] Restore/update Features section in `index.html`

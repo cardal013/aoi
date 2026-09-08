@@ -780,7 +780,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <article class="feature-card">
           <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5,19c2.5,0,4.5-2,4.5-4.5c0-2.3-1.8-4.2-4.1-4.5c-0.8-3.4-3.9-6-7.4-6c-2.9,0-5.4,1.8-6.6,4.3C1.8,9,0,11,0,13.5C0,16.5,2.5,19,5.5,19h12z" stroke="var(--accent)" fill="none" stroke-width="1.7"/></svg></div>
           <h3>Cloud Sync</h3>
-          <p>Seamlessly upload and import your library via the cloud. No manual backups required.</p>
+          <p>Seamlessly upload and import your library via the cloud. Bidirectional sync between app and website.</p>
         </article>
       </div>
     </div>
@@ -1116,6 +1116,16 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   });
 
   // --- AUTH LOGIC ---
+  function formatInternalEmail(username) {
+    // Replicates Kotlin: username.trim().lowercase().filter { it.isLetterOrDigit() }
+    // Unicode \p{L} = Any letter, \p{N} = Any number
+    const normalized = username.trim().toLowerCase()
+      .split('')
+      .filter(char => /\p{L}|\p{N}/u.test(char))
+      .join('');
+    return `usr_${normalized}@aoi-app.com`;
+  }
+
   async function fetchLibrary(){
     if (!currentUser) return;
     const { data, error } = await supabase
@@ -1139,7 +1149,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     userMenuArea.style.display = '';
     mobileAuthButtons.style.display = 'none';
     mobileUserButtons.style.display = '';
-    qs('navAvatar').textContent = initials(currentUser.email);
+    const username = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
+    qs('navAvatar').textContent = initials(username);
     renderProfile();
     publicSite.style.display = 'none';
     appSite.style.display = 'block';
@@ -1184,9 +1195,16 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('signupForm').onsubmit = async (e) => {
     e.preventDefault();
-    const email = qs('signupUsername').value; // Using email as username
+    const username = qs('signupUsername').value.trim();
+    const internalEmail = formatInternalEmail(username);
     const password = qs('signupPassword').value;
-    const { data, error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({
+      email: internalEmail,
+      password,
+      options: {
+        data: { username: username }
+      }
+    });
     if (error) { alert(error.message); return; }
     closeModal(signupScrim);
     if (data.user) logIn(data.user);
@@ -1194,9 +1212,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('loginForm').onsubmit = async (e) => {
     e.preventDefault();
-    const email = qs('loginUsername').value;
+    const username = qs('loginUsername').value;
+    const internalEmail = formatInternalEmail(username);
     const password = qs('loginPassword').value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: internalEmail,
+      password
+    });
     if (error) { alert(error.message); return; }
     closeModal(loginScrim);
     if (data.user) logIn(data.user);
@@ -1273,9 +1295,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // --- PROFILE ---
   function renderProfile(){
     if (!currentUser) return;
-    qs('profileAvatar').textContent = initials(currentUser.email);
-    qs('profileName').textContent = currentUser.email.split('@')[0];
-    qs('profileUsername').textContent = currentUser.email;
+    const username = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
+    qs('profileAvatar').textContent = initials(username);
+    qs('profileName').textContent = username;
+    qs('profileUsername').textContent = username;
   }
 
   // --- INITIAL CHECK ---
