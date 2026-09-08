@@ -69,7 +69,7 @@ fun AccountScreenContent(
     Scaffold(
         topBar = { scrollBehavior ->
             AppBar(
-                title = if (state.email != null) "Account" else "Login",
+                title = if (state.username != null) "Account" else "Login",
                 navigateUp = onNavigateBack,
                 scrollBehavior = scrollBehavior,
             )
@@ -83,9 +83,9 @@ fun AccountScreenContent(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            if (state.email != null) {
+            if (state.username != null) {
                 ProfileView(
-                    username = state.email,
+                    username = state.username,
                     onLogout = onLogout,
                     onContinue = onNavigateBack,
                     onCloudLibrary = onNavigateToCloudLibrary,

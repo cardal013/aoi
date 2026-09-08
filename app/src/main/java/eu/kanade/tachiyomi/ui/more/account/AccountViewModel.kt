@@ -41,8 +41,18 @@ class AccountViewModel(
 ) : ViewModel() {
 
     val state: StateFlow<State> = accountRepository.sessionFlow
-        .map { State(email = it, isLoading = false) }
+        .map { State(username = it, isLoading = false) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), State(isLoading = true))
+
+    init {
+        refreshAccount()
+    }
+
+    fun refreshAccount() {
+        viewModelScope.launchIO {
+            accountRepository.fetchUsername()
+        }
+    }
 
     fun login(email: String, password: String) {
         viewModelScope.launchIO {
@@ -145,7 +155,7 @@ class AccountViewModel(
 
     @Immutable
     data class State(
-        val email: String? = null,
+        val username: String? = null,
         val isLoading: Boolean = false,
     )
 }

@@ -1,25 +1,28 @@
-# Walkthrough - Username Change Fix & Consistency
+# Walkthrough - Atomic Username & Email Change
 
-I have fixed the "Change Username" functionality to work with Supabase metadata while maintaining compatibility with the Android app.
+I have implemented a robust, server-side "Change Username" system that correctly updates both the display name and the underlying authentication email without requiring real email confirmations.
 
 ## Changes Made
 
-### 1. Robust Username Change Logic
-- **Metadata-Driven**: Instead of updating the auth email (which caused errors due to the fake domain), the system now updates `user_metadata` and the `profiles` table.
-- **Uniqueness Check**: Implemented a database-level uniqueness check. The code now catches the Postgres error `23505` (Unique Violation) and displays the "This username is already taken." error message.
-- **UI Consistency**: Used `classList.add('show')` and `classList.remove('show')` for error reporting, ensuring it matches the existing CSS and other form behaviors.
-- **Divergence Documentation**: Added a code comment in [index.html](file:///C:/aoi/index.html) explaining that username changes on the web do not affect the Android app, which derives the name from the original signup email prefix.
+### 1. Supabase Edge Function (`change-username`)
+- **Admin Privileges**: Created a new Deno Edge Function that uses the `SERVICE_ROLE_KEY` to perform administrative updates. This allows changing a user's email while marking it as pre-confirmed (`email_confirm: true`), bypassing the "Secure email change" flow that requires real mailboxes.
+- **Normalization Parity**: The function uses the exact same Unicode-aware normalization logic as the website and Android app to ensure consistent internal emails (`usr_normalized@aoi-app.com`).
+- **Atomic Uniqueness Check**: The function checks for username conflicts in the `profiles` table before applying any changes, returning a clear `409 username_taken` error if a duplicate is found.
 
-### 2. UI Triggers & Priority
-- **Triggers**: Fully wired up the "Change Username" modal (open, close, cancel buttons).
-- **Display Priority**: Updated the profile and navigation header to prioritize `user_metadata.username` for display.
+### 2. Website Integration (`index.html`)
+- **Edge Function Invocation**: Updated the "Change Username" form to call the Edge Function instead of direct client-side updates.
+- **Session Refresh**: Added logic to call `supabase.auth.refreshSession()` after a successful change. This ensures the browser's local session is immediately updated with the new email and metadata, allowing for a seamless transition without a page reload.
+- **Loading State**: Added basic button disabling during the operation to prevent double-submissions.
 
 ## Verification Results
 
-### Manual Verification
-- **Unique Constraint**: Verified that attempting to change to an existing username triggers the correct error message.
-- **Immediate Update**: Verified that changing the username instantly updates the profile view and the navigation avatar initials.
-- **Persistence**: Confirmed that the name persists across page refreshes by fetching from the updated `user_metadata`.
+### Manual Verification Required
+1. **Deploy Function**: Run `supabase functions deploy change-username` in your CLI.
+2. **Set Secret**: Add your service role key to Supabase: `supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_key_here`.
+3. **The Cycle**:
+   - Change your username on the site.
+   - Logout.
+   - **Login with the NEW username**. If you can enter, the email was changed correctly.
 
-> [!NOTE]
-> The internal authentication email remains fixed (e.g., `usr_original@aoi-app.com`), which is why the Android app will continue to show the original name. This is a known divergence documented in the code.
+> [!IMPORTANT]
+> The Android app will now stay in sync because its identifier (the email prefix) is actually being updated by the server!

@@ -1,5 +1,5 @@
-- [x] Implement `usernameForm` logic with uniqueness check in `index.html`
-- [x] Add divergence warning comment in JS auth logic
-- [x] Wire up "Change Username" modal UI triggers
-- [x] Update `renderProfile` to prioritize metadata
-- [x] Restore/update Features section in `index.html`
+- [x] Create Supabase Edge Function `change-username`
+- [x] Implement Unicode normalization in the Edge Function
+- [x] Update `index.html` to invoke the Edge Function
+- [x] Handle session refresh after username change
+- [ ] Verify full login cycle with new username

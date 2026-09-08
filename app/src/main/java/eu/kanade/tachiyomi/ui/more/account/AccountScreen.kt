@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
@@ -51,6 +55,13 @@ class AccountScreen : Screen() {
         val uriHandler = LocalUriHandler.current
         val viewModel = metroViewModel<AccountViewModel>()
         val state by viewModel.state.collectAsState()
+
+        val lifecycleOwner = LocalLifecycleOwner.current
+        LaunchedEffect(lifecycleOwner) {
+            lifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                viewModel.refreshAccount()
+            }
+        }
 
         var showUpdateDialog by remember { mutableStateOf(false) }
         var syncType by remember { mutableStateOf<SyncType?>(null) }
