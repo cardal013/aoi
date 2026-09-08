@@ -105,11 +105,11 @@ class AccountViewModel(
                 logcat(LogPriority.INFO) { "Sync: Import starting for user ${user.id}" }
                 librarySupabaseRepository.getUserLibrary(user.id).onSuccess { remoteItems ->
                     logcat(LogPriority.INFO) { "Sync: Found ${remoteItems.size} remote items" }
-                    val currentLocal = getLibraryManga.await()
-                    val toUnfavorite = currentLocal.map { MangaUpdate(id = it.manga.id, favorite = false) }
-                    updateManga.awaitAll(toUnfavorite)
-                    logcat(LogPriority.INFO) { "Sync: Local library unfavorited" }
 
+                    val initialLocal = getLibraryManga.await()
+                    val remoteMangaUrls = remoteItems.map { it.mangaUrl }.toSet()
+
+                    // 1. Restore remote items first (safe)
                     var imported = 0
                     var failed = 0
                     remoteItems.forEach { remote ->
@@ -122,6 +122,17 @@ class AccountViewModel(
                             failed++
                         }
                     }
+
+                    // 2. Only after restore, remove favorites that are NOT in the cloud
+                    val toUnfavorite = initialLocal
+                        .filter { it.manga.url !in remoteMangaUrls }
+                        .map { MangaUpdate(id = it.manga.id, favorite = false) }
+
+                    if (toUnfavorite.isNotEmpty()) {
+                        updateManga.awaitAll(toUnfavorite)
+                        logcat(LogPriority.INFO) { "Sync: Removed ${toUnfavorite.size} local-only favorites" }
+                    }
+
                     logcat(LogPriority.INFO) { "Sync: Import completed. Imported: $imported, Failed: $failed" }
                     viewModelScope.launch { context.toast("Import completed! ($imported success, $failed fail)") }
                 }

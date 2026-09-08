@@ -1,16 +1,10 @@
-- [x] **UI Refinements (Profile)**
-    - [x] Convert buttons to `TextButton` (White/onSurface).
-    - [x] Add icons to profile buttons.
-    - [x] Implement `Update Account` button and base dialog.
-- [x] **Sync Logic (Full Import/Upload)**
-    - [x] Update `LibrarySupabaseRepository.kt` with `deleteAllLibrary` and `uploadLibrary`.
-    - [x] Implement `Cloud Restore` logic (create local entries from remote URL/Source).
-    - [x] Implement full `Upload` logic.
-    - [x] Fix `extension_id` FK violation by upserting extensions first.
-    - [x] Fix UUID type errors by using deterministic UUIDs.
-    - [x] Fix `added_at` format (use ISO Instant string).
-- [x] **Cloud Library Fix**
-    - [x] Fix Pager/TabRow navigation in `CloudLibraryScreen.kt`.
-- [ ] **Verification**
-    - [x] Verify build.
-    - [ ] Manual verification.
+- [x] **Fix Notifications (LibraryUpdateJob)**
+    - [x] Handle negative category IDs in `addMangaToQueue`.
+    - [x] Map -101..-104 to ReadingStatus filtering.
+- [x] **Safe Cloud Import (AccountViewModel)**
+    - [x] Restore remote items first.
+    - [x] Only unfavorite local items that are not in the remote list.
+- [x] **Verification**
+    - [x] Build project.
+    - [ ] Verify manual refresh on status tabs.
+    - [ ] Verify safe import behavior.

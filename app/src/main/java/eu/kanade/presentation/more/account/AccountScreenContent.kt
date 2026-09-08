@@ -27,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,6 +49,7 @@ import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Security
+import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.rounded.Visibility
 import mihon.icons.materialsymbols.rounded.VisibilityOff
@@ -164,11 +166,14 @@ private fun ProfileActionButton(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.onSurface)
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = Color.White
+        )
     ) {
-        Icon(icon, null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.size(8.dp))
-        Text(text, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+        Icon(icon, null, modifier = Modifier.size(28.dp), tint = Color.White)
+        Spacer(Modifier.size(16.dp))
+        // ExtraBold to make it look clickable without background
+        Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
     }
 }
 

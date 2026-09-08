@@ -71,7 +71,11 @@ class CloudLibraryScreen : Screen() {
                     tabs.forEachIndexed { index, tab ->
                         Tab(
                             selected = pagerState.currentPage == index,
-                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                            onClick = {
+                                scope.launch {
+                                    pagerState.scrollToPage(index)
+                                }
+                            },
                             text = { Text(tab.title) }
                         )
                     }

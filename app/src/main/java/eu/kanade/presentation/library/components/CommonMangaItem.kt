@@ -53,12 +53,6 @@ object CommonMangaItemDefaults {
     const val BrowseFavoriteCoverAlpha = 0.34f
 }
 
-private val ContinueReadingButtonSizeSmall = 32.dp
-private val ContinueReadingButtonSizeLarge = 36.dp
-
-private val ContinueReadingButtonIconSizeSmall = 20.dp
-private val ContinueReadingButtonIconSizeLarge = 24.dp
-
 private val ContinueReadingButtonGridPadding = 6.dp
 private val ContinueReadingButtonListSpacing = 8.dp
 
@@ -107,8 +101,8 @@ fun MangaCompactGridItem(
             )
             if (onClickContinueReading != null) {
                 ContinueReadingButton(
-                    size = ContinueReadingButtonSizeLarge,
-                    iconSize = ContinueReadingButtonIconSizeLarge,
+                    size = 32.dp,
+                    iconSize = 20.dp,
                     onClick = onClickContinueReading,
                     modifier = Modifier
                         .padding(ContinueReadingButtonGridPadding + 4.dp)
@@ -165,8 +159,8 @@ fun MangaComfortableGridItem(
                 )
                 if (onClickContinueReading != null) {
                     ContinueReadingButton(
-                        size = ContinueReadingButtonSizeLarge,
-                        iconSize = ContinueReadingButtonIconSizeLarge,
+                        size = 32.dp,
+                        iconSize = 20.dp,
                         onClick = onClickContinueReading,
                         modifier = Modifier
                             .padding(ContinueReadingButtonGridPadding + 4.dp)
@@ -326,8 +320,8 @@ fun MangaListItem(
         BadgeGroup(content = badge)
         if (onClickContinueReading != null) {
             ContinueReadingButton(
-                size = ContinueReadingButtonSizeSmall,
-                iconSize = ContinueReadingButtonIconSizeSmall,
+                size = 32.dp,
+                iconSize = 20.dp,
                 onClick = onClickContinueReading,
                 modifier = Modifier.padding(start = ContinueReadingButtonListSpacing),
             )

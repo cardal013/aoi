@@ -65,6 +65,7 @@ import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.interactor.GetLibraryManga
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.domain.manga.model.categoryId
 import tachiyomi.domain.source.model.SourceNotInstalledException
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.i18n.MR
@@ -165,16 +166,25 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
     private suspend fun addMangaToQueue(categoryId: Long) {
         val libraryManga = getLibraryManga.await()
 
-        val listToUpdate = if (categoryId != -1L) {
-            libraryManga.filter { categoryId in it.categories }
-        } else {
-            val includedCategories = libraryPreferences.updateCategories.get().map { it.toLong() }
-            val excludedCategories = libraryPreferences.updateCategoriesExclude.get().map { it.toLong() }
+        val listToUpdate = when {
+            // Virtual Status Tabs (-101..-104)
+            categoryId in -104L..-101L -> {
+                libraryManga.filter { it.manga.readingStatus.categoryId == categoryId }
+            }
+            // Regular Category
+            categoryId != -1L -> {
+                libraryManga.filter { categoryId in it.categories }
+            }
+            // All categories (Automated or Global manual)
+            else -> {
+                val includedCategories = libraryPreferences.updateCategories.get().map { it.toLong() }
+                val excludedCategories = libraryPreferences.updateCategoriesExclude.get().map { it.toLong() }
 
-            libraryManga.filter {
-                val included = includedCategories.isEmpty() || it.categories.intersect(includedCategories).isNotEmpty()
-                val excluded = it.categories.intersect(excludedCategories).isNotEmpty()
-                included && !excluded
+                libraryManga.filter {
+                    val included = includedCategories.isEmpty() || it.categories.intersect(includedCategories).isNotEmpty()
+                    val excluded = it.categories.intersect(excludedCategories).isNotEmpty()
+                    included && !excluded
+                }
             }
         }
 

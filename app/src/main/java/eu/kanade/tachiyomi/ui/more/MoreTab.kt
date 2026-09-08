@@ -1,5 +1,7 @@
 package eu.kanade.tachiyomi.ui.more
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -7,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cafe.adriel.voyager.navigator.LocalNavigator
@@ -19,23 +22,30 @@ import dev.zacsweers.metro.ContributesIntoMap
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import dev.zacsweers.metrox.viewmodel.metroViewModel
+import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.MoreScreen
+import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.more.account.AccountScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
+import eu.kanade.tachiyomi.util.system.DeviceUtil
+import eu.kanade.tachiyomi.util.system.toast
+import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import mihon.feature.support.SupportUsScreen
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -46,7 +56,7 @@ data object MoreTab : Tab {
         @Composable
         get() {
             val isSelected = LocalTabNavigator.current.current.key == key
-            val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_more_enter)
+            val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_library_enter)
             return TabOptions(
                 index = 4u,
                 title = stringResource(MR.strings.label_more),
@@ -61,8 +71,26 @@ data object MoreTab : Tab {
     @Composable
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
+        val context = LocalContext.current
         val viewModel = metroViewModel<MoreViewModel>()
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
+
+        val chooseBackup = rememberLauncherForActivityResult(
+            object : ActivityResultContracts.GetContent() {
+                override fun createIntent(context: android.content.Context, input: String): android.content.Intent {
+                    val intent = super.createIntent(context, input)
+                    return android.content.Intent.createChooser(intent, context.stringResource(MR.strings.file_select_backup))
+                }
+            },
+        ) {
+            if (it == null) {
+                context.toast(MR.strings.file_null_uri_error)
+                return@rememberLauncherForActivityResult
+            }
+
+            navigator.push(RestoreBackupScreen(it.toString()))
+        }
+
         MoreScreen(
             downloadQueueStateProvider = { downloadQueueState },
             downloadedOnly = viewModel.downloadedOnly,
@@ -73,6 +101,16 @@ data object MoreTab : Tab {
             onClickCategories = { navigator.push(CategoryScreen()) },
             onClickStats = { navigator.push(StatsScreen()) },
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
+            onClickImportBackup = {
+                if (!BackupRestoreJob.isRunning(context.workManager)) {
+                    if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
+                        context.toast(MR.strings.restore_miui_warning)
+                    }
+                    chooseBackup.launch("*/*")
+                } else {
+                    context.toast(MR.strings.restore_in_progress)
+                }
+            },
             onClickAccount = { navigator.push(AccountScreen()) },
             onClickSettings = { navigator.push(SettingsScreen()) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
