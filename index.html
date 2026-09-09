@@ -1239,20 +1239,52 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('signupForm').onsubmit = async (e) => {
     e.preventDefault();
-    const username = qs('signupUsername').value.trim();
-    const internalEmail = formatInternalEmail(username);
-    const password = qs('signupPassword').value;
-    const { data, error } = await supabase.auth.signUp({
-      email: internalEmail,
-      password,
-      options: {
-        data: { username: username }
+    console.log('[signup] submit disparado');
+    try {
+      const username = qs('signupUsername').value.trim();
+      console.log('[signup] username:', username);
+      const internalEmail = formatInternalEmail(username);
+      console.log('[signup] internalEmail:', internalEmail);
+      const password = qs('signupPassword').value;
+      const confirmPassword = qs('signupConfirmPassword').value;
+      console.log('[signup] password preenchida:', !!password, 'confirm preenchida:', !!confirmPassword);
+
+      const errEl = qs('signupConfirmError');
+      if (errEl) errEl.classList.remove('show');
+
+      if (password !== confirmPassword) {
+        console.log('[signup] abortado: passwords não coincidem');
+        if (errEl) errEl.classList.add('show');
+        return;
       }
-    });
-    if (error) { alert(error.message); return; }
-    closeModal(signupScrim);
-    if (data.user) logIn(data.user);
+
+      console.log('[signup] a chamar supabase.auth.signUp...');
+      const { data, error } = await supabase.auth.signUp({
+        email: internalEmail,
+        password,
+        options: {
+          data: { username: username }
+        }
+      });
+      console.log('[signup] resposta:', { data, error });
+
+      if (error) {
+        console.error('[signup] erro:', error.message);
+        alert(error.message);
+        return;
+      }
+      closeModal(signupScrim);
+      if (data.user) {
+        console.log('[signup] a fazer login automático...');
+        logIn(data.user);
+      } else {
+        console.warn('[signup] data.user veio vazio/undefined');
+      }
+    } catch (err) {
+      console.error('[signup] EXCEÇÃO NÃO APANHADA:', err);
+    }
   };
+
 
   qs('loginForm').onsubmit = async (e) => {
     e.preventDefault();
