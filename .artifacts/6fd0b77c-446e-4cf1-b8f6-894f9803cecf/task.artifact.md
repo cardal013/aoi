@@ -1,5 +1,3 @@
-- [x] Create Supabase Edge Function `change-username`
-- [x] Implement Unicode normalization in the Edge Function
-- [x] Update `index.html` to invoke the Edge Function
-- [x] Handle session refresh after username change
-- [ ] Verify full login cycle with new username
+- [x] Build Release APK to identify asset filename
+- [x] Report filename and wait for manual GitHub Release creation
+- [x] Update download links in `index.html`
