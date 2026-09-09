@@ -21,10 +21,6 @@ A modern manga \& manhwa reader for Android — clean, fast, and built around an
 
 ## Screenshots
 
-\## Screenshots
-
-
-
 <p align="center">
 
 &#x20; <table>
