@@ -6,8 +6,8 @@
 
 A modern manga \& manhwa reader for Android — clean, fast, and built around an extension-based source system.
 
-[!\[Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android\&logoColor=white)](https://github.com/cardal013/aoi)
-[!\[Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin\&logoColor=white)](https://kotlinlang.org)
+[!\[Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)](https://github.com/cardal013/aoi)
+[!\[Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [!\[License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
 [!\[Status](https://img.shields.io/badge/status-active-brightgreen)](#project-status)
 [!\[Downloads](https://img.shields.io/github/downloads/cardal013/aoi/total)](https://github.com/cardal013/aoi/releases/latest)
@@ -22,10 +22,11 @@ A modern manga \& manhwa reader for Android — clean, fast, and built around an
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="220">
-  <img src="screenshots/Account.jpeg" alt="Account screen" width="220">
+  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="200">
+  <img src="screenshots/Account.jpeg" alt="Account screen" width="200">
 
-&#x20; <img src="screenshots/supabase.jpeg" alt="supabase" width="220">
+&#x20; <img src="screenshots/supabase.jpeg" alt="supabase" width="200">
+
 </p>
 
 ## What is Aoi
