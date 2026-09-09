@@ -1266,17 +1266,31 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           data: { username: username }
         }
       });
-      console.log('[signup] resposta:', { data, error });
+      console.log('[signup] resposta completa:', {
+        user: data.user,
+        session: data.session,
+        error: error
+      });
 
       if (error) {
-        console.error('[signup] erro:', error.message);
+        console.error('[signup] erro retornado pelo Supabase:', error.message, error.status);
         alert(error.message);
         return;
       }
+
+      if (!data.session && data.user) {
+        console.warn('[signup] User criado mas SEM SESSÃO (isto acontece se o email confirmation estiver ON, mesmo que digas que está OFF)');
+      }
+
       closeModal(signupScrim);
       if (data.user) {
-        console.log('[signup] a fazer login automático...');
-        logIn(data.user);
+        console.log('[signup] user ID:', data.user.id);
+        if (data.session) {
+          console.log('[signup] sessão válida, a fazer login automático...');
+          logIn(data.user);
+        } else {
+          console.warn('[signup] abortado login automático: sem sessão');
+        }
       } else {
         console.warn('[signup] data.user veio vazio/undefined');
       }

@@ -55,6 +55,7 @@ class AccountRepository {
         logcat(LogPriority.INFO) { "AOI_ACCOUNT: Starting signup for $trimmedUsername as $internalEmail" }
 
         return try {
+            logcat(LogPriority.DEBUG) { "AOI_ACCOUNT: Calling supabase.auth.signUp..." }
             val authResponse = supabase.auth.signUpWith(Email) {
                 this.email = internalEmail
                 this.password = password
@@ -65,18 +66,27 @@ class AccountRepository {
             }
 
             val uid = authResponse?.id
+            logcat(LogPriority.INFO) { "AOI_ACCOUNT: Auth response received. UID: $uid" }
+
             if (uid != null) {
+                logcat(LogPriority.DEBUG) { "AOI_ACCOUNT: Inserting into profiles table..." }
                 // Inserir na tabela profiles do Supabase
-                supabase.postgrest["profiles"].insert(
-                    Profile(id = uid, username = trimmedUsername)
-                )
-                logcat(LogPriority.INFO) { "AOI_ACCOUNT: Signup success for $trimmedUsername" }
-                Result.success(Unit)
+                try {
+                    supabase.postgrest["profiles"].insert(
+                        Profile(id = uid, username = trimmedUsername),
+                    )
+                    logcat(LogPriority.INFO) { "AOI_ACCOUNT: Profile insert success for $trimmedUsername" }
+                    Result.success(Unit)
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "AOI_ACCOUNT: Profile insert FAILED" }
+                    Result.failure(e)
+                }
             } else {
+                logcat(LogPriority.WARN) { "AOI_ACCOUNT: UID is null after signup" }
                 Result.failure(Exception("Failed to get User ID"))
             }
         } catch (e: Exception) {
-            logcat(LogPriority.ERROR, e) { "AOI_ACCOUNT: Signup error" }
+            logcat(LogPriority.ERROR, e) { "AOI_ACCOUNT: Auth signUpWith FAILED" }
             Result.failure(e)
         }
     }
