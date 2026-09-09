@@ -21,14 +21,27 @@ A modern manga \& manhwa reader for Android — clean, fast, and built around an
 
 ## Screenshots
 
+\## Screenshots
+
+
+
 <p align="center">
-  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="220">
 
-&#x20; <img src="screenshots/supabase.jpeg" alt="supabase" width="220">
+&#x20; <table>
 
-</p>
+&#x20;   <tr>
 
-## What is Aoi
+&#x20;     <td><img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="200"></td>
+
+&#x20;     <td><img src="screenshots/Account.jpeg" alt="Account screen" width="200"></td>
+
+&#x20;     <td><img src="screenshots/supabase.jpeg" alt="Supabase" width="200"></td>
+
+&#x20;   </tr>
+
+&#x20; </table>
+
+</p>What is Aoi
 
 Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedicated backend and database layer on top of it. Instead of keeping everything only on-device, Aoi adds user accounts (username, profile, and related data) and a proper per-manga reading-status system, so your library isn't just a flat list — it's organized the way you actually read.
 
