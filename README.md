@@ -4,40 +4,34 @@
 
 # Aoi
 
-A modern manga \& manhwa reader for Android — clean, fast, and built around an extension-based source system.
+A modern manga & manhwa reader for Android — clean, fast, and built around an extension-based source system.
 
-[!\[Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)](https://github.com/cardal013/aoi)
-[!\[Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[!\[License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
-[!\[Status](https://img.shields.io/badge/status-active-brightgreen)](#project-status)
-[!\[Downloads](https://img.shields.io/github/downloads/cardal013/aoi/total)](https://github.com/cardal013/aoi/releases/latest)
-[!\[Latest release](https://img.shields.io/github/v/release/cardal013/aoi)](https://github.com/cardal013/aoi/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)](https://github.com/cardal013/aoi)
+[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![Status](https://img.shields.io/badge/status-active-brightgreen)](#project-status)
+[![Downloads](https://img.shields.io/github/downloads/cardal013/aoi/total)](https://github.com/cardal013/aoi/releases/latest)
+[![Latest release](https://img.shields.io/github/v/release/cardal013/aoi)](https://github.com/cardal013/aoi/releases/latest)
 
 [**Website**](https://aoi-mangas.vercel.app/) **•** [**Download**](https://github.com/cardal013/aoi/releases/latest)
 
 </div>
 
-\---
+---
 
 ## Screenshots
 
 <p align="center">
+  <table>
+    <tr>
+      <td><img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="200"></td>
+      <td><img src="screenshots/Account.jpeg" alt="Account screen" width="200"></td>
+      <td><img src="screenshots/supabase.jpeg" alt="Supabase" width="200"></td>
+    </tr>
+  </table>
+</p>
 
-&#x20; <table>
-
-&#x20;   <tr>
-
-&#x20;     <td><img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="200"></td>
-
-&#x20;     <td><img src="screenshots/Account.jpeg" alt="Account screen" width="200"></td>
-
-&#x20;     <td><img src="screenshots/supabase.jpeg" alt="Supabase" width="200"></td>
-
-&#x20;   </tr>
-
-&#x20; </table>
-
-</p>What is Aoi
+## What is Aoi
 
 Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedicated backend and database layer on top of it. Instead of keeping everything only on-device, Aoi adds user accounts (username, profile, and related data) and a proper per-manga reading-status system, so your library isn't just a flat list — it's organized the way you actually read.
 
@@ -67,20 +61,20 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Built with
 
-!\[Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin\&logoColor=white)
-!\[Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose\&logoColor=white)
-!\[Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase\&logoColor=white)
-!\[Mihon](https://img.shields.io/badge/Base-Mihon-E8433D)
+![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?logo=jetpackcompose&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white)
+![Mihon](https://img.shields.io/badge/Base-Mihon-E8433D)
 
 ## Project status
 
-!\[Status](https://img.shields.io/badge/status-active%20development-brightgreen)
+![Status](https://img.shields.io/badge/status-active%20development-brightgreen)
 
 ## Disclaimer
 
 Aoi is a reader, not a content host. It does not distribute or store any manga or manhwa itself; all content is retrieved at request time from the sources you choose to enable.
 
-\---
+---
 
 <p align="center">
   <a href="https://aoi-mangas.vercel.app/">Website</a> •
