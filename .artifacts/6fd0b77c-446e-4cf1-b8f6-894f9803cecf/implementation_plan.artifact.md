@@ -1,32 +1,35 @@
-# Implementation Plan - Direct APK Download Links
+# Implementation Plan - Debugging Signup Failure
 
-Update the "Download Aoi" buttons in `index.html` to point directly to the latest APK asset in GitHub releases.
+Diagnose why "Create Account" is failing on both the website and Android app by adding detailed logging and verifying Supabase backend configuration.
 
-## Current Status
+## User Action Required: Supabase Dashboard Check
 
-> [!WARNING]
-> I have checked the repository [cardal013/aoi](https://github.com/cardal013/aoi/releases) and confirmed that **no releases exist yet**. Direct download links will result in a 404 until a release is published with the APK asset.
+Please verify the following settings in your Supabase Dashboard as they are the most likely cause of a cross-platform silent failure:
+
+1.  **Authentication > Settings**:
+    *   **Confirm Email**: Ensure "Enable email confirmations" is **OFF**. If it's ON, signups will be created but won't be active until a (fictitious) email is confirmed.
+    *   **Allow Signups**: Ensure "Allow new users to sign up" is **ON**.
+2.  **Database > Tables > profiles**:
+    *   Check for any new constraints (like `NOT NULL` on columns without defaults) that might be rejecting the `insert` call during signup.
+    *   Try a manual SQL insert to test: `INSERT INTO profiles (id, username) VALUES ('any-uuid', 'test_manual');`
 
 ## Proposed Changes
 
-### [Website] [index.html](file:///C:/aoi/index.html)
+### 1. Website Debugging
+#### [MODIFY] [index.html](file:///C:/aoi/index.html)
+- Enhance `signupForm.onsubmit` logs to capture the full Supabase response, including the `session` object. This will confirm if the account is created but waiting for confirmation.
 
-#### 1. Update Hero Download Link
-- **[MODIFY]** Change the `href` of the "Download Aoi" button (line ~723) to point to the direct APK URL.
-- **URL Pattern**: `https://github.com/cardal013/aoi/releases/latest/download/aoi-universal-release.apk` (assuming the asset name follows the standard build output).
-
-#### 2. Update Feature/Footer Download Link
-- **[MODIFY]** Change the `href` of the "Download" link (line ~812 or similar) to the same direct APK URL.
-
-## Step-by-Step Execution Plan
-
-1. **Build Release APK**: I will attempt to run the Gradle task `:app:assembleRelease` to generate the APK locally and confirm its exact filename.
-2. **Report Filename**: I will provide you with the exact name of the generated APK (e.g., `app-universal-release.apk`).
-3. **Manual Action Required**: You will need to create a **Release** on GitHub (tag it as `v0.1.0` or similar) and upload the generated APK as an asset.
-4. **Update Links**: Once the release is ready, I will update the `index.html` files with the corresponding URL.
+### 2. Android App Debugging
+#### [MODIFY] [AccountRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/AccountRepository.kt)
+- Add detailed `logcat` entries for every step of the `signUp` process.
+- Log the `authResponse` from `supabase.auth.signUpWith(Email)`.
+- Explicitly log if the `insert` into the `profiles` table fails or succeeds.
 
 ## Verification Plan
 
-### Manual Verification
-- Clicking "Download Aoi" on the website should immediately trigger the browser's download manager for the `.apk` file.
-- Verify that the link does not point to the GitHub repository landing page anymore.
+### Automated Tests
+- Build the app using `:app:compileDebugKotlin` to ensure no syntax errors in logs.
+
+### Manual Verification Path
+1. **Analyze Site Logs**: Check the browser console for `[signup] resposta: { data: ..., error: ... }`. If `data.session` is `null` but `data.user` exists, email confirmation is active.
+2. **Analyze App Logs**: Run `adb logcat -s AOI_ACCOUNT` and attempt a signup. Look for errors during the `profiles` table insertion.

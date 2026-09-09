@@ -1,7 +1,6 @@
 <div align="center">
 
-<!-- TODO: replace with your actual logo/banner image, e.g. docs/banner.png -->
-<img src="docs/banner.png" alt="Aoi banner" width="600">
+<img src="screenshots/app%20icon.png" alt="Aoi icon" width="96">
 
 # Aoi
 
@@ -14,7 +13,7 @@ A modern manga & manhwa reader for Android — clean, fast, and built around an 
 [![Downloads](https://img.shields.io/github/downloads/cardal013/aoi/total)](https://github.com/cardal013/aoi/releases/latest)
 [![Latest release](https://img.shields.io/github/v/release/cardal013/aoi)](https://github.com/cardal013/aoi/releases/latest)
 
-**[Website](https://aoi-mangas.vercel.app/) • [Download](https://github.com/cardal013/aoi/releases/latest) • [Report a Bug](https://aoi-mangas.vercel.app/#bug-report)**
+**[Website](https://aoi-mangas.vercel.app/) • [Download](https://github.com/cardal013/aoi/releases/latest)**
 
 </div>
 
@@ -22,11 +21,9 @@ A modern manga & manhwa reader for Android — clean, fast, and built around an 
 
 ## Screenshots
 
-<!-- TODO: replace with real screenshots, e.g. docs/screenshot-library.png -->
 <p align="center">
-  <img src="docs/screenshot-library.png" alt="Library" width="200">
-  <img src="docs/screenshot-reader.png" alt="Reader" width="200">
-  <img src="docs/screenshot-status.png" alt="Reading status" width="200">
+  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="220">
+  <img src="screenshots/Account.jpeg" alt="Account screen" width="220">
 </p>
 
 ## What is Aoi
@@ -76,6 +73,5 @@ Aoi is a reader, not a content host. It does not distribute or store any manga o
 
 <p align="center">
   <a href="https://aoi-mangas.vercel.app/">Website</a> •
-  <a href="https://aoi-mangas.vercel.app/#bug-report">Report a Bug</a> •
   <a href="LICENSE">License</a>
 </p>
