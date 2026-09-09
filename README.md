@@ -22,10 +22,9 @@ A modern manga \& manhwa reader for Android — clean, fast, and built around an
 ## Screenshots
 
 <p align="center">
-  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="180">
-  <img src="screenshots/Account.jpeg" alt="Account screen" width="180">
+  <img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="220">
 
-&#x20; <img src="screenshots/supabase.jpeg" alt="supabase" width="180">
+&#x20; <img src="screenshots/supabase.jpeg" alt="supabase" width="220">
 
 </p>
 
