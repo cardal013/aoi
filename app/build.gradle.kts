@@ -38,7 +38,7 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "app.mihon"
+        applicationId = "com.cardal.aoi"
 
         versionCode = 29
         versionName = "0.20.4"

@@ -1,35 +1,35 @@
-# Implementation Plan - Debugging Signup Failure
+# Implementation Plan - Change Application ID (v2)
 
-Diagnose why "Create Account" is failing on both the website and Android app by adding detailed logging and verifying Supabase backend configuration.
+Change the Android application ID from `app.mihon` to `com.cardal.aoi` to avoid installation conflicts with the original Mihon app.
 
-## User Action Required: Supabase Dashboard Check
+## User Review Required
 
-Please verify the following settings in your Supabase Dashboard as they are the most likely cause of a cross-platform silent failure:
+> [!CAUTION]
+> **Firebase Integration**: The proposed changes to `app/google-services.json` are **placeholders** only to allow the project to build locally. Firebase features (Analytics, Crashlytics, etc.) will **fail silently** until you add the new package name `com.cardal.aoi` to your project in the Firebase Console and replace the file with the real one.
 
-1.  **Authentication > Settings**:
-    *   **Confirm Email**: Ensure "Enable email confirmations" is **OFF**. If it's ON, signups will be created but won't be active until a (fictitious) email is confirmed.
-    *   **Allow Signups**: Ensure "Allow new users to sign up" is **ON**.
-2.  **Database > Tables > profiles**:
-    *   Check for any new constraints (like `NOT NULL` on columns without defaults) that might be rejecting the `insert` call during signup.
-    *   Try a manual SQL insert to test: `INSERT INTO profiles (id, username) VALUES ('any-uuid', 'test_manual');`
+> [!IMPORTANT]
+> **Deep Links**: I found hardcoded `android:scheme="mihon"` in `app/src/main/AndroidManifest.xml`. To avoid conflicts where Android asks which app to open (Mihon or Aoi), I am proposing to change these to `android:scheme="aoi"`.
 
 ## Proposed Changes
 
-### 1. Website Debugging
-#### [MODIFY] [index.html](file:///C:/aoi/index.html)
-- Enhance `signupForm.onsubmit` logs to capture the full Supabase response, including the `session` object. This will confirm if the account is created but waiting for confirmation.
+### [VFS] [app/build.gradle.kts](file:///C:/aoi/app/build.gradle.kts)
+- **[MODIFY]** Change `applicationId = "app.mihon"` to `applicationId = "com.cardal.aoi"`.
 
-### 2. Android App Debugging
-#### [MODIFY] [AccountRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/AccountRepository.kt)
-- Add detailed `logcat` entries for every step of the `signUp` process.
-- Log the `authResponse` from `supabase.auth.signUpWith(Email)`.
-- Explicitly log if the `insert` into the `profiles` table fails or succeeds.
+### [VFS] [app/src/main/AndroidManifest.xml](file:///C:/aoi/app/src/main/AndroidManifest.xml)
+- **[MODIFY]** Update `android:scheme="mihon"` to `android:scheme="aoi"` in intent-filters (lines 81 and 192) to avoid deep link conflicts with the original Mihon app.
+
+### [VFS] [app/google-services.json](file:///C:/aoi/app/google-services.json)
+- **[MODIFY]** Update all occurrences of `app.mihon` and `app.mihon.debug` to `com.cardal.aoi` and `com.cardal.aoi.debug` respectively. (Placeholder for build stability).
+
+### [VFS] [telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt](file:///C:/aoi/telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt)
+- **[MODIFY]** Update `MIHON_PACKAGES` to include `com.cardal.aoi` and `com.cardal.aoi.debug`.
 
 ## Verification Plan
 
 ### Automated Tests
-- Build the app using `:app:compileDebugKotlin` to ensure no syntax errors in logs.
+- Run `./gradlew clean`.
+- Run `./gradlew :app:assembleDebug` to ensure the app builds with the new ID.
 
-### Manual Verification Path
-1. **Analyze Site Logs**: Check the browser console for `[signup] resposta: { data: ..., error: ... }`. If `data.session` is `null` but `data.user` exists, email confirmation is active.
-2. **Analyze App Logs**: Run `adb logcat -s AOI_ACCOUNT` and attempt a signup. Look for errors during the `profiles` table insertion.
+### Manual Verification
+- Verify that the generated APK has the new package name using `aapt dump badging <path_to_apk> | grep package`.
+- Verify deep links with `adb shell am start -W -a android.intent.action.VIEW -d "aoi://extension-store"`.

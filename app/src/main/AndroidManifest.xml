@@ -78,7 +78,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="mihon" />
+                <data android:scheme="aoi" />
                 <data android:host="extension-store" />
             </intent-filter>
 
@@ -189,7 +189,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="mihon" />
+                <data android:scheme="aoi" />
 
                 <data android:host="anilist-auth" />
                 <data android:host="bangumi-auth" />
