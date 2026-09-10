@@ -118,7 +118,7 @@ private fun ProfileView(
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold
     )
-    Spacer(modifier = Modifier.height(48.dp))
+    Spacer(modifier = Modifier.height(32.dp))
 
     ProfileActionButton(
         text = "My Cloud Library",
@@ -130,7 +130,7 @@ private fun ProfileView(
 
     ProfileActionButton(
         text = "Update Account",
-        icon = MaterialSymbols.Rounded.Sync,
+        icon = MaterialSymbols.Rounded.Security,
         onClick = onUpdateAccount
     )
 

@@ -226,6 +226,11 @@ class LibraryPreferences(
         false,
     )
 
+    val lastFullProgressSyncUserId: Preference<String> = preferenceStore.getString(
+        "last_full_progress_sync_user_id",
+        "",
+    )
+
     // endregion
 
     enum class ChapterSwipeAction {

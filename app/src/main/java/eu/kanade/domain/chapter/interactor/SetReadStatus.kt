@@ -2,6 +2,9 @@ package eu.kanade.domain.chapter.interactor
 
 import dev.zacsweers.metro.Inject
 import eu.kanade.domain.download.interactor.DeleteDownload
+import eu.kanade.tachiyomi.data.account.LibrarySupabaseRepository
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.withNonCancellableContext
 import tachiyomi.core.common.util.system.logcat
@@ -18,6 +21,8 @@ class SetReadStatus(
     private val deleteDownload: DeleteDownload,
     private val mangaRepository: MangaRepository,
     private val chapterRepository: ChapterRepository,
+    private val librarySupabaseRepository: LibrarySupabaseRepository,
+    private val supabase: SupabaseClient,
 ) {
 
     private val mapper = { chapter: Chapter, read: Boolean ->
@@ -43,6 +48,26 @@ class SetReadStatus(
             chapterRepository.updateAll(
                 chaptersToUpdate.map { mapper(it, read) },
             )
+
+            // AOI: Sync progress changes to cloud
+            val currentUser = supabase.auth.currentUserOrNull()
+            if (currentUser != null) {
+                chaptersToUpdate.groupBy { it.mangaId }.forEach { (mangaId, mangaChapters) ->
+                    val manga = mangaRepository.getMangaById(mangaId)
+                    if (manga != null) {
+                        librarySupabaseRepository.updateChaptersProgress(
+                            manga = manga,
+                            // Ensure we send the NEW state to the cloud
+                            chapters = mangaChapters.map {
+                                it.copy(
+                                    read = read,
+                                    lastPageRead = if (!read) 0 else it.lastPageRead,
+                                )
+                            },
+                        )
+                    }
+                }
+            }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
             return@withNonCancellableContext Result.InternalError(e)

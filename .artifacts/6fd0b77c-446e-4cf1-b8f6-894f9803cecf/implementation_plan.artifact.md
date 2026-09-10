@@ -1,35 +1,42 @@
-# Implementation Plan - Change Application ID (v2)
+# Implementation Plan - Fix Reconciliation for Empty Favorites
 
-Change the Android application ID from `app.mihon` to `com.cardal.aoi` to avoid installation conflicts with the original Mihon app.
+Fix the issue where `reconcileLocalToCloud` fails to clear the cloud library when the local favorites list is empty.
 
-## User Review Required
+## Problem Analysis
 
-> [!CAUTION]
-> **Firebase Integration**: The proposed changes to `app/google-services.json` are **placeholders** only to allow the project to build locally. Firebase features (Analytics, Crashlytics, etc.) will **fail silently** until you add the new package name `com.cardal.aoi` to your project in the Firebase Console and replace the file with the real one.
+The current code has an explicit guard `if (currentRemoteIds.isNotEmpty())` before the deletion logic. When a user removes all favorites locally, `currentRemoteIds` becomes empty, the guard is triggered, and the deletion logic is skipped entirely. This leaves the old data in the cloud.
 
-> [!IMPORTANT]
-> **Deep Links**: I found hardcoded `android:scheme="mihon"` in `app/src/main/AndroidManifest.xml`. To avoid conflicts where Android asks which app to open (Mihon or Aoi), I am proposing to change these to `android:scheme="aoi"`.
+Additionally, we need to ensure that the `NOT IN` logic behaves correctly by handling the empty list case as a "delete all for user" operation.
 
 ## Proposed Changes
 
-### [VFS] [app/build.gradle.kts](file:///C:/aoi/app/build.gradle.kts)
-- **[MODIFY]** Change `applicationId = "app.mihon"` to `applicationId = "com.cardal.aoi"`.
+### [Account] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)
 
-### [VFS] [app/src/main/AndroidManifest.xml](file:///C:/aoi/app/src/main/AndroidManifest.xml)
-- **[MODIFY]** Update `android:scheme="mihon"` to `android:scheme="aoi"` in intent-filters (lines 81 and 192) to avoid deep link conflicts with the original Mihon app.
-
-### [VFS] [app/google-services.json](file:///C:/aoi/app/google-services.json)
-- **[MODIFY]** Update all occurrences of `app.mihon` and `app.mihon.debug` to `com.cardal.aoi` and `com.cardal.aoi.debug` respectively. (Placeholder for build stability).
-
-### [VFS] [telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt](file:///C:/aoi/telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt)
-- **[MODIFY]** Update `MIHON_PACKAGES` to include `com.cardal.aoi` and `com.cardal.aoi.debug`.
+#### 1. Fix `reconcileLocalToCloud` Logic
+- **[MODIFY]** Remove the `if (currentRemoteIds.isNotEmpty())` check.
+- **[MODIFY]** Update the `filter` block to always apply `eq("user_id", userId)` and conditionally apply `notIn("manga_id", currentRemoteIds)` only if the list is not empty.
+- **Logic**:
+    ```kotlin
+    supabase.postgrest["user_library"].delete {
+        filter {
+            eq("user_id", userId)
+            if (currentRemoteIds.isNotEmpty()) {
+                notIn("manga_id", currentRemoteIds)
+            }
+        }
+    }
+    ```
+- This ensures that if the list is empty, only the `user_id` filter is applied, resulting in a full wipe for that user.
 
 ## Verification Plan
 
-### Automated Tests
-- Run `./gradlew clean`.
-- Run `./gradlew :app:assembleDebug` to ensure the app builds with the new ID.
-
 ### Manual Verification
-- Verify that the generated APK has the new package name using `aapt dump badging <path_to_apk> | grep package`.
-- Verify deep links with `adb shell am start -W -a android.intent.action.VIEW -d "aoi://extension-store"`.
+1. **Clear Favorites**:
+   - Remove all manga from favorites locally.
+   - Click **Update Account**.
+   - Verify in Supabase Dashboard that both `user_library` and `user_chapter_progress` for that user are now completely empty.
+2. **Partial Update**:
+   - Have 5 favorites locally.
+   - Remove 2.
+   - Click **Update Account**.
+   - Verify that exactly those 2 are removed from the cloud, and the other 3 remain.

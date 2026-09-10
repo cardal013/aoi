@@ -49,6 +49,8 @@ import eu.kanade.tachiyomi.ui.reader.setting.ReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.setting.ReadingMode
 import eu.kanade.tachiyomi.ui.reader.viewer.Viewer
 import eu.kanade.tachiyomi.util.chapter.filterDownloaded
+import eu.kanade.tachiyomi.data.account.supabase
+import io.github.jan.supabase.auth.auth
 import eu.kanade.tachiyomi.util.chapter.removeDuplicates
 import eu.kanade.tachiyomi.util.editCover
 import eu.kanade.tachiyomi.util.lang.byteSize
@@ -108,6 +110,7 @@ class ReaderViewModel(
     private val downloadPreferences: DownloadPreferences,
     private val trackPreferences: TrackPreferences,
     private val trackChapter: TrackChapter,
+    private val librarySupabaseRepository: eu.kanade.tachiyomi.data.account.LibrarySupabaseRepository,
     private val getManga: GetManga,
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val getNextChapters: GetNextChapters,
@@ -580,6 +583,18 @@ class ReaderViewModel(
 
             if (readerChapter.pages?.lastIndex == pageIndex) {
                 updateChapterProgressOnComplete(readerChapter)
+            }
+
+            val currentUser = supabase.auth.currentUserOrNull()
+            if (currentUser != null) {
+                viewModelScope.launchIO {
+                    librarySupabaseRepository.updateChapterProgress(
+                        manga = manga!!,
+                        chapter = readerChapter.chapter.toDomainChapter()!!,
+                        page = pageIndex,
+                        isRead = readerChapter.chapter.read,
+                    )
+                }
             }
 
             updateChapter.await(

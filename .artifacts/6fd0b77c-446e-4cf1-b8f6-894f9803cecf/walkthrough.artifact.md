@@ -1,27 +1,28 @@
-# Walkthrough - Application ID Change
+# Walkthrough - Fix Reconciliation for Empty Favorites
 
-I have changed the Android application ID from `app.mihon` to `com.cardal.aoi` to avoid installation conflicts with the original Mihon app and updated the necessary references.
+I have fixed the issue where the cloud library was not being cleared when the local favorites list was empty.
 
 ## Changes Made
 
-### 1. Build Configuration
-- **[MODIFY] [build.gradle.kts](file:///C:/aoi/app/build.gradle.kts)**: Updated `applicationId` to `com.cardal.aoi`.
-
-### 2. Manifest & Deep Links
-- **[MODIFY] [AndroidManifest.xml](file:///C:/aoi/app/src/main/AndroidManifest.xml)**: Changed `android:scheme="mihon"` to `android:scheme="aoi"`. This ensures that deep links (like extension store links) are handled by Aoi without triggering a system prompt to choose between Aoi and Mihon.
-
-### 3. Firebase & Telemetry
-- **[MODIFY] [google-services.json](file:///C:/aoi/app/google-services.json)**: Updated package name placeholders to `com.cardal.aoi`.
-  > [!CAUTION]
-  > These are **placeholders** for build stability. Firebase features will remain inactive until you register `com.cardal.aoi` in the Firebase Console and upload the real `google-services.json`.
-- **[MODIFY] [TelemetryConfig.kt](file:///C:/aoi/telemetry/src/firebase/kotlin/mihon/telemetry/TelemetryConfig.kt)**: Added the new package IDs to the whitelist for telemetry initialization.
+### 1. Robust Deletion Logic
+- **[MODIFY] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)**:
+    - Removed the guard clause that skipped deletions when `currentRemoteIds` was empty.
+    - Implemented conditional filtering for the `DELETE` query:
+        - If favorites exist: Only delete items **not in** the current favorites list.
+        - If no favorites exist: Delete **all** items for the current user.
+    - This fix applies to both `user_chapter_progress` and `user_library` tables.
 
 ## Verification Results
 
 ### Automated Tests
-- Executed `gradlew clean :app:assembleDebug` (Success).
+- Verified project build stability with `gradlew :app:assembleDebug` (Success).
 
-### Manual Verification Required
-- **Deep Links**: Test the new scheme by running:
-  `adb shell am start -W -a android.intent.action.VIEW -d "aoi://extension-store"`
-- **Installation**: Verify the app installs alongside the original Mihon app.
+### Manual Verification Path
+1. **Full Wipe**:
+    - Remove all manga from your favorites locally.
+    - Click **Update Account**.
+    - Verify in Supabase Dashboard that your `user_library` and `user_chapter_progress` entries are now 0.
+2. **Partial Sync**:
+    - Remove only some manga from favorites.
+    - Click **Update Account**.
+    - Verify that only the removed items are deleted from Supabase.

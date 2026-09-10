@@ -1,5 +1,3 @@
-- [x] Change `applicationId` in `app/build.gradle.kts`
-- [x] Update `android:scheme` in `app/src/main/AndroidManifest.xml`
-- [x] Update package name placeholders in `app/google-services.json`
-- [x] Update `MIHON_PACKAGES` in `telemetry/.../TelemetryConfig.kt`
-- [x] Run `./gradlew clean` and build the app
+- [x] Fix empty list handling in `reconcileLocalToCloud`
+- [ ] Verify full cloud wipe when local library is empty
+- [ ] Verify partial cloud sync when some items are removed
