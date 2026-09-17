@@ -1,42 +1,73 @@
-# Implementation Plan - Fix Reconciliation for Empty Favorites
+# Implementation Plan - Sync Stability and Progress UI
 
-Fix the issue where `reconcileLocalToCloud` fails to clear the cloud library when the local favorites list is empty.
+Address the Foreign Key violation in the synchronization flow and add a comprehensive progress UI to the Account screen.
 
-## Problem Analysis
+## User Review Required
 
-The current code has an explicit guard `if (currentRemoteIds.isNotEmpty())` before the deletion logic. When a user removes all favorites locally, `currentRemoteIds` becomes empty, the guard is triggered, and the deletion logic is skipped entirely. This leaves the old data in the cloud.
-
-Additionally, we need to ensure that the `NOT IN` logic behaves correctly by handling the empty list case as a "delete all for user" operation.
+> [!IMPORTANT]
+> **Sequential Execution**: To fix the `23503` (FK violation) error, I will change the reconciliation logic to process each manga sequentially: first metadata (`uploadMangaSync`), then chapters (`updateChaptersProgress`). This ensures the parent record in `manga_sources` always exists before chapters reference it.
 
 ## Proposed Changes
 
 ### [Account] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)
 
-#### 1. Fix `reconcileLocalToCloud` Logic
-- **[MODIFY]** Remove the `if (currentRemoteIds.isNotEmpty())` check.
-- **[MODIFY]** Update the `filter` block to always apply `eq("user_id", userId)` and conditionally apply `notIn("manga_id", currentRemoteIds)` only if the list is not empty.
-- **Logic**:
+#### 1. Update Sync Methods for Reporting
+- **[MODIFY]** Update `reconcileLocalToCloud`, `reconcileCloudToLocal`, and `backfillAllProgress` to accept callbacks:
+    - `onProgress: (current: Int, total: Int) -> Unit`
+    - `onMangaFailed: (mangaTitle: String) -> Unit`
+
+#### 2. Fix Sequential Logic in `reconcileLocalToCloud`
+- **[MODIFY]** Change the logic to process mangas one by one:
     ```kotlin
-    supabase.postgrest["user_library"].delete {
-        filter {
-            eq("user_id", userId)
-            if (currentRemoteIds.isNotEmpty()) {
-                notIn("manga_id", currentRemoteIds)
-            }
+    localMangaList.forEachIndexed { index, manga ->
+        onProgress(index + 1, localMangaList.size)
+        try {
+            uploadMangaSync(userId, manga)
+            // Immediately sync chapters for THIS manga after metadata success
+            val chapters = getChapters.await(manga.id)
+            updateChaptersProgress(manga, chapters)
+        } catch (e: Exception) {
+            onMangaFailed(manga.title)
         }
     }
     ```
-- This ensures that if the list is empty, only the `user_id` filter is applied, resulting in a full wipe for that user.
+
+### [Account] [AccountViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountViewModel.kt)
+
+#### 1. Expand State
+- **[MODIFY]** Add fields to `State`:
+    - `syncStatus: SyncStatus` (Idle, Syncing, Success, Error)
+    - `syncProgress: Pair<Int, Int>?`
+    - `failedMangas: List<String>`
+
+#### 2. Update Sync Actions
+- **[MODIFY]** Update `uploadToCloud` and `importFromCloud` to update the state as progress is reported by the repository.
+
+### [Account] [Account UI]
+
+#### 1. [AccountScreenContent.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/account/AccountScreenContent.kt)
+- **[NEW]** Add a `SyncProgressOverlay` that shows:
+    - A Linear Progress Indicator.
+    - A text label: "Syncing: 12/48 mangas".
+    - A persistent warning: "Syncing with cloud — please do not leave this screen until finished."
+- **[MODIFY]** Disable "Update Account" and "Logout" buttons while `syncStatus == Syncing`.
+- **[NEW]** Add a "Sync Failed" section (or dialog) if `failedMangas` is not empty.
 
 ## Verification Plan
 
+### Automated Tests
+- Build verification: `gradlew :app:assembleDebug`.
+
 ### Manual Verification
-1. **Clear Favorites**:
-   - Remove all manga from favorites locally.
-   - Click **Update Account**.
-   - Verify in Supabase Dashboard that both `user_library` and `user_chapter_progress` for that user are now completely empty.
-2. **Partial Update**:
-   - Have 5 favorites locally.
-   - Remove 2.
-   - Click **Update Account**.
-   - Verify that exactly those 2 are removed from the cloud, and the other 3 remain.
+1. **FK Violation Test**:
+    - Re-add the problematic manga with a different source.
+    - Click **Update Account**.
+    - Verify in Logcat that no `23503` error occurs.
+2. **UI Test**:
+    - Trigger a sync.
+    - Verify that the progress bar appears and updates correctly.
+    - Verify that buttons are disabled during sync.
+    - Verify the persistent warning is visible.
+3. **Failure Summary**:
+    - Force a failure (e.g., toggle network) for some mangas.
+    - Verify that a summary of failed mangas appears after the operation completes.

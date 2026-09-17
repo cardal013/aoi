@@ -55,6 +55,7 @@ class AccountScreen : Screen() {
         val uriHandler = LocalUriHandler.current
         val viewModel = metroViewModel<AccountViewModel>()
         val state by viewModel.state.collectAsState()
+        val syncState by viewModel.syncState.collectAsState()
 
         val lifecycleOwner = LocalLifecycleOwner.current
         LaunchedEffect(lifecycleOwner) {
@@ -68,12 +69,14 @@ class AccountScreen : Screen() {
 
         AccountScreenContent(
             state = state,
+            syncState = syncState,
             onNavigateBack = navigator::pop,
             onNavigateToCloudLibrary = { uriHandler.openUri("https://aoi-mangas.vercel.app/") },
             onUpdateAccount = { showUpdateDialog = true },
             onLogin = viewModel::login,
             onSignUp = viewModel::signUp,
             onLogout = viewModel::logout,
+            onClearFailed = viewModel::clearFailedMangas,
         )
 
         if (showUpdateDialog) {

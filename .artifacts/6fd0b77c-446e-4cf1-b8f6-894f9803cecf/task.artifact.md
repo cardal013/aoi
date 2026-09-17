@@ -1,3 +1,4 @@
-- [x] Fix empty list handling in `reconcileLocalToCloud`
-- [ ] Verify full cloud wipe when local library is empty
-- [ ] Verify partial cloud sync when some items are removed
+- [x] Update `LibrarySupabaseRepository.kt` sync methods with progress callbacks and sequential logic
+- [x] Update `AccountViewModel.kt` with sync state and progress tracking
+- [x] Implement `SyncProgressOverlay` and failure summary in `AccountScreenContent.kt`
+- [x] Verify build and fix any UI issues

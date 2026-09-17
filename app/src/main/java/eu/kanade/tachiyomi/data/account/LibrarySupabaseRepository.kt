@@ -4,13 +4,18 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.exceptions.RestException
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import java.util.UUID
+import kotlin.time.Duration.Companion.seconds
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
@@ -26,6 +31,32 @@ class LibrarySupabaseRepository(
 ) {
 
     private val BATCH_SIZE = 25
+    private val sessionMutex = Mutex()
+
+    private suspend fun ensureValidSession() {
+        val currentSession = supabase.auth.currentSessionOrNull() ?: return
+        val nowMillis = System.currentTimeMillis()
+        val expiresAtMillis = currentSession.expiresAt.toEpochMilliseconds()
+
+        // Refresh if expiring in less than 2 minutes (120,000 ms)
+        if (expiresAtMillis - nowMillis < 120000) {
+            sessionMutex.withLock {
+                // Re-check inside lock
+                val refreshedSession = supabase.auth.currentSessionOrNull() ?: return@withLock
+                if (refreshedSession.expiresAt.toEpochMilliseconds() - System.currentTimeMillis() >= 120000) {
+                    return@withLock // Already refreshed by someone else
+                }
+
+                logcat(LogPriority.DEBUG) { "AOI_SYNC: Session expiring soon, refreshing..." }
+                try {
+                    supabase.auth.refreshCurrentSession()
+                    logcat(LogPriority.DEBUG) { "AOI_SYNC: Session refreshed successfully" }
+                } catch (e: Exception) {
+                    logcat(LogPriority.ERROR, e) { "AOI_SYNC: Failed to refresh session" }
+                }
+            }
+        }
+    }
 
     suspend fun getUserLibrary(userId: String): Result<List<UserLibraryItem>> {
         return try {
@@ -82,53 +113,75 @@ class LibrarySupabaseRepository(
     }
 
     suspend fun uploadMangaSync(userId: String, manga: Manga) {
+        // AOI: Proactive session refresh
+        ensureValidSession()
+
         // Generate deterministic UUIDs based on source and url to avoid duplicates
         val remoteMangaId = UUID.nameUUIDFromBytes("manga:${manga.source}:${manga.url}".toByteArray()).toString()
         val remoteSourceId = UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
         val extensionId = manga.source.toString() // In Tachiyomi, source ID is the extension ID
 
-        // 0. Ensure extension exists in 'extensions' table (required for FK in manga_sources)
-        val source = sourceManager.getOrStub(manga.source)
-        supabase.postgrest["extensions"].upsert(
-            ExtensionRemote(
-                id = extensionId,
-                name = source.name,
-                isActive = true
-            )
-        )
+        var retryCount = 0
+        var success = false
+        val maxRetries = 2
 
-        // 1. Upsert into 'manga' table
-        supabase.postgrest["manga"].upsert(
-            MangaRemote(
-                id = remoteMangaId,
-                title = manga.title,
-                author = manga.author,
-                artist = manga.artist,
-                thumbnailUrl = manga.thumbnailUrl
-            )
-        )
+        while (!success && retryCount <= maxRetries) {
+            try {
+                // 0. Ensure extension exists in 'extensions' table (required for FK in manga_sources)
+                val source = sourceManager.getOrStub(manga.source)
+                supabase.postgrest["extensions"].upsert(
+                    ExtensionRemote(
+                        id = extensionId,
+                        name = source.name,
+                        isActive = true
+                    )
+                )
 
-        // 2. Upsert into 'manga_sources' table
-        supabase.postgrest["manga_sources"].upsert(
-            MangaSourceSyncRemote(
-                id = remoteSourceId,
-                mangaId = remoteMangaId,
-                extensionId = extensionId,
-                sourceMangaId = manga.url // The URL is the unique ID within the source
-            )
-        )
+                // 1. Upsert into 'manga' table
+                supabase.postgrest["manga"].upsert(
+                    MangaRemote(
+                        id = remoteMangaId,
+                        title = manga.title,
+                        author = manga.author,
+                        artist = manga.artist,
+                        thumbnailUrl = manga.thumbnailUrl
+                    )
+                )
 
-        // 3. Upsert into 'user_library' table
-        supabase.postgrest["user_library"].upsert(
-            UserLibraryEntrySimple(
-                userId = userId,
-                mangaId = remoteMangaId,
-                status = mapToRemoteStatus(manga.readingStatus),
-                isFavorite = manga.favorite,
-                sourceId = remoteSourceId,
-                addedAt = java.time.Instant.now().toString()
-            )
-        )
+                // 2. Upsert into 'manga_sources' table
+                supabase.postgrest["manga_sources"].upsert(
+                    MangaSourceSyncRemote(
+                        id = remoteSourceId,
+                        mangaId = remoteMangaId,
+                        extensionId = extensionId,
+                        sourceMangaId = manga.url // The URL is the unique ID within the source
+                    )
+                )
+
+                // 3. Upsert into 'user_library' table
+                supabase.postgrest["user_library"].upsert(
+                    UserLibraryEntrySimple(
+                        userId = userId,
+                        mangaId = remoteMangaId,
+                        status = mapToRemoteStatus(manga.readingStatus),
+                        isFavorite = manga.favorite,
+                        sourceId = remoteSourceId,
+                        addedAt = java.time.Instant.now().toString()
+                    )
+                )
+                success = true
+            } catch (e: Exception) {
+                val isNetworkError = e is java.io.IOException || e.message?.contains("Unable to resolve host") == true || e.message?.contains("timeout") == true
+
+                if (isNetworkError && retryCount < maxRetries) {
+                    retryCount++
+                    logcat(LogPriority.WARN) { "AOI_SYNC: Network error uploading ${manga.title}, retrying in 2s... (Attempt ${retryCount + 1}/3)" }
+                    delay(2.seconds)
+                } else {
+                    throw e // Let the caller handle permanent failures
+                }
+            }
+        }
     }
 
     private fun mapToRemoteStatus(status: DomainReadingStatus): String {
@@ -190,13 +243,9 @@ class LibrarySupabaseRepository(
      */
     suspend fun updateChaptersProgress(manga: Manga, chapters: List<Chapter>): Boolean {
         val session = supabase.auth.currentSessionOrNull()
-        val userId = session?.user?.id ?: run {
+        if (session == null) {
             logcat(LogPriority.WARN) { "AOI_SYNC: Aborting progress sync, no active session found" }
             return false
-        }
-
-        logcat(LogPriority.DEBUG) {
-            "AOI_SYNC: Starting batch update. Client: ${supabase.hashCode()}, Session found: true, Token prefix: ${session.accessToken.take(10)}..."
         }
 
         val remoteSourceId = UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
@@ -204,47 +253,82 @@ class LibrarySupabaseRepository(
         var allSuccess = true
 
         chapters.chunked(BATCH_SIZE).forEach { batch ->
-            val remoteChapters = batch.map { chapter ->
-                val remoteChapterId = UUID.nameUUIDFromBytes("chapter:${manga.source}:${manga.url}:${chapter.url}".toByteArray()).toString()
-                val dateUpload = if (chapter.dateUpload > 0) java.time.Instant.ofEpochMilli(chapter.dateUpload).toString() else now
-                ChapterUpsertRemote(
-                    id = remoteChapterId,
-                    mangaSourceId = remoteSourceId,
-                    sourceChapterId = chapter.url,
-                    name = chapter.name,
-                    chapterNumber = chapter.chapterNumber,
-                    chapterLabel = null,
-                    scanlator = chapter.scanlator,
-                    uploadedAt = dateUpload
-                )
-            }
+            // Proactive session refresh
+            ensureValidSession()
 
-            val progressList = batch.map { chapter ->
-                val remoteChapterId = UUID.nameUUIDFromBytes("chapter:${manga.source}:${manga.url}:${chapter.url}".toByteArray()).toString()
-                ChapterProgressRemote(
-                    userId = userId,
-                    chapterId = remoteChapterId,
-                    mangaId = remoteSourceId,
-                    lastPageRead = chapter.lastPageRead.toInt(),
-                    read = chapter.read,
-                    updatedAt = now
-                )
-            }
+            var retryCount = 0
+            var batchSuccess = false
+            val maxRetries = 2
 
-            try {
-                // Step 1: Bulk Upsert Chapters
-                supabase.postgrest["chapters"].upsert(remoteChapters) {
-                    onConflict = "id"
+            while (!batchSuccess && retryCount <= maxRetries) {
+                val remoteChapters = batch.map { chapter ->
+                    val remoteChapterId = UUID.nameUUIDFromBytes("chapter:${manga.source}:${manga.url}:${chapter.url}".toByteArray()).toString()
+                    val dateUpload = if (chapter.dateUpload > 0) java.time.Instant.ofEpochMilli(chapter.dateUpload).toString() else now
+                    ChapterUpsertRemote(
+                        id = remoteChapterId,
+                        mangaSourceId = remoteSourceId,
+                        sourceChapterId = chapter.url,
+                        name = chapter.name,
+                        chapterNumber = chapter.chapterNumber,
+                        chapterLabel = null,
+                        scanlator = chapter.scanlator,
+                        uploadedAt = dateUpload
+                    )
                 }
 
-                // Step 2: Bulk Upsert Progress
-                supabase.postgrest["user_chapter_progress"].upsert(progressList) {
-                    onConflict = "user_id,chapter_id"
+                val progressList = batch.map { chapter ->
+                    val remoteChapterId = UUID.nameUUIDFromBytes("chapter:${manga.source}:${manga.url}:${chapter.url}".toByteArray()).toString()
+                    ChapterProgressRemote(
+                        userId = session.user!!.id,
+                        chapterId = remoteChapterId,
+                        mangaId = remoteSourceId,
+                        lastPageRead = chapter.lastPageRead.toInt(),
+                        read = chapter.read,
+                        updatedAt = now
+                    )
                 }
-            } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Supabase: Error batch updating chapter progress for ${manga.title}" }
-                allSuccess = false
+
+                try {
+                    // Step 1: Bulk Upsert Chapters
+                    supabase.postgrest["chapters"].upsert(remoteChapters) {
+                        onConflict = "id"
+                    }
+
+                    // Step 2: Bulk Upsert Progress
+                    supabase.postgrest["user_chapter_progress"].upsert(progressList) {
+                        onConflict = "user_id,chapter_id"
+                    }
+                    batchSuccess = true
+                } catch (e: RestException) {
+                    if (e.statusCode == 42501 && retryCount == 0) {
+                        sessionMutex.withLock {
+                            logcat(LogPriority.WARN) { "AOI_SYNC: Unauthorized (42501), attempting session refresh and retry..." }
+                            try {
+                                supabase.auth.refreshCurrentSession()
+                                retryCount++
+                            } catch (refreshEx: Exception) {
+                                logcat(LogPriority.ERROR, refreshEx) { "AOI_SYNC: Session refresh failed during retry" }
+                                break
+                            }
+                        }
+                    } else {
+                        logcat(LogPriority.ERROR, e) { "Supabase: Error batch updating chapter progress for ${manga.title}. Status: ${e.statusCode}" }
+                        break
+                    }
+                } catch (e: Exception) {
+                    val isNetworkError = e is java.io.IOException || e.message?.contains("Unable to resolve host") == true || e.message?.contains("timeout") == true
+
+                    if (isNetworkError && retryCount < maxRetries) {
+                        retryCount++
+                        logcat(LogPriority.WARN) { "AOI_SYNC: Network error syncing progress for ${manga.title}, retrying in 2s... (Attempt ${retryCount + 1}/3)" }
+                        delay(2.seconds)
+                    } else {
+                        logcat(LogPriority.ERROR, e) { "Supabase: Unexpected error batch updating chapter progress for ${manga.title}" }
+                        break
+                    }
+                }
             }
+            if (!batchSuccess) allSuccess = false
         }
         return allSuccess
     }
@@ -256,7 +340,11 @@ class LibrarySupabaseRepository(
     suspend fun backfillAllProgress(mangaList: List<Manga>, getChapters: GetChaptersByMangaId): Boolean {
         val userId = supabase.auth.currentUserOrNull()?.id ?: return false
         logcat(LogPriority.INFO) { "Sync: Starting full progress backfill for user $userId" }
-        var globalSuccess = true
+
+        var mangasSynced = 0
+        var mangasFailed = 0
+        var chaptersSynced = 0
+        var chaptersFailed = 0
 
         mangaList.forEach { manga ->
             val chapters = getChapters.await(manga.id)
@@ -265,53 +353,124 @@ class LibrarySupabaseRepository(
             if (chapters.isNotEmpty()) {
                 logcat(LogPriority.DEBUG) { "Sync: Backfilling all ${chapters.size} chapters for ${manga.title}" }
                 val success = updateChaptersProgress(manga, chapters)
-                if (!success) globalSuccess = false
+                if (success) {
+                    mangasSynced++
+                    chaptersSynced += chapters.size
+                } else {
+                    mangasFailed++
+                    chaptersFailed += chapters.size
+                }
+            } else {
+                mangasSynced++ // Technically nothing to do
             }
         }
 
-        if (globalSuccess) {
-            logcat(LogPriority.INFO) { "Sync: Full progress backfill completed successfully" }
+        if (mangasFailed == 0) {
+            logcat(LogPriority.INFO) { "Sync: Completed. Mangas: $mangasSynced synced. Chapters: $chaptersSynced synced." }
         } else {
-            logcat(LogPriority.WARN) { "Sync: Full progress backfill finished with some errors" }
+            logcat(LogPriority.WARN) { "Sync: Completed with errors. Mangas: $mangasSynced synced, $mangasFailed failed. Chapters: $chaptersSynced synced, $chaptersFailed failed." }
         }
 
-        return globalSuccess
+        return mangasFailed == 0
     }
 
     suspend fun reconcileLocalToCloud(
         userId: String,
         localMangaList: List<Manga>,
-        getChapters: GetChaptersByMangaId
+        getChapters: GetChaptersByMangaId,
+        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
+        onMangaFailed: (mangaTitle: String) -> Unit = {}
     ) {
-        val currentRemoteIds = localMangaList.map { manga ->
+        // AOI: Proactive session refresh before starting reconciliation
+        ensureValidSession()
+
+        // user_library uses "manga:" prefix
+        val currentMangaHashes = localMangaList.map { manga ->
+            UUID.nameUUIDFromBytes("manga:${manga.source}:${manga.url}".toByteArray()).toString()
+        }.toSet()
+
+        // user_chapter_progress uses "source:" prefix
+        val currentSourceHashes = localMangaList.map { manga ->
             UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
-        }
+        }.toSet()
 
-        // Delete progress and library entries for manga not in local favorites
+        // 1. Cleanup user_library (uses "manga:" hashes)
         try {
-            supabase.postgrest["user_chapter_progress"].delete {
-                filter {
-                    eq("user_id", userId)
-                    if (currentRemoteIds.isNotEmpty()) {
-                        notIn("manga_id", currentRemoteIds)
+            if (localMangaList.isEmpty()) {
+                supabase.postgrest["user_library"].delete {
+                    filter { eq("user_id", userId) }
+                }
+                logcat(LogPriority.INFO) { "Sync: user_library full wipe finished (empty favorites)" }
+            } else {
+                val libraryMangaIdsInCloud = supabase.postgrest["user_library"]
+                    .select(columns = Columns.list("manga_id")) {
+                        filter { eq("user_id", userId) }
                     }
+                    .decodeList<MangaIdRemote>()
+                    .map { it.mangaId }
+
+                val libraryIdsToDelete = libraryMangaIdsInCloud.filter { it !in currentMangaHashes }
+                if (libraryIdsToDelete.isNotEmpty()) {
+                    libraryIdsToDelete.chunked(100).forEach { chunk ->
+                        supabase.postgrest["user_library"].delete {
+                            filter {
+                                eq("user_id", userId)
+                                isIn("manga_id", chunk)
+                            }
+                        }
+                    }
+                    logcat(LogPriority.INFO) { "Sync: user_library cleanup finished" }
                 }
             }
-            // Delete library entries
-            supabase.postgrest["user_library"].delete {
-                filter {
-                    eq("user_id", userId)
-                    if (currentRemoteIds.isNotEmpty()) {
-                        notIn("manga_id", currentRemoteIds)
-                    }
-                }
-            }
-            logcat(LogPriority.INFO) { "Sync: Remote cleanup finished" }
         } catch (e: Exception) {
-            logcat(LogPriority.ERROR, e) { "Sync: Remote cleanup failed" }
+            logcat(LogPriority.ERROR, e) { "Sync: user_library cleanup failed" }
         }
 
-        // Upsert all current favorites
+        // 2. Cleanup user_chapter_progress (uses "source:" hashes)
+        try {
+            if (localMangaList.isEmpty()) {
+                supabase.postgrest["user_chapter_progress"].delete {
+                    filter { eq("user_id", userId) }
+                }
+                logcat(LogPriority.INFO) { "Sync: user_chapter_progress full wipe finished (empty favorites)" }
+            } else {
+                val progressMangaIdsInCloud = supabase.postgrest["user_chapter_progress"]
+                    .select(columns = Columns.list("manga_id")) {
+                        filter { eq("user_id", userId) }
+                    }
+                    .decodeList<MangaIdRemote>()
+                    .map { it.mangaId }
+                    .distinct()
+
+                val progressIdsToDelete = progressMangaIdsInCloud.filter { it !in currentSourceHashes }
+                if (progressIdsToDelete.isNotEmpty()) {
+                    progressIdsToDelete.chunked(100).forEach { chunk ->
+                        supabase.postgrest["user_chapter_progress"].delete {
+                            filter {
+                                eq("user_id", userId)
+                                isIn("manga_id", chunk)
+                            }
+                        }
+                    }
+                    logcat(LogPriority.INFO) { "Sync: user_chapter_progress cleanup finished" }
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: user_chapter_progress cleanup failed" }
+        }
+
+        // 3. Upsert all current favorites to user_library and related tables
+        localMangaList.forEachIndexed { index, manga ->
+            onProgress(index + 1, localMangaList.size)
+            try {
+                uploadMangaSync(userId, manga)
+            } catch (e: Exception) {
+                logcat(LogPriority.ERROR, e) { "Sync: Failed to upsert library entry for ${manga.title}: ${e.message}" }
+                onMangaFailed(manga.title)
+            }
+        }
+
+        // Upsert all current favorites progress
         backfillAllProgress(localMangaList, getChapters)
     }
 
@@ -320,6 +479,8 @@ class LibrarySupabaseRepository(
         updateMangaFromRemote: mihon.domain.source.interactor.UpdateMangaFromRemote,
         updateChapter: tachiyomi.domain.chapter.interactor.UpdateChapter,
         chapterRepository: tachiyomi.domain.chapter.repository.ChapterRepository,
+        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
+        onMangaFailed: (mangaTitle: String) -> Unit = {}
     ) {
         // 1. Fetch cloud library
         val remoteItems = getUserLibrary(userId).getOrNull() ?: return
@@ -347,42 +508,75 @@ class LibrarySupabaseRepository(
             try {
                 updateMangaFromRemote(manga, fetchChapters = true)
             } catch (e: Exception) {
-                logcat(LogPriority.WARN) { "Sync: Source offline or error for ${manga.title}, skipping refresh" }
+                logcat(LogPriority.WARN, e) { "Sync: Source offline or error for ${manga.title}, skipping refresh" }
             }
         }
 
-        // 5. Fetch all progress from cloud
-        val progressEntries = try {
+        // 5. Fetch all progress from cloud (Split into 2 queries to avoid join issues)
+        val progressList = try {
             supabase.postgrest["user_chapter_progress"]
-                .select(columns = Columns.raw("*, chapters(*)")) {
+                .select {
                     filter { eq("user_id", userId) }
                 }
-                .decodeList<ChapterProgressEntryRemote>()
+                .decodeList<ChapterProgressRemote>()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Sync: Failed to fetch remote progress" }
             return
         }
 
+        if (progressList.isEmpty()) {
+            logcat(LogPriority.INFO) { "Sync: No remote progress found" }
+            return
+        }
+
+        // 5.1 Fetch associated chapter metadata for these progress entries in chunks to avoid URL length limits
+        val chapterIds = progressList.map { it.chapterId }.distinct()
+        val chapterMetadataMap = mutableMapOf<String, ChapterRemote>()
+
+        try {
+            chapterIds.chunked(100).forEach { chunk ->
+                val results = supabase.postgrest["chapters"]
+                    .select {
+                        filter { isIn("id", chunk) }
+                    }
+                    .decodeList<ChapterRemote>()
+                chapterMetadataMap.putAll(results.associateBy { it.id })
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: Failed to fetch chapter metadata for progress" }
+            return
+        }
+
         // 6. Apply progress locally
-        activeMangas.forEach { manga ->
-            val mangaRemoteId = UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
-            val entriesForManga = progressEntries.filter { it.mangaId == mangaRemoteId }
+        activeMangas.forEachIndexed { index, manga ->
+            onProgress(index + 1, activeMangas.size)
+            val mangaRemoteId = UUID.nameUUIDFromBytes("manga:${manga.source}:${manga.url}".toByteArray()).toString()
+            val entriesForManga = progressList.filter { it.mangaId == mangaRemoteId }
 
             if (entriesForManga.isNotEmpty()) {
-                val updates = entriesForManga.mapNotNull { entry ->
-                    val localChapter = chapterRepository.getChapterByUrlAndMangaId(entry.chapters.sourceChapterId, manga.id)
-                    if (localChapter != null && (localChapter.read != entry.read || localChapter.lastPageRead != entry.lastPageRead.toLong())) {
-                        tachiyomi.domain.chapter.model.ChapterUpdate(
-                            id = localChapter.id,
-                            read = entry.read,
-                            lastPageRead = entry.lastPageRead.toLong()
-                        )
-                    } else {
-                        null
+                try {
+                    // Refresh chapters from source first to ensure matching works
+                    updateMangaFromRemote(manga, fetchChapters = true)
+
+                    val updates = entriesForManga.mapNotNull { entry ->
+                        val chapterMetadata = chapterMetadataMap[entry.chapterId] ?: return@mapNotNull null
+                        val localChapter = chapterRepository.getChapterByUrlAndMangaId(chapterMetadata.sourceChapterId, manga.id)
+                        if (localChapter != null && (localChapter.read != entry.read || localChapter.lastPageRead != entry.lastPageRead.toLong())) {
+                            tachiyomi.domain.chapter.model.ChapterUpdate(
+                                id = localChapter.id,
+                                read = entry.read,
+                                lastPageRead = entry.lastPageRead.toLong()
+                            )
+                        } else {
+                            null
+                        }
                     }
-                }
-                if (updates.isNotEmpty()) {
-                    updateChapter.awaitAll(updates)
+                    if (updates.isNotEmpty()) {
+                        updateChapter.awaitAll(updates)
+                    }
+                } catch (e: Exception) {
+                    logcat(LogPriority.WARN, e) { "Sync: Failed to import progress for ${manga.title}" }
+                    onMangaFailed(manga.title)
                 }
             }
         }
@@ -398,6 +592,11 @@ data class UserLibraryEntrySimple(
     @SerialName("is_favorite") val isFavorite: Boolean,
     @SerialName("source_id") val sourceId: String,
     @SerialName("added_at") val addedAt: String
+)
+
+@Serializable
+data class MangaIdRemote(
+    @SerialName("manga_id") val mangaId: String
 )
 
 @Serializable
@@ -464,16 +663,6 @@ data class ChapterRemote(
     @SerialName("chapter_label") val chapterLabel: String? = null,
     val scanlator: String? = null,
     @SerialName("uploaded_at") val uploadedAt: String? = null
-)
-
-@Serializable
-data class ChapterProgressEntryRemote(
-    @SerialName("user_id") val userId: String,
-    @SerialName("chapter_id") val chapterId: String,
-    @SerialName("manga_id") val mangaId: String,
-    @SerialName("last_page_read") val lastPageRead: Int,
-    val read: Boolean,
-    val chapters: ChapterRemote
 )
 
 @Serializable

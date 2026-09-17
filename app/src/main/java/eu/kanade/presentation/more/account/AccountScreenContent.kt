@@ -1,7 +1,9 @@
 package eu.kanade.presentation.more.account
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,12 +12,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -28,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -45,6 +52,8 @@ import eu.kanade.tachiyomi.util.system.toast
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.Close
+import mihon.icons.materialsymbols.rounded.Error
+import mihon.icons.materialsymbols.rounded.Info
 import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
@@ -59,12 +68,14 @@ import tachiyomi.presentation.core.components.material.Scaffold
 @Composable
 fun AccountScreenContent(
     state: AccountViewModel.State,
+    syncState: AccountViewModel.SyncState,
     onNavigateBack: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
     onUpdateAccount: () -> Unit,
     onLogin: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
     onLogout: () -> Unit,
+    onClearFailed: () -> Unit,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
@@ -75,105 +86,40 @@ fun AccountScreenContent(
             )
         },
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            if (state.username != null) {
-                ProfileView(
-                    username = state.username,
-                    onLogout = onLogout,
-                    onContinue = onNavigateBack,
-                    onCloudLibrary = onNavigateToCloudLibrary,
-                    onUpdateAccount = onUpdateAccount,
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (state.username != null) {
+                    ProfileView(
+                        username = state.username,
+                        syncStatus = syncState.status,
+                        onLogout = onLogout,
+                        onContinue = onNavigateBack,
+                        onCloudLibrary = onNavigateToCloudLibrary,
+                        onUpdateAccount = onUpdateAccount,
+                    )
+                } else {
+                    AuthView(onLogin = onLogin, onSignUp = onSignUp)
+                }
+            }
+
+            if (syncState.status == AccountViewModel.SyncStatus.Syncing) {
+                SyncProgressOverlay(syncState.progress)
+            }
+
+            if (syncState.failedMangas.isNotEmpty()) {
+                SyncErrorDialog(
+                    failedMangas = syncState.failedMangas,
+                    onDismiss = onClearFailed
                 )
-            } else {
-                AuthView(onLogin = onLogin, onSignUp = onSignUp)
             }
         }
-    }
-}
-
-@Composable
-private fun ProfileView(
-    username: String,
-    onLogout: () -> Unit,
-    onContinue: () -> Unit,
-    onCloudLibrary: () -> Unit,
-    onUpdateAccount: () -> Unit,
-) {
-    Icon(
-        painter = painterResource(R.drawable.ic_mihon),
-        contentDescription = null,
-        modifier = Modifier.size(100.dp),
-        tint = MaterialTheme.colorScheme.primary
-    )
-    Spacer(modifier = Modifier.height(24.dp))
-    Text(
-        text = "Welcome, $username",
-        fontSize = 24.sp,
-        fontWeight = FontWeight.Bold
-    )
-    Spacer(modifier = Modifier.height(32.dp))
-
-    ProfileActionButton(
-        text = "My Cloud Library",
-        icon = MaterialSymbols.Rounded.LocalLibrary,
-        onClick = onCloudLibrary
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    ProfileActionButton(
-        text = "Update Account",
-        icon = MaterialSymbols.Rounded.Security,
-        onClick = onUpdateAccount
-    )
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    ProfileActionButton(
-        text = "Continue to app",
-        icon = MaterialSymbols.RoundedFilled.PlayArrow,
-        onClick = onContinue
-    )
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    TextButton(
-        onClick = onLogout,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-    ) {
-        Icon(MaterialSymbols.Rounded.Close, null, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.size(8.dp))
-        Text("Logout", fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun ProfileActionButton(
-    text: String,
-    icon: ImageVector,
-    onClick: () -> Unit
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = Color.White
-        )
-    ) {
-        Icon(icon, null, modifier = Modifier.size(28.dp), tint = Color.White)
-        Spacer(Modifier.size(16.dp))
-        // ExtraBold to make it look clickable without background
-        Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
     }
 }
 
@@ -284,5 +230,172 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
             text = if (selectedTab == 0) "Don't have an account? Sign Up" else "Already have an account? Log In",
             fontSize = 13.sp
         )
+    }
+}
+
+@Composable
+private fun SyncProgressOverlay(progress: Pair<Int, Int>?) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.8f)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = MaterialSymbols.Rounded.Sync,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.White
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                "Syncing with cloud",
+                color = Color.White,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                "Please do not leave this screen until finished",
+                color = Color.White.copy(alpha = 0.8f),
+                fontSize = 16.sp
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            if (progress != null) {
+                val (current, total) = progress
+                val percent = if (total > 0) current.toFloat() / total else 0f
+                LinearProgressIndicator(
+                    progress = { percent },
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    trackColor = Color.White.copy(alpha = 0.2f),
+                    strokeCap = StrokeCap.Round
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    "Processing: $current / $total mangas",
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium
+                )
+            } else {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SyncErrorDialog(failedMangas: List<String>, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = { Icon(MaterialSymbols.Rounded.Error, null, tint = MaterialTheme.colorScheme.error) },
+        title = { Text("Sync Finished with Errors") },
+        text = {
+            Column {
+                Text("${failedMangas.size} mangas failed to sync. You might want to check your connection and try again.")
+                if (failedMangas.size <= 5) {
+                    Spacer(Modifier.height(8.dp))
+                    failedMangas.forEach {
+                        Text("• $it", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("OK") }
+        }
+    )
+}
+
+@Composable
+private fun ProfileView(
+    username: String,
+    syncStatus: AccountViewModel.SyncStatus,
+    onLogout: () -> Unit,
+    onContinue: () -> Unit,
+    onCloudLibrary: () -> Unit,
+    onUpdateAccount: () -> Unit,
+) {
+    val isSyncing = syncStatus == AccountViewModel.SyncStatus.Syncing
+
+    Icon(
+        painter = painterResource(R.drawable.ic_mihon),
+        contentDescription = null,
+        modifier = Modifier.size(100.dp),
+        tint = MaterialTheme.colorScheme.primary
+    )
+    Spacer(modifier = Modifier.height(24.dp))
+    Text(
+        text = "Welcome, $username",
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold
+    )
+    Spacer(modifier = Modifier.height(48.dp))
+
+    ProfileActionButton(
+        text = "My Cloud Library",
+        icon = MaterialSymbols.Rounded.LocalLibrary,
+        enabled = !isSyncing,
+        onClick = onCloudLibrary
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    ProfileActionButton(
+        text = "Update Account",
+        icon = MaterialSymbols.Rounded.Sync,
+        enabled = !isSyncing,
+        onClick = onUpdateAccount
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    ProfileActionButton(
+        text = "Continue to app",
+        icon = MaterialSymbols.RoundedFilled.PlayArrow,
+        onClick = onContinue
+    )
+
+    Spacer(modifier = Modifier.height(24.dp))
+
+    TextButton(
+        onClick = onLogout,
+        enabled = !isSyncing,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+    ) {
+        Icon(MaterialSymbols.Rounded.Close, null, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.size(8.dp))
+        Text("Logout", fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun ProfileActionButton(
+    text: String,
+    icon: ImageVector,
+    enabled: Boolean = true,
+    onClick: () -> Unit
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.fillMaxWidth().height(56.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = Color.White,
+            disabledContentColor = Color.Gray.copy(alpha = 0.5f)
+        )
+    ) {
+        Icon(icon, null, modifier = Modifier.size(28.dp))
+        Spacer(Modifier.size(16.dp))
+        // ExtraBold to make it look clickable without background
+        Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
     }
 }
