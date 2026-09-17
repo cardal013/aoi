@@ -1,4 +1,4 @@
-- [x] Update `LibrarySupabaseRepository.kt` sync methods with progress callbacks and sequential logic
-- [x] Update `AccountViewModel.kt` with sync state and progress tracking
-- [x] Implement `SyncProgressOverlay` and failure summary in `AccountScreenContent.kt`
-- [x] Verify build and fix any UI issues
+- [x] Update `index.html` with new category labels and order
+- [x] Refactor `reconcileLocalToCloud` in `LibrarySupabaseRepository.kt` to include chapter sync in the progress loop
+- [x] Update `AccountViewModel.kt` to auto-dismiss sync overlay on success
+- [x] Verify renaming in site and auto-close in app

@@ -14,6 +14,7 @@ import eu.kanade.tachiyomi.data.account.LibrarySupabaseRepository
 import eu.kanade.tachiyomi.data.account.supabase
 import eu.kanade.tachiyomi.util.system.toast
 import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -78,11 +79,16 @@ class AccountViewModel(
                         val success = librarySupabaseRepository.backfillAllProgress(
                             mangaList = localFavorites,
                             getChapters = getChaptersByMangaId,
+                            onProgress = { current, total ->
+                                mutableSyncState.update { it.copy(progress = current to total) }
+                            }
                         )
                         if (success) {
                             libraryPreferences.lastFullProgressSyncUserId.set(user.id)
                             mutableSyncState.update { it.copy(status = SyncStatus.Success) }
                             logcat(LogPriority.INFO) { "Sync: Automatic backfill finished and marked as done" }
+                            delay(1000)
+                            mutableSyncState.update { it.copy(status = SyncStatus.Idle) }
                         } else {
                             mutableSyncState.update { it.copy(status = SyncStatus.Error) }
                             logcat(LogPriority.WARN) { "Sync: Automatic backfill finished with errors" }
@@ -150,6 +156,8 @@ class AccountViewModel(
                     if (failedCount == 0) {
                         mutableSyncState.update { it.copy(status = SyncStatus.Success) }
                         viewModelScope.launch { context.toast("Upload completed!") }
+                        delay(1000)
+                        mutableSyncState.update { it.copy(status = SyncStatus.Idle) }
                     } else {
                         mutableSyncState.update { it.copy(status = SyncStatus.Error) }
                         viewModelScope.launch { context.toast("Upload finished with $failedCount errors") }
@@ -192,6 +200,8 @@ class AccountViewModel(
                     if (failedCount == 0) {
                         mutableSyncState.update { it.copy(status = SyncStatus.Success) }
                         viewModelScope.launch { context.toast("Import completed!") }
+                        delay(1000)
+                        mutableSyncState.update { it.copy(status = SyncStatus.Idle) }
                     } else {
                         mutableSyncState.update { it.copy(status = SyncStatus.Error) }
                         viewModelScope.launch { context.toast("Import finished with $failedCount errors") }

@@ -842,9 +842,9 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div class="lib-toolbar">
       <div class="status-tabs" id="libraryTabs">
         <button type="button" data-status="reading" class="active">Reading</button>
-        <button type="button" data-status="planned">Planned</button>
         <button type="button" data-status="completed">Completed</button>
         <button type="button" data-status="dropped">Dropped</button>
+        <button type="button" data-status="planned">Plan to Read</button>
       </div>
       <div class="search-field" id="librarySearchField">
         <input type="search" id="librarySearch" placeholder="Search this list…">
@@ -1085,8 +1085,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // --- APP CONSTANTS ---
-  const STATUSES = ["reading","planned","completed","dropped"];
-  const STATUS_LABEL = { reading:"Reading", planned:"Planned", completed:"Completed", dropped:"Dropped" };
+  const STATUSES = ["reading","completed","dropped","planned"];
+  const STATUS_LABEL = { reading:"Reading", completed:"Completed", dropped:"Dropped", planned:"Plan to Read" };
   const STATUS_DOT_VAR = { reading:"var(--accent)", planned:"#8D8B93", completed:"#1E9E6B", dropped:"#D6455D" };
   const STATUS_MAP = { READING:'reading', PLAN_TO_READ:'planned', COMPLETED:'completed', DROPPED:'dropped' };
   const REV_STATUS_MAP = { reading:'READING', planned:'PLAN_TO_READ', completed:'COMPLETED', dropped:'DROPPED' };

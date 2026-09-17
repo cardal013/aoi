@@ -337,7 +337,11 @@ class LibrarySupabaseRepository(
      * Syncs ALL chapters of provided mangas to the cloud.
      * @return true if every chapter of every manga was successfully synced.
      */
-    suspend fun backfillAllProgress(mangaList: List<Manga>, getChapters: GetChaptersByMangaId): Boolean {
+    suspend fun backfillAllProgress(
+        mangaList: List<Manga>,
+        getChapters: GetChaptersByMangaId,
+        onProgress: (current: Int, total: Int) -> Unit = { _, _ -> }
+    ): Boolean {
         val userId = supabase.auth.currentUserOrNull()?.id ?: return false
         logcat(LogPriority.INFO) { "Sync: Starting full progress backfill for user $userId" }
 
@@ -346,7 +350,8 @@ class LibrarySupabaseRepository(
         var chaptersSynced = 0
         var chaptersFailed = 0
 
-        mangaList.forEach { manga ->
+        mangaList.forEachIndexed { index, manga ->
+            onProgress(index + 1, mangaList.size)
             val chapters = getChapters.await(manga.id)
             // No filter: we want to sync the entire state of the library
 
@@ -381,9 +386,6 @@ class LibrarySupabaseRepository(
         onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
         onMangaFailed: (mangaTitle: String) -> Unit = {}
     ) {
-        // AOI: Proactive session refresh before starting reconciliation
-        ensureValidSession()
-
         // user_library uses "manga:" prefix
         val currentMangaHashes = localMangaList.map { manga ->
             UUID.nameUUIDFromBytes("manga:${manga.source}:${manga.url}".toByteArray()).toString()
@@ -393,6 +395,9 @@ class LibrarySupabaseRepository(
         val currentSourceHashes = localMangaList.map { manga ->
             UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
         }.toSet()
+
+        // AOI: Proactive session refresh before starting reconciliation
+        ensureValidSession()
 
         // 1. Cleanup user_library (uses "manga:" hashes)
         try {
@@ -459,19 +464,23 @@ class LibrarySupabaseRepository(
             logcat(LogPriority.ERROR, e) { "Sync: user_chapter_progress cleanup failed" }
         }
 
-        // 3. Upsert all current favorites to user_library and related tables
+        // 3. Sequential Sync: Metadata then Progress per Manga
         localMangaList.forEachIndexed { index, manga ->
             onProgress(index + 1, localMangaList.size)
             try {
+                // Ensure manga and user_library entry exists
                 uploadMangaSync(userId, manga)
+
+                // Immediately sync chapters for this manga
+                val chapters = getChapters.await(manga.id)
+                if (chapters.isNotEmpty()) {
+                    updateChaptersProgress(manga, chapters)
+                }
             } catch (e: Exception) {
-                logcat(LogPriority.ERROR, e) { "Sync: Failed to upsert library entry for ${manga.title}: ${e.message}" }
+                logcat(LogPriority.ERROR, e) { "Sync: Failed to reconcile ${manga.title}: ${e.message}" }
                 onMangaFailed(manga.title)
             }
         }
-
-        // Upsert all current favorites progress
-        backfillAllProgress(localMangaList, getChapters)
     }
 
     suspend fun reconcileCloudToLocal(
@@ -504,13 +513,6 @@ class LibrarySupabaseRepository(
 
         // 4. Refresh chapters from source for all active mangas
         val activeMangas = mangaRepository.getFavorites()
-        activeMangas.forEach { manga ->
-            try {
-                updateMangaFromRemote(manga, fetchChapters = true)
-            } catch (e: Exception) {
-                logcat(LogPriority.WARN, e) { "Sync: Source offline or error for ${manga.title}, skipping refresh" }
-            }
-        }
 
         // 5. Fetch all progress from cloud (Split into 2 queries to avoid join issues)
         val progressList = try {
@@ -526,6 +528,8 @@ class LibrarySupabaseRepository(
 
         if (progressList.isEmpty()) {
             logcat(LogPriority.INFO) { "Sync: No remote progress found" }
+            // Even if no progress, we should still update UI that we finished the library sync
+            onProgress(activeMangas.size, activeMangas.size)
             return
         }
 
