@@ -1,3 +1,3 @@
-- [x] Implement paginated fetching for `user_chapter_progress` in `LibrarySupabaseRepository.kt`
-- [x] Verify build stability
-- [ ] Verify full progress import (5500+ rows) in Logcat
+- [ ] Remove `updateMangaFromRemote` from `reconcileCloudToLocal` in `LibrarySupabaseRepository.kt`
+- [ ] Run `./gradlew assembleRelease` to build production APK
+- [ ] Create GitHub Release `v0.20.4` with `app-universal-release.apk`

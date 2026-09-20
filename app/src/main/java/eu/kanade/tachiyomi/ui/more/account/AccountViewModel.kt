@@ -211,7 +211,6 @@ class AccountViewModel(
                     logcat(LogPriority.INFO) { "Sync: Import starting for user ${user.id}" }
                     librarySupabaseRepository.reconcileCloudToLocal(
                         userId = user.id,
-                        updateMangaFromRemote = updateMangaFromRemote,
                         updateChapter = updateChapter,
                         chapterRepository = chapterRepository,
                         onProgress = { current: Int, total: Int ->

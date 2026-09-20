@@ -1,46 +1,32 @@
-# Implementation Plan - Paginated Progress Fetching
+# Implementation Plan - Final Sync Fix & Release Process
 
-Implement paginated fetching for `user_chapter_progress` to ensure that all remote reading progress is imported, even for very large libraries (exceeding the default PostgREST limit of 1000 rows).
-
-## Problem Analysis
-
-In `reconcileCloudToLocal`, the current code fetches remote progress using a single `.select()` call. By default, Supabase/PostgREST limits results to 1000 rows. With the user's library containing over 5500 rows, only a small portion of the progress is being imported, leading to missing data.
+Fix the chapter deletion bug during import and prepare the application for official release.
 
 ## Proposed Changes
 
 ### [Account] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)
 
-#### 1. Paginated Fetching Logic
-- **[MODIFY]** Update the progress fetching block (Step 5) to use a loop with `.range()`.
-- **Strategy**:
-    1. Fetch chunks of 1000 rows at a time.
-    2. Continue fetching until the returned list is smaller than the chunk size (indicating the last page).
-    3. Accumulate all results into the final `progressList`.
-- **Code Structure**:
-    ```kotlin
-    val allProgress = mutableListOf<ChapterProgressRemote>()
-    var offset = 0
-    val pageSize = 1000
-    while (true) {
-        val chunk = supabase.postgrest["user_chapter_progress"]
-            .select {
-                filter { eq("user_id", userId) }
-                range(offset.toLong(), (offset + pageSize - 1).toLong())
-            }
-            .decodeList<ChapterProgressRemote>()
-        allProgress.addAll(chunk)
-        if (chunk.size < pageSize) break
-        offset += pageSize
-    }
-    ```
+#### 1. Remove Dangerous Refresh during Import
+- **[MODIFY]** Remove the call to `updateMangaFromRemote(manga, fetchChapters = true)` inside `reconcileCloudToLocal`.
+- **Reason**: This call triggers a synchronization with the source (e.g., MangaDex). If the source fails or returns an empty list, the app assumes the chapters were deleted and removes them from the local database. The Import process should only reconcile the read status of *existing* local chapters.
+
+### [Release] Build Process
+
+#### 1. Generate Production APK
+- **[EXECUTE]** Run `./gradlew assembleRelease` to generate the signed `app-universal-release.apk`.
+- This uses the `aoi-release.keystore` and `keystore.properties` already configured in the project.
+
+#### 2. Create GitHub Release
+- **[EXECUTE]** Create a release on GitHub with tag `v0.20.4` and attach the generated APK.
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Large Library Import**:
-   - Use an account with > 1000 reading progress entries.
-   - Click **Import from cloud**.
-   - Verify in Logcat that multiple pages are being fetched (optional: add logging for pages).
-   - Confirm that all mangas in the library have their progress restored, not just the first 1000.
-2. **Import Success**:
-   - Check the diagnostic log: `progressListTotal` should now show the correct total (e.g., 5599) instead of exactly 1000.
+1. **Import Stability**:
+   - Run "Import from cloud".
+   - Verify that local chapters are **not** deleted, even if the network is unstable or a source is temporarily down.
+2. **Release APK**:
+   - Verify that `app/build/outputs/apk/release/app-universal-release.apk` exists.
+   - Install it on a device and verify it works (optional, for the user).
+3. **Website Link**:
+   - Once the release is published, click "Download Aoi" on the website and verify it downloads the correct APK.

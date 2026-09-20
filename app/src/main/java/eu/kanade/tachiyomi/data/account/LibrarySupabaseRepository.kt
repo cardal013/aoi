@@ -504,7 +504,6 @@ class LibrarySupabaseRepository(
 
     suspend fun reconcileCloudToLocal(
         userId: String,
-        updateMangaFromRemote: mihon.domain.source.interactor.UpdateMangaFromRemote,
         updateChapter: tachiyomi.domain.chapter.interactor.UpdateChapter,
         chapterRepository: tachiyomi.domain.chapter.repository.ChapterRepository,
         onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
@@ -593,9 +592,6 @@ class LibrarySupabaseRepository(
 
             if (entriesForManga.isNotEmpty()) {
                 try {
-                    // Refresh chapters from source first to ensure matching works
-                    updateMangaFromRemote(manga, fetchChapters = true)
-
                     val updates = entriesForManga.mapNotNull { entry ->
                         val chapterMetadata = chapterMetadataMap[entry.chapterId] ?: return@mapNotNull null
                         val localChapter = chapterRepository.getChapterByUrlAndMangaId(chapterMetadata.sourceChapterId, manga.id)
