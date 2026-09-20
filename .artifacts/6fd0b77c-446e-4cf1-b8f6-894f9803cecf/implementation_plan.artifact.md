@@ -1,42 +1,46 @@
-# Implementation Plan - UI Refinements & Auto-Close Sync
+# Implementation Plan - Paginated Progress Fetching
 
-Rename library categories for consistency and ensure the synchronization progress overlay closes automatically upon completion.
+Implement paginated fetching for `user_chapter_progress` to ensure that all remote reading progress is imported, even for very large libraries (exceeding the default PostgREST limit of 1000 rows).
+
+## Problem Analysis
+
+In `reconcileCloudToLocal`, the current code fetches remote progress using a single `.select()` call. By default, Supabase/PostgREST limits results to 1000 rows. With the user's library containing over 5500 rows, only a small portion of the progress is being imported, leading to missing data.
 
 ## Proposed Changes
 
-### 1. Rename Categories & Fix Order
-- **[MODIFY] [index.html](file:///C:/aoi/index.html)**:
-    - Update `STATUS_LABEL` to use "Plan to Read" instead of "Planned".
-    - Reorder `STATUSES` array and the library tab buttons to: **Reading, Completed, Dropped, Plan to Read**.
-- **[MODIFY] [ReadingStatus.kt](file:///C:/aoi/domain/src/main/java/tachiyomi/domain/manga/model/ReadingStatus.kt)**:
-    - (Verified) The enum order already matches: `READING, COMPLETED, DROPPED, PLAN_TO_READ`.
-- **[MODIFY] [base/strings.xml](file:///C:/aoi/i18n/src/commonMain/moko-resources/base/strings.xml)**:
-    - (Verified) `reading_status_plan_to_read` already set to "Plan to Read".
+### [Account] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)
 
-### 2. Fix Sync Overlay (Auto-close & Better Progress)
-- **[MODIFY] [LibrarySupabaseRepository.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/data/account/LibrarySupabaseRepository.kt)**:
-    - Update `reconcileLocalToCloud` and `reconcileCloudToLocal` to report progress throughout the *entire* operation.
-    - Currently, the overlay often "hangs" at 100% because the final chapter backfill phase doesn't report progress.
-    - Normalize the progress counter so 100% actually means the operation is finished.
-- **[MODIFY] [AccountViewModel.kt](file:///C:/aoi/app/src/main/java/eu/kanade/tachiyomi/ui/more/account/AccountViewModel.kt)**:
-    - After a successful sync, wait for a brief moment (e.g., 1s) to allow the user to see the 100% completion state, then transition `syncStatus` back to `Idle`.
-    - This will automatically hide the `SyncProgressOverlay` in `AccountScreenContent.kt`.
-
-### 3. Cleanup UI Code
-- **[MODIFY] [AccountScreenContent.kt](file:///C:/aoi/app/src/main/java/eu/kanade/presentation/more/account/AccountScreenContent.kt)**:
-    - Ensure the layout is clean and the overlay correctly blocks interactions only during the `Syncing` state.
+#### 1. Paginated Fetching Logic
+- **[MODIFY]** Update the progress fetching block (Step 5) to use a loop with `.range()`.
+- **Strategy**:
+    1. Fetch chunks of 1000 rows at a time.
+    2. Continue fetching until the returned list is smaller than the chunk size (indicating the last page).
+    3. Accumulate all results into the final `progressList`.
+- **Code Structure**:
+    ```kotlin
+    val allProgress = mutableListOf<ChapterProgressRemote>()
+    var offset = 0
+    val pageSize = 1000
+    while (true) {
+        val chunk = supabase.postgrest["user_chapter_progress"]
+            .select {
+                filter { eq("user_id", userId) }
+                range(offset.toLong(), (offset + pageSize - 1).toLong())
+            }
+            .decodeList<ChapterProgressRemote>()
+        allProgress.addAll(chunk)
+        if (chunk.size < pageSize) break
+        offset += pageSize
+    }
+    ```
 
 ## Verification Plan
 
 ### Manual Verification
-1. **Category Names (Site)**:
-    - Open the website.
-    - Verify tabs are: Reading, Completed, Dropped, Plan to Read.
-    - Change a manga status and verify the label "Plan to Read" appears correctly.
-2. **Auto-Close Overlay (App)**:
-    - Open the Account screen.
-    - Click **Update Account**.
-    - Watch the progress bar go from 0% to 100%.
-    - Verify that the overlay **disappears automatically** once it reaches 100% (with a short delay).
-3. **Failure State**:
-    - Ensure that if a sync fails, the error dialog *still shows* and doesn't auto-close (manual dismissal required for errors).
+1. **Large Library Import**:
+   - Use an account with > 1000 reading progress entries.
+   - Click **Import from cloud**.
+   - Verify in Logcat that multiple pages are being fetched (optional: add logging for pages).
+   - Confirm that all mangas in the library have their progress restored, not just the first 1000.
+2. **Import Success**:
+   - Check the diagnostic log: `progressListTotal` should now show the correct total (e.g., 5599) instead of exactly 1000.

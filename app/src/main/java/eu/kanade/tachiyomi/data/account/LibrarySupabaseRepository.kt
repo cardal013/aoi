@@ -473,8 +473,27 @@ class LibrarySupabaseRepository(
 
                 // Immediately sync chapters for this manga
                 val chapters = getChapters.await(manga.id)
+
+                logcat(LogPriority.INFO) {
+                    "AOI_SYNC: getChapters result | " +
+                    "manga=${manga.title} | " +
+                    "mangaId=${manga.id} | " +
+                    "count=${chapters.size} | " +
+                    "readCount=${chapters.count { it.read }}"
+                }
+
                 if (chapters.isNotEmpty()) {
+                    logcat(LogPriority.INFO) {
+                        "AOI_SYNC: Calling updateChaptersProgress | " +
+                        "manga=${manga.title} | chapters=${chapters.size}"
+                    }
+
                     updateChaptersProgress(manga, chapters)
+                } else {
+                    logcat(LogPriority.WARN) {
+                        "AOI_SYNC: SKIPPING chapter sync — empty chapter list | " +
+                        "manga=${manga.title}"
+                    }
                 }
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e) { "Sync: Failed to reconcile ${manga.title}: ${e.message}" }
@@ -514,13 +533,26 @@ class LibrarySupabaseRepository(
         // 4. Refresh chapters from source for all active mangas
         val activeMangas = mangaRepository.getFavorites()
 
-        // 5. Fetch all progress from cloud (Split into 2 queries to avoid join issues)
-        val progressList = try {
-            supabase.postgrest["user_chapter_progress"]
-                .select {
-                    filter { eq("user_id", userId) }
-                }
-                .decodeList<ChapterProgressRemote>()
+        // 5. Fetch all progress from cloud (Paginated to handle > 1000 rows)
+        val progressList = mutableListOf<ChapterProgressRemote>()
+        var offset = 0
+        val pageSize = 1000
+
+        try {
+            while (true) {
+                val chunk = supabase.postgrest["user_chapter_progress"]
+                    .select {
+                        filter { eq("user_id", userId) }
+                        range(offset.toLong(), (offset + pageSize - 1).toLong())
+                    }
+                    .decodeList<ChapterProgressRemote>()
+
+                progressList.addAll(chunk)
+                logcat(LogPriority.INFO) { "Sync: Fetched progress chunk | offset=$offset | size=${chunk.size} | totalSoFar=${progressList.size}" }
+
+                if (chunk.size < pageSize) break
+                offset += pageSize
+            }
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e) { "Sync: Failed to fetch remote progress" }
             return
@@ -554,8 +586,10 @@ class LibrarySupabaseRepository(
         // 6. Apply progress locally
         activeMangas.forEachIndexed { index, manga ->
             onProgress(index + 1, activeMangas.size)
-            val mangaRemoteId = UUID.nameUUIDFromBytes("manga:${manga.source}:${manga.url}".toByteArray()).toString()
-            val entriesForManga = progressList.filter { it.mangaId == mangaRemoteId }
+            val mangaSourceId = UUID.nameUUIDFromBytes("source:${manga.source}:${manga.url}".toByteArray()).toString()
+            val entriesForManga = progressList.filter { it.mangaId == mangaSourceId }
+
+            logcat(LogPriority.INFO) { "Sync: ${manga.title} | mangaSourceId=$mangaSourceId | entriesFound=${entriesForManga.size} | progressListTotal=${progressList.size}" }
 
             if (entriesForManga.isNotEmpty()) {
                 try {

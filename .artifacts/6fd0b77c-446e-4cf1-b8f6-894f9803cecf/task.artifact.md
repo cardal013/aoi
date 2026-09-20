@@ -1,4 +1,3 @@
-- [x] Update `index.html` with new category labels and order
-- [x] Refactor `reconcileLocalToCloud` in `LibrarySupabaseRepository.kt` to include chapter sync in the progress loop
-- [x] Update `AccountViewModel.kt` to auto-dismiss sync overlay on success
-- [x] Verify renaming in site and auto-close in app
+- [x] Implement paginated fetching for `user_chapter_progress` in `LibrarySupabaseRepository.kt`
+- [x] Verify build stability
+- [ ] Verify full progress import (5500+ rows) in Logcat

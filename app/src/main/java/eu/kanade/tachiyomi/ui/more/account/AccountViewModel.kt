@@ -14,6 +14,8 @@ import eu.kanade.tachiyomi.data.account.LibrarySupabaseRepository
 import eu.kanade.tachiyomi.data.account.supabase
 import eu.kanade.tachiyomi.util.system.toast
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.exception.AuthErrorCode
+import io.github.jan.supabase.auth.exception.AuthRestException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -108,13 +110,37 @@ class AccountViewModel(
 
     fun login(email: String, password: String) {
         viewModelScope.launchIO {
-            accountRepository.login(email, password)
+            accountRepository.login(email, password).onFailure { e ->
+                val message = getAuthErrorMessage(e)
+                viewModelScope.launch { context.toast(message) }
+            }
         }
     }
 
     fun signUp(email: String, password: String) {
         viewModelScope.launchIO {
-            accountRepository.signUp(email, password)
+            accountRepository.signUp(email, password).onFailure { e ->
+                val message = getAuthErrorMessage(e)
+                viewModelScope.launch { context.toast(message) }
+            }
+        }
+    }
+
+    private fun getAuthErrorMessage(e: Throwable): String {
+        return when (e) {
+            is AuthRestException -> {
+                when (e.errorCode) {
+                    AuthErrorCode.InvalidCredentials -> "Password ou email incorretos"
+                    AuthErrorCode.UserAlreadyExists, AuthErrorCode.EmailExists -> "Este email já tem conta"
+                    else -> e.errorDescription.takeIf { it.isNotBlank() } ?: e.message ?: "Erro na autenticação"
+                }
+            }
+            is java.io.IOException -> "Sem ligação à internet"
+            else -> if (e.message?.contains("Unable to resolve host") == true) {
+                "Sem ligação à internet"
+            } else {
+                e.message ?: "Ocorreu um erro inesperado"
+            }
         }
     }
 
