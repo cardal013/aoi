@@ -1,5 +1,5 @@
 -- Aoi: estado do esquema, da RLS e das políticas. Só lê, não altera nada.
--- Correr no painel do Supabase: SQL Editor -> colar -> Run. Depois "Export -> CSV" e guardar como supabase/schema_atual.csv.
+-- Correr no painel do Supabase: SQL Editor -> colar -> Run. O resultado resumido fica em supabase/schema.md.
 --
 -- O que procurar:
 --   rls      -> todas as tabelas do Aoi devem estar "ligada"
