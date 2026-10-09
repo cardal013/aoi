@@ -75,8 +75,6 @@ class AccountViewModel(
         viewModelScope.launchIO { accountRepository.logout() }
     }
 
-    fun fullResync() = cloudSync.fullResync()
-
     fun removeLocalOnly() = cloudSync.removeLocalOnly()
 
     fun keepLocalOnly() = cloudSync.keepLocalOnly()

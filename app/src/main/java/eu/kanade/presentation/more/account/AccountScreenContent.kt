@@ -1,6 +1,8 @@
 package eu.kanade.presentation.more.account
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.AppBar
@@ -56,8 +60,6 @@ import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.delay
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Close
-import mihon.icons.materialsymbols.rounded.ExpandLess
-import mihon.icons.materialsymbols.rounded.ExpandMore
 import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
@@ -77,7 +79,6 @@ fun AccountScreenContent(
     syncState: CloudSync.State,
     onNavigateBack: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
-    onFullResync: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
     onLogin: (String, String) -> Unit,
@@ -117,7 +118,6 @@ fun AccountScreenContent(
                         onLogout = onLogout,
                         onContinue = onNavigateBack,
                         onCloudLibrary = onNavigateToCloudLibrary,
-                        onFullResync = onFullResync,
                         onRemoveLocalOnly = onRemoveLocalOnly,
                         onKeepLocalOnly = onKeepLocalOnly,
                     )
@@ -146,12 +146,7 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         }
     }
 
-    Icon(
-        painter = painterResource(R.drawable.ic_mihon),
-        contentDescription = null,
-        modifier = Modifier.size(80.dp),
-        tint = MaterialTheme.colorScheme.primary,
-    )
+    AoiLogo(size = 80.dp)
     Spacer(modifier = Modifier.height(16.dp))
     Text(
         text = stringResource(if (isLogin) MR.strings.account_welcome_back else MR.strings.account_create),
@@ -258,18 +253,10 @@ private fun ProfileView(
     onLogout: () -> Unit,
     onContinue: () -> Unit,
     onCloudLibrary: () -> Unit,
-    onFullResync: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
 ) {
-    var showAdvanced by remember { mutableStateOf(false) }
-
-    Icon(
-        painter = painterResource(R.drawable.ic_mihon),
-        contentDescription = null,
-        modifier = Modifier.size(100.dp),
-        tint = MaterialTheme.colorScheme.primary,
-    )
+    AoiLogo(size = 100.dp)
     Spacer(modifier = Modifier.height(24.dp))
     Text(
         text = stringResource(MR.strings.account_welcome, username),
@@ -305,45 +292,7 @@ private fun ProfileView(
         onClick = onContinue,
     )
 
-    Spacer(modifier = Modifier.height(16.dp))
-
-    TextButton(
-        onClick = { showAdvanced = !showAdvanced },
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.outline),
-    ) {
-        Text(stringResource(MR.strings.pref_category_advanced), fontSize = 14.sp)
-        Spacer(Modifier.width(4.dp))
-        Icon(
-            imageVector = if (showAdvanced) MaterialSymbols.Rounded.ExpandLess else MaterialSymbols.Rounded.ExpandMore,
-            contentDescription = null,
-            modifier = Modifier.size(18.dp),
-        )
-    }
-
-    if (showAdvanced) {
-        Surface(
-            onClick = onFullResync,
-            enabled = !syncState.running,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(MR.strings.cloud_sync_full_resync),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = stringResource(MR.strings.cloud_sync_full_resync_summary),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-    }
-
-    Spacer(modifier = Modifier.height(16.dp))
+    Spacer(modifier = Modifier.height(24.dp))
 
     TextButton(
         onClick = onLogout,
@@ -474,7 +423,27 @@ private fun ProfileActionButton(
     }
 }
 
+// Logo como o ícone da app: quadrado azul de cantos redondos com o 青い a branco
+@Composable
+private fun AoiLogo(size: Dp) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(size * 0.22f))
+            .background(AOI_BLUE),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_mihon),
+            contentDescription = null,
+            modifier = Modifier.size(size * 0.75f),
+            tint = Color.White,
+        )
+    }
+}
+
 private const val MAX_TITLES = 5
 private const val MINUTE_MS = 60_000L
 private const val HOUR_MS = 60 * MINUTE_MS
 private const val DAY_MS = 24 * HOUR_MS
+private val AOI_BLUE = Color(0xFF0253D2)

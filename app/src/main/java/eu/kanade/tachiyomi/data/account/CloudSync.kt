@@ -104,8 +104,6 @@ class CloudSync(
         sync(Mode.AUTO)
     }
 
-    fun fullResync() = sync(Mode.FULL_RESYNC)
-
     /** Os mangas que já não estão na cloud saem também da biblioteca local. */
     fun removeLocalOnly() {
         val mangas = state.value.localOnly
@@ -154,7 +152,7 @@ class CloudSync(
         val firstSync = uploadMarker.get() == 0L || downloadMarker.get() == 0L
 
         // O upload a seguir a uma alteração só precisa do import se for o primeiro sync
-        val doImport = mode == Mode.AUTO || (mode == Mode.UPLOAD && firstSync)
+        val doImport = mode == Mode.AUTO || firstSync
 
         mutableState.update { it.copy(running = true, progress = null) }
         val onProgress = { current: Int, total: Int -> mutableState.update { it.copy(progress = current to total) } }
@@ -174,22 +172,15 @@ class CloudSync(
 
         // No primeiro sync, enviar sem ter juntado o progresso da cloud podia fazer recuar capítulos lidos
         if (ok || !firstSync) {
-            val result = when {
-                mode == Mode.FULL_RESYNC -> repo.reconcileLocalToCloud(
+            val result = if (firstSync) {
+                repo.uploadWholeLibrary(
                     userId = userId,
                     localMangaList = mangaRepository.getFavorites(),
                     getChapters = getChaptersByMangaId,
-                    mirror = true,
                     onProgress = onProgress,
                 )
-                firstSync -> repo.reconcileLocalToCloud(
-                    userId = userId,
-                    localMangaList = mangaRepository.getFavorites(),
-                    getChapters = getChaptersByMangaId,
-                    mirror = false,
-                    onProgress = onProgress,
-                )
-                else -> repo.syncLocalChangesToCloud(
+            } else {
+                repo.syncLocalChangesToCloud(
                     userId = userId,
                     since = uploadMarker.get(),
                     onProgress = onProgress,
@@ -199,10 +190,6 @@ class CloudSync(
                 // Só avança o marco se tudo correu bem; o que falhou volta a ir no próximo
                 uploadMarker.set(start)
                 mangaRepository.clearCloudSyncedBefore(start)
-                if (mode == Mode.FULL_RESYNC) {
-                    downloadMarker.set(start)
-                    mutableState.update { it.copy(localOnly = emptyList()) }
-                }
             } else {
                 ok = false
             }
@@ -243,7 +230,7 @@ class CloudSync(
         val localOnly: List<Manga> = emptyList(),
     )
 
-    private enum class Mode { AUTO, UPLOAD, FULL_RESYNC }
+    private enum class Mode { AUTO, UPLOAD }
 
     private companion object {
         val UPLOAD_DEBOUNCE = 5.seconds

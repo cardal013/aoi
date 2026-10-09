@@ -146,44 +146,21 @@ class LibrarySupabaseRepository(
     }
 
     /**
-     * Upload completo: envia todos os favoritos locais e o progresso dos capítulos.
-     * - Com [mirror] (Full resync) a cloud fica igual ao aparelho: apaga o que já não é favorito local
-     *   e envia todos os capítulos, também os não lidos.
-     * - Sem [mirror] (primeiro sync, depois de juntar com a cloud) não apaga nada
-     *   e só envia capítulos com progresso.
+     * Upload completo (primeiro sync, depois de juntar com a cloud): envia todos os favoritos locais
+     * e o progresso dos capítulos lidos ou começados. Não apaga nada da cloud.
      */
-    suspend fun reconcileLocalToCloud(
+    suspend fun uploadWholeLibrary(
         userId: String,
         localMangaList: List<Manga>,
         getChapters: GetChaptersByMangaId,
-        mirror: Boolean,
         onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
-        onMangaFailed: (mangaTitle: String) -> Unit = {},
     ): SyncResult {
-        if (mirror && localMangaList.isEmpty()) {
-            // Espelhar uma biblioteca vazia apagava a cloud toda
-            logcat(LogPriority.WARN) { "Sync: Full resync recusado com a biblioteca local vazia" }
-            return SyncResult(ok = false)
-        }
         ensureValidSession()
 
         var failures = 0
-        val failedTitles = linkedSetOf<String>()
         fun fail(title: String) {
             failures++
-            if (failedTitles.add(title)) onMangaFailed(title)
-        }
-
-        var mangasRemoved = 0
-        if (mirror) {
-            try {
-                mangasRemoved = removeCloudEntriesNotIn(userId, localMangaList)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                failures++
-                logcat(LogPriority.ERROR, e) { "Sync: falhou a limpeza da cloud" }
-            }
+            logcat(LogPriority.WARN) { "Sync: falhou $title" }
         }
 
         val total = localMangaList.size * 2
@@ -198,8 +175,7 @@ class LibrarySupabaseRepository(
         var chaptersSent = 0
         localMangaList.forEach { manga ->
             try {
-                val chapters = getChapters.await(manga.id)
-                    .filter { mirror || it.read || it.lastPageRead > 0 }
+                val chapters = getChapters.await(manga.id).filter { it.read || it.lastPageRead > 0 }
                 chaptersSent += uploadProgress(userId, chapters.map { manga to it }, ::fail)
             } catch (e: CancellationException) {
                 throw e
@@ -210,67 +186,9 @@ class LibrarySupabaseRepository(
             onProgress(++done, total)
         }
 
-        val result = SyncResult(
-            ok = failures == 0,
-            mangasSent = mangasSent,
-            chaptersSent = chaptersSent,
-            mangasRemoved = mangasRemoved,
-        )
-        logcat(LogPriority.INFO) {
-            "Sync: upload COMPLETO${if (mirror) " (espelho)" else ""} | ${result.summary()} | falhas=$failures"
-        }
+        val result = SyncResult(ok = failures == 0, mangasSent = mangasSent, chaptersSent = chaptersSent)
+        logcat(LogPriority.INFO) { "Sync: upload COMPLETO | ${result.summary()} | falhas=$failures" }
         return result
-    }
-
-    /** Apaga da cloud a biblioteca e o progresso dos mangas que não estão em [localMangaList]. */
-    private suspend fun removeCloudEntriesNotIn(userId: String, localMangaList: List<Manga>): Int {
-        val localLibraryIds = localMangaList.map { mangaRemoteId(it.source, it.url) }.toSet()
-        val localSourceIds = localMangaList.map { sourceRemoteId(it.source, it.url) }.toSet()
-
-        val libraryIdsToDelete = fetchAllMangaIds("user_library", userId).filter { it !in localLibraryIds }
-        libraryIdsToDelete.chunked(UPSERT_BATCH_SIZE).forEach { chunk ->
-            withRetry {
-                supabase.postgrest["user_library"].delete {
-                    filter {
-                        eq("user_id", userId)
-                        isIn("manga_id", chunk)
-                    }
-                }
-            }
-        }
-
-        val progressIdsToDelete = fetchAllMangaIds("user_chapter_progress", userId).filter { it !in localSourceIds }
-        progressIdsToDelete.chunked(UPSERT_BATCH_SIZE).forEach { chunk ->
-            withRetry {
-                supabase.postgrest["user_chapter_progress"].delete {
-                    filter {
-                        eq("user_id", userId)
-                        isIn("manga_id", chunk)
-                    }
-                }
-            }
-        }
-        return libraryIdsToDelete.size
-    }
-
-    private suspend fun fetchAllMangaIds(table: String, userId: String): Set<String> {
-        val ids = mutableSetOf<String>()
-        var offset = 0
-        while (true) {
-            val chunk = withRetry {
-                supabase.postgrest[table]
-                    .select(columns = Columns.list("manga_id")) {
-                        filter { eq("user_id", userId) }
-                        order("manga_id", Order.ASCENDING)
-                        range(offset.toLong(), (offset + PAGE_SIZE - 1).toLong())
-                    }
-                    .decodeList<MangaIdRemote>()
-            }
-            ids.addAll(chunk.map { it.mangaId })
-            if (chunk.size < PAGE_SIZE) break
-            offset += PAGE_SIZE
-        }
-        return ids
     }
 
     /**
@@ -843,11 +761,6 @@ data class UserLibraryEntrySimple(
     @SerialName("is_favorite") val isFavorite: Boolean,
     @SerialName("source_id") val sourceId: String,
     @SerialName("added_at") val addedAt: String,
-)
-
-@Serializable
-data class MangaIdRemote(
-    @SerialName("manga_id") val mangaId: String,
 )
 
 @Serializable

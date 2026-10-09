@@ -136,9 +136,6 @@
     <string name="cloud_sync_local_only_summary">They were removed on another device, or never made it to the cloud.</string>
     <string name="cloud_sync_local_only_remove">Remove here</string>
     <string name="cloud_sync_local_only_keep">Keep and upload</string>
-    <string name="cloud_sync_full_resync">Full resync</string>
-    <string name="cloud_sync_full_resync_summary">Replaces your cloud library with the one on this device</string>
-    <string name="cloud_sync_full_resync_confirm">This sends your whole library and replaces the cloud version. Anything in the cloud that isn\'t on this device will be removed. It can take a while.</string>
     <string name="action_edit_cover">Edit cover</string>
     <string name="action_view_chapters">View chapters</string>
     <string name="action_pause">Pause</string>
