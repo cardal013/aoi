@@ -1,0 +1,59 @@
+-- Registos "sujos" para o sync incremental com a cloud (Aoi).
+CREATE TABLE cloud_dirty_mangas(
+    manga_id INTEGER NOT NULL PRIMARY KEY,
+    modified_at INTEGER NOT NULL,
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE cloud_dirty_chapters(
+    chapter_id INTEGER NOT NULL PRIMARY KEY,
+    modified_at INTEGER NOT NULL,
+    FOREIGN KEY(chapter_id) REFERENCES chapters (_id)
+    ON DELETE CASCADE
+);
+
+CREATE INDEX cloud_dirty_mangas_modified_index ON cloud_dirty_mangas(modified_at);
+CREATE INDEX cloud_dirty_chapters_modified_index ON cloud_dirty_chapters(modified_at);
+
+CREATE TRIGGER cloud_dirty_mangas_on_insert
+AFTER INSERT ON mangas
+WHEN new.favorite = 1
+BEGIN
+  INSERT OR REPLACE INTO cloud_dirty_mangas(manga_id, modified_at)
+  VALUES (new._id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;
+
+CREATE TRIGGER cloud_dirty_mangas_on_update
+AFTER UPDATE ON mangas
+WHEN new.favorite != old.favorite OR new.reading_status != old.reading_status
+BEGIN
+  INSERT OR REPLACE INTO cloud_dirty_mangas(manga_id, modified_at)
+  VALUES (new._id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;
+
+CREATE TRIGGER cloud_dirty_chapters_on_readd
+AFTER UPDATE OF favorite ON mangas
+WHEN new.favorite = 1 AND old.favorite = 0
+BEGIN
+  INSERT OR REPLACE INTO cloud_dirty_chapters(chapter_id, modified_at)
+  SELECT _id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER)
+  FROM chapters
+  WHERE manga_id = new._id AND (read = 1 OR last_page_read > 0);
+END;
+
+CREATE TRIGGER cloud_dirty_chapters_on_insert
+AFTER INSERT ON chapters
+WHEN new.read = 1 OR new.last_page_read > 0
+BEGIN
+  INSERT OR REPLACE INTO cloud_dirty_chapters(chapter_id, modified_at)
+  VALUES (new._id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;
+
+CREATE TRIGGER cloud_dirty_chapters_on_update
+AFTER UPDATE ON chapters
+WHEN new.read != old.read OR new.last_page_read != old.last_page_read
+BEGIN
+  INSERT OR REPLACE INTO cloud_dirty_chapters(chapter_id, modified_at)
+  VALUES (new._id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;

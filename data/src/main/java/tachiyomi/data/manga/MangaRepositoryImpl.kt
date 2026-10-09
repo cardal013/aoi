@@ -64,6 +64,22 @@ class MangaRepositoryImpl(
             .awaitAsList()
     }
 
+    override suspend fun getFavoritesModifiedSince(since: Long): List<Manga> {
+        return database.cloud_syncQueries
+            .getFavoritesModifiedSince(since, MangaMapper::mapManga)
+            .awaitAsList()
+    }
+
+    override suspend fun getRemovedFromLibrarySince(since: Long): List<Manga> {
+        return database.cloud_syncQueries
+            .getRemovedFromLibrarySince(since, MangaMapper::mapManga)
+            .awaitAsList()
+    }
+
+    override suspend fun clearCloudDirty(mangaIds: List<Long>) {
+        mangaIds.chunked(500).forEach { database.cloud_syncQueries.clearDirtyMangas(it) }
+    }
+
     override suspend fun getReadMangaNotInLibrary(): List<Manga> {
         return database.mangasQueries
             .getReadMangaNotInLibrary(MangaMapper::mapManga)

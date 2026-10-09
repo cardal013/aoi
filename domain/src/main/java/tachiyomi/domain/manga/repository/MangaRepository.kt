@@ -18,6 +18,14 @@ interface MangaRepository {
 
     suspend fun getFavorites(): List<Manga>
 
+    /** Favoritos cujo favorito ou estado de leitura mudou desde [since] (ms), para o sync incremental. */
+    suspend fun getFavoritesModifiedSince(since: Long): List<Manga>
+
+    /** Mangas retirados da biblioteca desde [since] (ms), para o sync incremental. */
+    suspend fun getRemovedFromLibrarySince(since: Long): List<Manga>
+
+    suspend fun clearCloudDirty(mangaIds: List<Long>)
+
     suspend fun getReadMangaNotInLibrary(): List<Manga>
 
     suspend fun getLibraryManga(): List<LibraryManga>

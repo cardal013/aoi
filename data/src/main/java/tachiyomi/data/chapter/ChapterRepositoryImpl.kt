@@ -137,6 +137,16 @@ class ChapterRepositoryImpl(
             .awaitAsOneOrNull()
     }
 
+    override suspend fun getFavoriteChaptersModifiedSince(since: Long): List<Chapter> {
+        return database.cloud_syncQueries
+            .getFavoriteChaptersModifiedSince(since, ::mapChapter)
+            .awaitAsList()
+    }
+
+    override suspend fun clearCloudDirty(chapterIds: List<Long>) {
+        chapterIds.chunked(500).forEach { database.cloud_syncQueries.clearDirtyChapters(it) }
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun mapChapter(
         id: Long,

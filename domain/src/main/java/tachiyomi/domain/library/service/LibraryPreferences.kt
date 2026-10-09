@@ -231,6 +231,18 @@ class LibraryPreferences(
         "",
     )
 
+    /** Instante (ms) do início do último upload para a cloud concluído com sucesso, por utilizador. */
+    fun lastCloudUploadSync(userId: String): Preference<Long> = preferenceStore.getLong(
+        "last_cloud_upload_sync_$userId",
+        0L,
+    )
+
+    /** Instante (ms) do início do último import da cloud concluído com sucesso, por utilizador. */
+    fun lastCloudDownloadSync(userId: String): Preference<Long> = preferenceStore.getLong(
+        "last_cloud_download_sync_$userId",
+        0L,
+    )
+
     // endregion
 
     enum class ChapterSwipeAction {

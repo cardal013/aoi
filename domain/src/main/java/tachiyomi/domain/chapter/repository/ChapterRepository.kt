@@ -27,4 +27,9 @@ interface ChapterRepository {
     suspend fun getChapterByMangaIdAsFlow(mangaId: Long, applyScanlatorFilter: Boolean = false): Flow<List<Chapter>>
 
     suspend fun getChapterByUrlAndMangaId(url: String, mangaId: Long): Chapter?
+
+    /** Capítulos de favoritos cujo read ou last_page_read mudou desde [since] (ms), para o sync incremental. */
+    suspend fun getFavoriteChaptersModifiedSince(since: Long): List<Chapter>
+
+    suspend fun clearCloudDirty(chapterIds: List<Long>)
 }
