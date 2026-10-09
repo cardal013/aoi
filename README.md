@@ -8,7 +8,7 @@ A modern manga & manhwa reader for Android — clean, fast, and built around an 
 
 [![Platform](https://img.shields.io/badge/platform-Android-3DDC84?logo=android&logoColor=white)](https://github.com/cardal013/aoi)
 [![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![License: GPL-3.0](https://img.shields.io/badge/License-GPL--3.0-blue.svg)](LICENSE)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-active-brightgreen)](#project-status)
 [![Downloads](https://img.shields.io/github/downloads/cardal013/aoi/total)](https://github.com/cardal013/aoi/releases/latest)
 [![Latest release](https://img.shields.io/github/v/release/cardal013/aoi)](https://github.com/cardal013/aoi/releases/latest)
@@ -69,6 +69,10 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 ## Project status
 
 ![Status](https://img.shields.io/badge/status-active%20development-brightgreen)
+
+## Baseado no Mihon
+
+O Aoi é um fork do [Mihon](https://github.com/mihonapp/mihon), distribuído sob a licença [Apache 2.0](LICENSE) (a mesma do Mihon). O leitor, as extensões e as fontes vêm do Mihon; o Aoi acrescenta contas, estados de leitura e a biblioteca na cloud. Obrigado à equipa do Mihon e aos seus contribuidores.
 
 ## Disclaimer
 
