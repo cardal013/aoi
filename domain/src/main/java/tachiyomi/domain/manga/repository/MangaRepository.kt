@@ -26,6 +26,18 @@ interface MangaRepository {
 
     suspend fun clearCloudDirty(mangaIds: List<Long>)
 
+    /** Marca os mangas (e os capítulos com progresso) para o próximo upload. */
+    suspend fun markCloudDirty(mangaIds: List<Long>)
+
+    /** Mangas apagados da base de dados desde [since] (ms), como (source, url). */
+    suspend fun getDeletedForCloudSince(since: Long): List<Pair<Long, String>>
+
+    /** Apaga as marcas de sync anteriores a [before] (ms), que já foram enviadas. */
+    suspend fun clearCloudSyncedBefore(before: Long)
+
+    /** Instante (ms) da última alteração local por enviar à cloud. */
+    fun getLastLocalChangeAsFlow(): Flow<Long>
+
     suspend fun getReadMangaNotInLibrary(): List<Manga>
 
     suspend fun getLibraryManga(): List<LibraryManga>

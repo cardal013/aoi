@@ -1,5 +1,6 @@
 package tachiyomi.data.manga
 
+import app.cash.sqldelight.async.coroutines.await
 import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.async.coroutines.awaitAsOneOrNull
@@ -78,6 +79,31 @@ class MangaRepositoryImpl(
 
     override suspend fun clearCloudDirty(mangaIds: List<Long>) {
         mangaIds.chunked(500).forEach { database.cloud_syncQueries.clearDirtyMangas(it) }
+    }
+
+    override suspend fun markCloudDirty(mangaIds: List<Long>) {
+        val now = System.currentTimeMillis()
+        mangaIds.chunked(500).forEach {
+            database.cloud_syncQueries.markDirtyMangas(now, it)
+            database.cloud_syncQueries.markDirtyChaptersOfMangas(now, it)
+        }
+    }
+
+    override suspend fun getDeletedForCloudSince(since: Long): List<Pair<Long, String>> {
+        return database.cloud_syncQueries
+            .getRemovedSince(since) { source, url -> source to url }
+            .awaitAsList()
+    }
+
+    override suspend fun clearCloudSyncedBefore(before: Long) {
+        // Os grupos de statements gerados em modo async só correm com await()
+        database.cloud_syncQueries.clearSyncedBefore(before).await()
+    }
+
+    override fun getLastLocalChangeAsFlow(): Flow<Long> {
+        return database.cloud_syncQueries
+            .lastLocalChange { last -> last ?: 0L }
+            .subscribeToOne()
     }
 
     override suspend fun getReadMangaNotInLibrary(): List<Manga> {
@@ -234,7 +260,7 @@ class MangaRepositoryImpl(
                     isSyncing = 0,
                     notes = value.notes,
                     memo = value.memo?.let(MemoColumnAdapter::encode),
-                    readingStatus = value.readingStatus?.value
+                    readingStatus = value.readingStatus?.value,
                 )
             }
         }

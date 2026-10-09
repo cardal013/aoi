@@ -43,4 +43,8 @@ dependencies {
     implementation(libs.kotlinx.datetime)
 
     api(libs.bundles.sqldelight)
+
+    testImplementation(libs.bundles.test)
+    testImplementation(libs.sqldelight.sqliteDriver)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }

@@ -16,8 +16,31 @@ CREATE TABLE cloud_dirty_chapters(
     ON DELETE CASCADE
 );
 
+-- Mangas apagados da base de dados (ex.: Clear database) antes de a remocao chegar a cloud.
+-- Sem isto o ON DELETE CASCADE levava a marca dirty e a cloud nunca sabia da remocao.
+CREATE TABLE cloud_removed_mangas(
+    source INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    removed_at INTEGER NOT NULL,
+    PRIMARY KEY(source, url)
+);
+
 CREATE INDEX cloud_dirty_mangas_modified_index ON cloud_dirty_mangas(modified_at);
 CREATE INDEX cloud_dirty_chapters_modified_index ON cloud_dirty_chapters(modified_at);
+
+CREATE TRIGGER cloud_removed_mangas_on_delete
+BEFORE DELETE ON mangas
+WHEN old.favorite = 1 OR EXISTS (SELECT 1 FROM cloud_dirty_mangas WHERE manga_id = old._id)
+BEGIN
+  INSERT OR REPLACE INTO cloud_removed_mangas(source, url, removed_at)
+  VALUES (old.source, old.url, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;
+
+CREATE TRIGGER cloud_removed_mangas_on_insert
+AFTER INSERT ON mangas
+BEGIN
+  DELETE FROM cloud_removed_mangas WHERE source = new.source AND url = new.url;
+END;
 
 CREATE TRIGGER cloud_dirty_mangas_on_insert
 AFTER INSERT ON mangas
@@ -90,3 +113,32 @@ WHERE manga_id IN :mangaIds;
 clearDirtyChapters:
 DELETE FROM cloud_dirty_chapters
 WHERE chapter_id IN :chapterIds;
+
+markDirtyMangas:
+INSERT OR REPLACE INTO cloud_dirty_mangas(manga_id, modified_at)
+SELECT _id, :now FROM mangas WHERE _id IN :mangaIds;
+
+markDirtyChaptersOfMangas:
+INSERT OR REPLACE INTO cloud_dirty_chapters(chapter_id, modified_at)
+SELECT _id, :now FROM chapters
+WHERE manga_id IN :mangaIds AND (read = 1 OR last_page_read > 0);
+
+getRemovedSince:
+SELECT source, url
+FROM cloud_removed_mangas
+WHERE removed_at >= :since;
+
+-- Depois de um upload com sucesso o que e anterior ao inicio dele ja esta na cloud
+clearSyncedBefore {
+  DELETE FROM cloud_dirty_mangas WHERE modified_at < :before;
+  DELETE FROM cloud_dirty_chapters WHERE modified_at < :before;
+  DELETE FROM cloud_removed_mangas WHERE removed_at < :before;
+}
+
+-- Muda sempre que ha algo novo para enviar (o SQLDelight notifica tambem o que os triggers alteram)
+lastLocalChange:
+SELECT max(
+  coalesce((SELECT max(modified_at) FROM cloud_dirty_mangas), 0),
+  coalesce((SELECT max(modified_at) FROM cloud_dirty_chapters), 0),
+  coalesce((SELECT max(removed_at) FROM cloud_removed_mangas), 0)
+) AS last;

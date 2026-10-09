@@ -1,0 +1,21 @@
+-- Mangas apagados da base de dados antes de a remocao chegar a cloud (Aoi).
+CREATE TABLE cloud_removed_mangas(
+    source INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    removed_at INTEGER NOT NULL,
+    PRIMARY KEY(source, url)
+);
+
+CREATE TRIGGER cloud_removed_mangas_on_delete
+BEFORE DELETE ON mangas
+WHEN old.favorite = 1 OR EXISTS (SELECT 1 FROM cloud_dirty_mangas WHERE manga_id = old._id)
+BEGIN
+  INSERT OR REPLACE INTO cloud_removed_mangas(source, url, removed_at)
+  VALUES (old.source, old.url, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
+END;
+
+CREATE TRIGGER cloud_removed_mangas_on_insert
+AFTER INSERT ON mangas
+BEGIN
+  DELETE FROM cloud_removed_mangas WHERE source = new.source AND url = new.url;
+END;
