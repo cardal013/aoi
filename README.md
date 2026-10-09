@@ -57,7 +57,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 
 ### How the sync works
 
-- Opening the app (or logging in) pulls what changed in the cloud since the last sync, then sends what changed on the device.
+- Opening the app, logging in or getting back online pulls what changed in the cloud since the last sync, then sends what changed on the device.
 - Every local change (library entries, reading status, chapter read/page) is marked on the device and sent about 5 seconds later, in batches. Reading progress is also sent live while you read.
 - The sync remembers the time of its last success; if something fails, the next sync sends it again.
 - The first sync of an account on a device merges both libraries: nothing is deleted and read progress never goes backwards.
@@ -90,12 +90,12 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
-### Unreleased
-- Automatic sync: no more *Upload*/*Import* buttons, the account screen shows when it last synced
+### 0.20.7
+- Automatic sync (on open, after login, whenever the connection comes back, and a few seconds after each change); no sync buttons, the account screen only shows when it last synced
 - The first sync on a device merges both libraries instead of overwriting one with the other
 - Manga missing from the cloud are no longer removed from the device without asking
 - Manga deleted from the local database (e.g. *Clear database*) are also removed from the cloud
-- Account screen translated (English and Portuguese), reading status names in Portuguese
+- The app is always in English
 - No more username or internal email in the logs; the website warns that passwords can't be recovered
 
 ### 0.20.5

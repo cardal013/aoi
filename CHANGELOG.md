@@ -14,15 +14,15 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
-## [Aoi Unreleased]
+## [Aoi v0.20.7] - 2026-10-09
 ### Added
-- Automatic sync with the cloud: pulls what changed when the app opens or after logging in, and sends local changes a few seconds after they happen
+- Automatic sync with the cloud: pulls what changed when the app opens, after logging in and when the connection comes back, and sends local changes a few seconds after they happen
 - Manga missing from the cloud are shown in *Account* to remove here or keep and upload again, instead of being removed silently
 - Manga deleted from the local database before syncing (e.g. *Clear database*) are removed from the cloud too
-- Portuguese translation for the account screen and the reading status names
 
 ### Changed
-- *Upload to cloud* / *Import from cloud* buttons removed; the account screen shows when the library last synced
+- *Upload to cloud* / *Import from cloud* buttons removed; the account screen only shows when the library last synced
+- The app only ships English resources, whatever the phone language
 - *Full resync* moved under *Advanced* and asks for confirmation; it refuses to mirror an empty library
 - The first sync of an account on a device merges both libraries and never moves read progress backwards
 - Full upload sends manga in batches of 100 and pages every cloud query
