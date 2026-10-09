@@ -22,3 +22,4 @@ ignorance/
 aoi-release.keystore
 keystore.properties
 .artifacts/
+/aoi/
