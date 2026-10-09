@@ -43,6 +43,8 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |🗂️|**Reading status categories**|Save each manga as Reading, Completed, Dropped, or Plan to Read.|
 |📖|**Clean, focused reader**|Inherited from Mihon.|
 |☁️|**Cloud-backed library**|Backed by a database — access your library from the website too.|
+|🔄|**Incremental sync**|*Update Account* only uploads what changed since your last successful sync (library, reading status, read progress and removals), in batches. *Import from cloud* only pulls what changed in the cloud. A *Full resync* button re-sends everything if something gets out of sync.|
+|📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
 
 ### Reading status categories
 
@@ -53,11 +55,48 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |❌ Dropped|Stopped, not continuing|
 |📌 Plan to Read|Saved for later|
 
+### How the incremental sync works
+
+- Each account remembers the time of its last successful sync, on the device.
+- The app marks locally what changed (library entries, reading status, chapter read/page) and *Update Account* sends only those records. Manga removed from the library are removed from the cloud one by one.
+- The timestamp only moves forward when everything was sent; if something fails, the next sync sends it again.
+- The first sync of an account, and *Full resync*, send the whole library.
+- *Import from cloud* reads only the rows changed since your last import (`updated_at`), 1000 at a time.
+
 ## Installation
 
-Download the latest APK from the [Releases page](https://github.com/cardal013/aoi/releases/latest) and install it on your Android device.
+Download the latest APK from the [Releases page](https://github.com/cardal013/aoi/releases/latest) (or straight from the [website](https://aoi-mangas.vercel.app/)) and install it on your Android device.
 
 <!-- TODO: add a Play Store badge here if/when Aoi is published -->
+
+## Building from source
+
+1. JDK 21 and the Android SDK (Android Studio's bundled JDK works).
+2. Create `ignorance/local.properties` (git-ignored) with your Supabase project:
+   ```properties
+   SUPABASE_URL=https://<project>.supabase.co
+   SUPABASE_ANON_KEY=<anon key>
+   ```
+   Without it the app builds but cannot connect to the cloud.
+3. Run the SQL in [`supabase/migrations`](supabase/migrations) on your Supabase project (needed for the incremental import).
+4. Build:
+   ```powershell
+   .\gradlew.bat :app:assembleDebug     # app/build/outputs/apk/debug/app-universal-debug.apk
+   .\gradlew.bat assembleRelease        # needs keystore.properties + the keystore
+   ```
+   The debug build installs next to the release one (`com.cardal.aoi.dev`).
+
+## Changelog
+
+### 0.20.5
+- Incremental sync with the cloud (only what changed), with a *Full resync* button
+- *Import from cloud* only pulls what changed, paginated
+- New manga go to *Plan to Read* by default
+- Local database migration (dirty tracking for the sync) and a Supabase migration (`user_library.updated_at`)
+
+### 0.20.4
+- Import no longer removes local chapters when a source fails
+- Import reads progress in pages of 1000 rows
 
 ## Built with
 
