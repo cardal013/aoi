@@ -1062,6 +1062,9 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         </div>
         <div class="field-error" id="signupConfirmError">Passwords don't match.</div>
       </div>
+      <p style="font-size:12.5px; color:var(--text-muted); line-height:1.5; margin:-4px 0 16px;">
+        Aoi accounts have no email, so a forgotten password can't be recovered. Keep it somewhere safe.
+      </p>
       <button type="submit" class="btn btn-primary btn-block">Create account</button>
       <p style="text-align:center; font-size:13px; color:var(--text-muted); margin-top:16px;">
         Already have an account?
@@ -1239,26 +1242,20 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('signupForm').onsubmit = async (e) => {
     e.preventDefault();
-    console.log('[signup] submit disparado');
     try {
       const username = qs('signupUsername').value.trim();
-      console.log('[signup] username:', username);
       const internalEmail = formatInternalEmail(username);
-      console.log('[signup] internalEmail:', internalEmail);
       const password = qs('signupPassword').value;
       const confirmPassword = qs('signupConfirmPassword').value;
-      console.log('[signup] password preenchida:', !!password, 'confirm preenchida:', !!confirmPassword);
 
       const errEl = qs('signupConfirmError');
       if (errEl) errEl.classList.remove('show');
 
       if (password !== confirmPassword) {
-        console.log('[signup] abortado: passwords não coincidem');
         if (errEl) errEl.classList.add('show');
         return;
       }
 
-      console.log('[signup] a chamar supabase.auth.signUp...');
       const { data, error } = await supabase.auth.signUp({
         email: internalEmail,
         password,
@@ -1266,36 +1263,17 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           data: { username: username }
         }
       });
-      console.log('[signup] resposta completa:', {
-        user: data.user,
-        session: data.session,
-        error: error
-      });
 
       if (error) {
-        console.error('[signup] erro retornado pelo Supabase:', error.message, error.status);
         alert(error.message);
         return;
       }
 
-      if (!data.session && data.user) {
-        console.warn('[signup] User criado mas SEM SESSÃO (isto acontece se o email confirmation estiver ON, mesmo que digas que está OFF)');
-      }
-
       closeModal(signupScrim);
-      if (data.user) {
-        console.log('[signup] user ID:', data.user.id);
-        if (data.session) {
-          console.log('[signup] sessão válida, a fazer login automático...');
-          logIn(data.user);
-        } else {
-          console.warn('[signup] abortado login automático: sem sessão');
-        }
-      } else {
-        console.warn('[signup] data.user veio vazio/undefined');
-      }
+      // Sem sessão quer dizer que a confirmação de email está ligada no Supabase
+      if (data.user && data.session) logIn(data.user);
     } catch (err) {
-      console.error('[signup] EXCEÇÃO NÃO APANHADA:', err);
+      console.error('signup', err);
     }
   };
 
@@ -1316,35 +1294,25 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('usernameForm').onsubmit = async (e) => {
     e.preventDefault();
-    console.log('[change-username] submit disparado');
     try {
       const newUsername = qs('newUsername').value.trim();
       const errEl = qs('usernameError');
       const btn = e.target.querySelector('button[type="submit"]');
       errEl.classList.remove('show');
 
-      console.log('[change-username] user logado:', currentUser);
-      console.log('[change-username] newUsername:', newUsername, 'atual:', currentUser?.user_metadata?.username);
-
-      if (!newUsername) { console.log('[change-username] abortado: vazio'); return; }
+      if (!newUsername) return;
       if (newUsername === currentUser?.user_metadata?.username) {
-        console.log('[change-username] abortado: igual ao atual');
         closeModal(usernameScrim);
         return;
       }
 
       btn.disabled = true;
-      console.log('[change-username] a chamar Edge Function...');
-
       const { data, error } = await supabase.functions.invoke('change-username', {
         body: { newUsername: newUsername }
       });
-
       btn.disabled = false;
-      console.log('[change-username] resposta:', { data, error });
 
       if (error || (data && data.error)) {
-        console.error('[change-username] erro detetado:', error, data);
         if (data?.error === 'username_taken' || (error && error.status === 409)) {
           errEl.classList.add('show');
         } else {
@@ -1353,7 +1321,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         return;
       }
 
-      console.log('[change-username] sucesso, a fazer refresh da sessão...');
       await supabase.auth.refreshSession();
       const { data: { user } } = await supabase.auth.getUser();
 
@@ -1362,9 +1329,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       const displayName = currentUser.user_metadata?.username || currentUser.email.replace("usr_", "").split("@")[0];
       qs('navAvatar').textContent = initials(displayName);
       closeModal(usernameScrim);
-      console.log('[change-username] concluído com sucesso');
     } catch (err) {
-      console.error('[change-username] EXCEÇÃO NÃO APANHADA:', err);
+      console.error('change-username', err);
     }
   };
 
@@ -1511,48 +1477,37 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   qs('passwordForm').onsubmit = async (e) => {
     e.preventDefault();
-    console.log('[change-password] submit disparado');
     try {
       const currentPassword = qs('currentPassword').value;
       const newPassword = qs('newPassword').value;
       const confirmPassword = qs('confirmPassword').value;
-      console.log('[change-password] currentUser.email usado para verificar:', currentUser.email);
-      console.log('[change-password] currentUser completo:', currentUser);
 
       qs('currentPasswordError').classList.remove('show');
       qs('confirmPasswordError').classList.remove('show');
 
       if (newPassword !== confirmPassword) {
-        console.log('[change-password] abortado: passwords novas não coincidem');
         qs('confirmPasswordError').classList.add('show');
         return;
       }
 
-      console.log('[change-password] a verificar password atual via signInWithPassword...');
+      // Confirma a palavra-passe atual antes de a trocar
       const { error: verifyError } = await supabase.auth.signInWithPassword({
         email: currentUser.email,
         password: currentPassword
       });
-      console.log('[change-password] resultado verificação:', verifyError);
-
       if (verifyError) {
-        console.error('[change-password] verificação falhou:', verifyError.message, verifyError.status);
         qs('currentPasswordError').classList.add('show');
         return;
       }
 
-      console.log('[change-password] verificação ok, a atualizar password...');
       const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
-      console.log('[change-password] resultado update:', updateError);
-
       if (updateError) {
         alert(updateError.message);
         return;
       }
-      console.log('[change-password] sucesso!');
       closeModal(passwordScrim);
     } catch (err) {
-      console.error('[change-password] EXCEÇÃO NÃO APANHADA:', err);
+      console.error('change-password', err);
     }
   };
 
