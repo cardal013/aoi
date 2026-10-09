@@ -72,6 +72,7 @@ fun AccountScreenContent(
     onNavigateBack: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
     onUpdateAccount: () -> Unit,
+    onFullResync: () -> Unit,
     onLogin: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
     onLogout: () -> Unit,
@@ -103,6 +104,7 @@ fun AccountScreenContent(
                         onContinue = onNavigateBack,
                         onCloudLibrary = onNavigateToCloudLibrary,
                         onUpdateAccount = onUpdateAccount,
+                        onFullResync = onFullResync,
                     )
                 } else {
                     AuthView(onLogin = onLogin, onSignUp = onSignUp)
@@ -278,7 +280,7 @@ private fun SyncProgressOverlay(progress: Pair<Int, Int>?) {
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    "Processing: $current / $total mangas",
+                    "Processing: $current / $total",
                     color = Color.White,
                     fontWeight = FontWeight.Medium
                 )
@@ -320,6 +322,7 @@ private fun ProfileView(
     onContinue: () -> Unit,
     onCloudLibrary: () -> Unit,
     onUpdateAccount: () -> Unit,
+    onFullResync: () -> Unit,
 ) {
     val isSyncing = syncStatus == AccountViewModel.SyncStatus.Syncing
 
@@ -352,6 +355,19 @@ private fun ProfileView(
         enabled = !isSyncing,
         onClick = onUpdateAccount
     )
+
+    TextButton(
+        onClick = onFullResync,
+        enabled = !isSyncing,
+        modifier = Modifier.fillMaxWidth().height(40.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = ButtonDefaults.textButtonColors(
+            contentColor = MaterialTheme.colorScheme.outline,
+            disabledContentColor = Color.Gray.copy(alpha = 0.5f),
+        ),
+    ) {
+        Text("Full resync", fontSize = 14.sp)
+    }
 
     Spacer(modifier = Modifier.height(8.dp))
 

@@ -73,6 +73,7 @@ class AccountScreen : Screen() {
             onNavigateBack = navigator::pop,
             onNavigateToCloudLibrary = { uriHandler.openUri("https://aoi-mangas.vercel.app/") },
             onUpdateAccount = { showUpdateDialog = true },
+            onFullResync = { syncType = SyncType.FULL_RESYNC },
             onLogin = viewModel::login,
             onSignUp = viewModel::signUp,
             onLogout = viewModel::logout,
@@ -94,7 +95,11 @@ class AccountScreen : Screen() {
                 type = type,
                 onDismiss = { syncType = null },
                 onConfirm = {
-                    if (type == SyncType.IMPORT) viewModel.importFromCloud() else viewModel.uploadToCloud()
+                    when (type) {
+                        SyncType.IMPORT -> viewModel.importFromCloud()
+                        SyncType.UPLOAD -> viewModel.uploadToCloud()
+                        SyncType.FULL_RESYNC -> viewModel.uploadToCloud(fullResync = true)
+                    }
                     syncType = null
                 }
             )
@@ -131,7 +136,7 @@ class AccountScreen : Screen() {
 
                 SyncOptionCard(
                     title = "Import from cloud",
-                    subtitle = "Replaces local library with cloud version",
+                    subtitle = "Brings in what changed in the cloud",
                     icon = MaterialSymbols.Rounded.Download,
                     onClick = { onOptionSelected(SyncType.IMPORT) }
                 )
@@ -140,7 +145,7 @@ class AccountScreen : Screen() {
 
                 SyncOptionCard(
                     title = "Upload to cloud",
-                    subtitle = "Replaces cloud library with local version",
+                    subtitle = "Sends only what changed locally",
                     icon = MaterialSymbols.Rounded.ArrowUpward,
                     onClick = { onOptionSelected(SyncType.UPLOAD) }
                 )
@@ -191,10 +196,13 @@ class AccountScreen : Screen() {
 
     @Composable
     private fun SyncConfirmationDialog(type: SyncType, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-        val message = if (type == SyncType.IMPORT) {
-            "This will replace your local library with the cloud version. Mangas not present locally will be added. Any local manga not present in the cloud will be removed from your library. Continue?"
-        } else {
-            "This will replace your cloud library with your local library. Any cloud data not present locally will be lost. Continue?"
+        val message = when (type) {
+            SyncType.IMPORT ->
+                "This will bring in what changed in the cloud since your last import. Mangas not present locally will be added. Any local manga removed from the cloud will be removed from your library. Continue?"
+            SyncType.UPLOAD ->
+                "This will send only what changed locally since your last upload to the cloud. Continue?"
+            SyncType.FULL_RESYNC ->
+                "This will re-send your whole library and replace the cloud version. It can take a long time. Any cloud data not present locally will be lost. Continue?"
         }
 
         androidx.compose.material3.AlertDialog(
@@ -210,5 +218,5 @@ class AccountScreen : Screen() {
         )
     }
 
-    private enum class SyncType { IMPORT, UPLOAD }
+    private enum class SyncType { IMPORT, UPLOAD, FULL_RESYNC }
 }

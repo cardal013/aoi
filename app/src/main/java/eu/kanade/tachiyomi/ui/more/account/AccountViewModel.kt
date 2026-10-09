@@ -49,7 +49,6 @@ class AccountViewModel(
     private val libraryPreferences: tachiyomi.domain.library.service.LibraryPreferences,
     private val updateMangaFromRemote: mihon.domain.source.interactor.UpdateMangaFromRemote,
     private val updateChapter: tachiyomi.domain.chapter.interactor.UpdateChapter,
-    private val chapterRepository: tachiyomi.domain.chapter.repository.ChapterRepository,
 ) : ViewModel() {
 
     private val syncMutex = Mutex()
@@ -150,7 +149,12 @@ class AccountViewModel(
         }
     }
 
-    fun uploadToCloud() {
+    /**
+     * Envia as alterações locais para a cloud.
+     * Incremental por defeito (só o que mudou desde o último upload com sucesso);
+     * completo no primeiro sync do utilizador ou com [fullResync].
+     */
+    fun uploadToCloud(fullResync: Boolean = false) {
         val user = supabase.auth.currentUserOrNull() ?: run {
             logcat(LogPriority.WARN) { "Sync: Cannot upload, no user session" }
             return
@@ -161,32 +165,55 @@ class AccountViewModel(
         viewModelScope.launchIO {
             syncMutex.withLock {
                 try {
-                    logcat(LogPriority.INFO) { "Sync: Reconciliation starting for user ${user.id}" }
-                    val localFavorites = getLibraryManga.await().map { it.manga }
-                    logcat(LogPriority.INFO) { "Sync: Found ${localFavorites.size} local favorites" }
+                    val syncStart = System.currentTimeMillis()
+                    val lastUploadSync = libraryPreferences.lastCloudUploadSync(user.id)
+                    val since = if (fullResync) 0L else lastUploadSync.get()
+                    val onProgress = { current: Int, total: Int ->
+                        mutableSyncState.update { it.copy(progress = current to total) }
+                    }
+                    val onMangaFailed = { title: String ->
+                        mutableSyncState.update { it.copy(failedMangas = it.failedMangas + title) }
+                    }
 
-                    librarySupabaseRepository.reconcileLocalToCloud(
-                        userId = user.id,
-                        localMangaList = localFavorites,
-                        getChapters = getChaptersByMangaId,
-                        onProgress = { current: Int, total: Int ->
-                            mutableSyncState.update { it.copy(progress = current to total) }
-                        },
-                        onMangaFailed = { title: String ->
-                            mutableSyncState.update { it.copy(failedMangas = it.failedMangas + title) }
-                        }
-                    )
+                    logcat(LogPriority.INFO) {
+                        "Sync: Upload starting for user ${user.id} | ${if (since == 0L) "completo" else "incremental"}"
+                    }
+                    val result = if (since == 0L) {
+                        val localFavorites = getLibraryManga.await().map { it.manga }
+                        logcat(LogPriority.INFO) { "Sync: Found ${localFavorites.size} local favorites" }
+                        librarySupabaseRepository.reconcileLocalToCloud(
+                            userId = user.id,
+                            localMangaList = localFavorites,
+                            getChapters = getChaptersByMangaId,
+                            onProgress = onProgress,
+                            onMangaFailed = onMangaFailed,
+                        )
+                    } else {
+                        librarySupabaseRepository.syncLocalChangesToCloud(
+                            userId = user.id,
+                            since = since,
+                            onProgress = onProgress,
+                            onMangaFailed = onMangaFailed,
+                        )
+                    }
 
-                    logcat(LogPriority.INFO) { "Sync: Full update completed" }
                     val failedCount = mutableSyncState.value.failedMangas.size
-                    if (failedCount == 0) {
+                    if (result.ok && failedCount == 0) {
+                        // Só avança o marco do último sync se tudo correu bem
+                        lastUploadSync.set(syncStart)
+                        logcat(LogPriority.INFO) { "Sync: Upload completed | ${result.summary()}" }
                         mutableSyncState.update { it.copy(status = SyncStatus.Success) }
-                        viewModelScope.launch { context.toast("Upload completed!") }
+                        viewModelScope.launch { context.toast("Upload completed! ${result.totalSent} records sent") }
                         delay(1000)
                         mutableSyncState.update { it.copy(status = SyncStatus.Idle) }
                     } else {
+                        logcat(LogPriority.WARN) { "Sync: Upload finished with errors | ${result.summary()}" }
                         mutableSyncState.update { it.copy(status = SyncStatus.Error) }
-                        viewModelScope.launch { context.toast("Upload finished with $failedCount errors") }
+                        viewModelScope.launch {
+                            context.toast(
+                                if (failedCount > 0) "Upload finished with $failedCount errors" else "Upload finished with errors",
+                            )
+                        }
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Sync: Upload failed" }
@@ -197,6 +224,9 @@ class AccountViewModel(
         }
     }
 
+    /**
+     * Traz da cloud o que mudou desde o último import com sucesso (completo no primeiro).
+     */
     fun importFromCloud() {
         val user = supabase.auth.currentUserOrNull() ?: run {
             logcat(LogPriority.WARN) { "Sync: Cannot import, no user session" }
@@ -208,11 +238,14 @@ class AccountViewModel(
         viewModelScope.launchIO {
             syncMutex.withLock {
                 try {
+                    val syncStart = System.currentTimeMillis()
+                    val lastDownloadSync = libraryPreferences.lastCloudDownloadSync(user.id)
                     logcat(LogPriority.INFO) { "Sync: Import starting for user ${user.id}" }
-                    librarySupabaseRepository.reconcileCloudToLocal(
+                    val result = librarySupabaseRepository.reconcileCloudToLocal(
                         userId = user.id,
+                        since = lastDownloadSync.get(),
+                        pendingSince = libraryPreferences.lastCloudUploadSync(user.id).get(),
                         updateChapter = updateChapter,
-                        chapterRepository = chapterRepository,
                         onProgress = { current: Int, total: Int ->
                             mutableSyncState.update { it.copy(progress = current to total) }
                         },
@@ -220,16 +253,23 @@ class AccountViewModel(
                             mutableSyncState.update { it.copy(failedMangas = it.failedMangas + title) }
                         }
                     )
-                    logcat(LogPriority.INFO) { "Sync: Import completed" }
+
                     val failedCount = mutableSyncState.value.failedMangas.size
-                    if (failedCount == 0) {
+                    if (result.ok && failedCount == 0) {
+                        lastDownloadSync.set(syncStart)
+                        logcat(LogPriority.INFO) { "Sync: Import completed | ${result.summary()}" }
                         mutableSyncState.update { it.copy(status = SyncStatus.Success) }
-                        viewModelScope.launch { context.toast("Import completed!") }
+                        viewModelScope.launch { context.toast("Import completed! ${result.totalReceived} records received") }
                         delay(1000)
                         mutableSyncState.update { it.copy(status = SyncStatus.Idle) }
                     } else {
+                        logcat(LogPriority.WARN) { "Sync: Import finished with errors | ${result.summary()}" }
                         mutableSyncState.update { it.copy(status = SyncStatus.Error) }
-                        viewModelScope.launch { context.toast("Import finished with $failedCount errors") }
+                        viewModelScope.launch {
+                            context.toast(
+                                if (failedCount > 0) "Import finished with $failedCount errors" else "Import finished with errors",
+                            )
+                        }
                     }
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Sync: Import failed" }
