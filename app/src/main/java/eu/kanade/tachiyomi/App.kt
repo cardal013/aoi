@@ -30,6 +30,7 @@ import eu.kanade.domain.ui.model.setAppCompatDelegateThemeMode
 import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.crash.CrashActivity
 import eu.kanade.tachiyomi.crash.GlobalExceptionHandler
+import eu.kanade.tachiyomi.data.account.CloudSync
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.BufferedSourceFetcher
 import eu.kanade.tachiyomi.data.coil.ImageDecoder
@@ -97,6 +98,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @Inject private lateinit var injektMetroInteropModule: MetroInteropModule
 
     @Inject private lateinit var migrations: Set<Migration>
+
+    @Inject private lateinit var cloudSync: CloudSync
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
@@ -184,6 +187,11 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         initializeMigrator()
+
+        // Os outros processos (ex.: o do ecrã de crash) não sincronizam
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getProcessName() == packageName) {
+            cloudSync.start(scope)
+        }
     }
 
     private fun setupInjekt() {
@@ -245,6 +253,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     override fun onStart(owner: LifecycleOwner) {
         SecureActivityDelegate.onApplicationStart(this)
+        cloudSync.onAppForeground()
     }
 
     override fun onStop(owner: LifecycleOwner) {

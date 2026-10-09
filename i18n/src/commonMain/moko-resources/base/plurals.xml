@@ -1,5 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Aoi: sync com a cloud -->
+    <plurals name="cloud_sync_failed_mangas">
+        <item quantity="one">Last sync failed for %1$d manga</item>
+        <item quantity="other">Last sync failed for %1$d mangas</item>
+    </plurals>
+    <plurals name="cloud_sync_local_only_title">
+        <item quantity="one">%1$d manga is no longer in your cloud library</item>
+        <item quantity="other">%1$d mangas are no longer in your cloud library</item>
+    </plurals>
+    <plurals name="cloud_sync_local_only_toast">
+        <item quantity="one">%1$d manga is no longer in your cloud library. Check it in More → Account</item>
+        <item quantity="other">%1$d mangas are no longer in your cloud library. Check them in More → Account</item>
+    </plurals>
+
     <plurals name="lock_after_mins">
         <item quantity="one">After %1$s minute</item>
         <item quantity="other">After %1$s minutes</item>

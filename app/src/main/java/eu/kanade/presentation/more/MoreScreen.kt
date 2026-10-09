@@ -14,10 +14,10 @@ import eu.kanade.tachiyomi.ui.more.DownloadQueueState
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.automirroredrounded.Label
-import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.CloudOff
 import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Info
+import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.QueryStats
 import mihon.icons.materialsymbols.rounded.Settings
 import mihon.icons.materialsymbols.rounded.Storage
@@ -75,7 +75,7 @@ fun MoreScreen(
             }
             item {
                 TextPreferenceWidget(
-                    title = "Account",
+                    title = stringResource(MR.strings.account_title),
                     icon = MaterialSymbols.Rounded.Person,
                     onPreferenceClick = onClickAccount,
                 )

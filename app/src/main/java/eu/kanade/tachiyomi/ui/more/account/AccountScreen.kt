@@ -1,25 +1,8 @@
 package eu.kanade.tachiyomi.ui.more.account
 
-import android.content.Context
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Surface
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -27,13 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -42,10 +19,8 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.more.account.AccountScreenContent
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.more.account.AccountViewModel
-import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.ArrowUpward
-import mihon.icons.materialsymbols.rounded.Download
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 
 class AccountScreen : Screen() {
 
@@ -64,159 +39,47 @@ class AccountScreen : Screen() {
             }
         }
 
-        var showUpdateDialog by remember { mutableStateOf(false) }
-        var syncType by remember { mutableStateOf<SyncType?>(null) }
+        var showFullResyncDialog by remember { mutableStateOf(false) }
 
         AccountScreenContent(
             state = state,
             syncState = syncState,
             onNavigateBack = navigator::pop,
-            onNavigateToCloudLibrary = { uriHandler.openUri("https://aoi-mangas.vercel.app/") },
-            onUpdateAccount = { showUpdateDialog = true },
-            onFullResync = { syncType = SyncType.FULL_RESYNC },
+            onNavigateToCloudLibrary = { uriHandler.openUri(CLOUD_LIBRARY_URL) },
+            onSyncNow = viewModel::syncNow,
+            onFullResync = { showFullResyncDialog = true },
+            onRemoveLocalOnly = viewModel::removeLocalOnly,
+            onKeepLocalOnly = viewModel::keepLocalOnly,
             onLogin = viewModel::login,
             onSignUp = viewModel::signUp,
             onLogout = viewModel::logout,
-            onClearFailed = viewModel::clearFailedMangas,
         )
 
-        if (showUpdateDialog) {
-            SyncOptionsBottomSheet(
-                onDismiss = { showUpdateDialog = false },
-                onOptionSelected = {
-                    syncType = it
-                    showUpdateDialog = false
-                }
-            )
-        }
-
-        syncType?.let { type ->
-            SyncConfirmationDialog(
-                type = type,
-                onDismiss = { syncType = null },
-                onConfirm = {
-                    when (type) {
-                        SyncType.IMPORT -> viewModel.importFromCloud()
-                        SyncType.UPLOAD -> viewModel.uploadToCloud()
-                        SyncType.FULL_RESYNC -> viewModel.uploadToCloud(fullResync = true)
+        if (showFullResyncDialog) {
+            AlertDialog(
+                onDismissRequest = { showFullResyncDialog = false },
+                title = { Text(stringResource(MR.strings.cloud_sync_full_resync)) },
+                text = { Text(stringResource(MR.strings.cloud_sync_full_resync_confirm)) },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            showFullResyncDialog = false
+                            viewModel.fullResync()
+                        },
+                    ) {
+                        Text(stringResource(MR.strings.action_ok))
                     }
-                    syncType = null
-                }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showFullResyncDialog = false }) {
+                        Text(stringResource(MR.strings.action_cancel))
+                    }
+                },
             )
         }
     }
 
-    @Composable
-    private fun SyncOptionsBottomSheet(onDismiss: () -> Unit, onOptionSelected: (SyncType) -> Unit) {
-        val sheetState = rememberModalBottomSheetState()
-        ModalBottomSheet(
-            onDismissRequest = onDismiss,
-            sheetState = sheetState,
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp)
-                    .padding(bottom = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Text(
-                    text = "Sync Library",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = "Choose a direction to sync your library",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                SyncOptionCard(
-                    title = "Import from cloud",
-                    subtitle = "Brings in what changed in the cloud",
-                    icon = MaterialSymbols.Rounded.Download,
-                    onClick = { onOptionSelected(SyncType.IMPORT) }
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                SyncOptionCard(
-                    title = "Upload to cloud",
-                    subtitle = "Sends only what changed locally",
-                    icon = MaterialSymbols.Rounded.ArrowUpward,
-                    onClick = { onOptionSelected(SyncType.UPLOAD) }
-                )
-            }
-        }
+    private companion object {
+        const val CLOUD_LIBRARY_URL = "https://aoi-mangas.vercel.app/"
     }
-
-    @Composable
-    private fun SyncOptionCard(
-        title: String,
-        subtitle: String,
-        icon: ImageVector,
-        onClick: () -> Unit,
-    ) {
-        Surface(
-            onClick = onClick,
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
-        ) {
-            Row(
-                modifier = Modifier
-                    .padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(32.dp),
-                    tint = MaterialTheme.colorScheme.primary,
-                )
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Text(
-                        text = subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    )
-                }
-            }
-        }
-    }
-
-    @Composable
-    private fun SyncConfirmationDialog(type: SyncType, onDismiss: () -> Unit, onConfirm: () -> Unit) {
-        val message = when (type) {
-            SyncType.IMPORT ->
-                "This will bring in what changed in the cloud since your last import. Mangas not present locally will be added. Any local manga removed from the cloud will be removed from your library. Continue?"
-            SyncType.UPLOAD ->
-                "This will send only what changed locally since your last upload to the cloud. Continue?"
-            SyncType.FULL_RESYNC ->
-                "This will re-send your whole library and replace the cloud version. It can take a long time. Any cloud data not present locally will be lost. Continue?"
-        }
-
-        androidx.compose.material3.AlertDialog(
-            onDismissRequest = onDismiss,
-            title = { Text("Confirm Sync") },
-            text = { Text(message) },
-            confirmButton = {
-                TextButton(onClick = onConfirm) { Text("Confirm") }
-            },
-            dismissButton = {
-                TextButton(onClick = onDismiss) { Text("Cancel") }
-            }
-        )
-    }
-
-    private enum class SyncType { IMPORT, UPLOAD, FULL_RESYNC }
 }

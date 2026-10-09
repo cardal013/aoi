@@ -226,11 +226,6 @@ class LibraryPreferences(
         false,
     )
 
-    val lastFullProgressSyncUserId: Preference<String> = preferenceStore.getString(
-        "last_full_progress_sync_user_id",
-        "",
-    )
-
     /** Instante (ms) do início do último upload para a cloud concluído com sucesso, por utilizador. */
     fun lastCloudUploadSync(userId: String): Preference<Long> = preferenceStore.getLong(
         "last_cloud_upload_sync_$userId",

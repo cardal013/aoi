@@ -1,24 +1,27 @@
 package eu.kanade.presentation.more.account
 
+import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -27,14 +30,15 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -43,83 +47,89 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.account.CloudSync
 import eu.kanade.tachiyomi.ui.more.account.AccountViewModel
 import eu.kanade.tachiyomi.util.system.toast
+import kotlinx.coroutines.delay
 import mihon.icons.materialsymbols.MaterialSymbols
-import mihon.icons.materialsymbols.rounded.Bookmark
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.Error
-import mihon.icons.materialsymbols.rounded.Info
+import mihon.icons.materialsymbols.rounded.ExpandLess
+import mihon.icons.materialsymbols.rounded.ExpandMore
 import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
-import mihon.icons.materialsymbols.rounded.Security
-import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.rounded.Visibility
 import mihon.icons.materialsymbols.rounded.VisibilityOff
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
+import tachiyomi.core.common.i18n.stringResource
+import tachiyomi.domain.manga.model.Manga
+import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.i18n.pluralStringResource
+import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun AccountScreenContent(
     state: AccountViewModel.State,
-    syncState: AccountViewModel.SyncState,
+    syncState: CloudSync.State,
     onNavigateBack: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
-    onUpdateAccount: () -> Unit,
+    onSyncNow: () -> Unit,
     onFullResync: () -> Unit,
+    onRemoveLocalOnly: () -> Unit,
+    onKeepLocalOnly: () -> Unit,
     onLogin: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
     onLogout: () -> Unit,
-    onClearFailed: () -> Unit,
 ) {
     Scaffold(
         topBar = { scrollBehavior ->
             AppBar(
-                title = if (state.username != null) "Account" else "Login",
+                title = stringResource(
+                    if (state.username != null) MR.strings.account_title else MR.strings.account_login,
+                ),
                 navigateUp = onNavigateBack,
                 scrollBehavior = scrollBehavior,
             )
         },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
+        ) {
+            // Centrado quando cabe no ecrã, com scroll quando não cabe (ex.: aviso de mangas fora da cloud)
             Column(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(horizontal = 32.dp),
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .heightIn(min = maxHeight)
+                    .padding(horizontal = 32.dp, vertical = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+                verticalArrangement = Arrangement.Center,
             ) {
                 if (state.username != null) {
                     ProfileView(
                         username = state.username,
-                        syncStatus = syncState.status,
+                        syncState = syncState,
                         onLogout = onLogout,
                         onContinue = onNavigateBack,
                         onCloudLibrary = onNavigateToCloudLibrary,
-                        onUpdateAccount = onUpdateAccount,
+                        onSyncNow = onSyncNow,
                         onFullResync = onFullResync,
+                        onRemoveLocalOnly = onRemoveLocalOnly,
+                        onKeepLocalOnly = onKeepLocalOnly,
                     )
                 } else {
                     AuthView(onLogin = onLogin, onSignUp = onSignUp)
                 }
-            }
-
-            if (syncState.status == AccountViewModel.SyncStatus.Syncing) {
-                SyncProgressOverlay(syncState.progress)
-            }
-
-            if (syncState.failedMangas.isNotEmpty()) {
-                SyncErrorDialog(
-                    failedMangas = syncState.failedMangas,
-                    onDismiss = onClearFailed
-                )
             }
         }
     }
@@ -128,67 +138,64 @@ fun AccountScreenContent(
 @Composable
 private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, String) -> Unit) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    val isLogin = selectedTab == 0
 
-    val onAction = {
+    val onAction: () -> Unit = {
         if (password.length < 6) {
-            context.toast("Your password needs to be at least 6 characters")
+            context.toast(context.stringResource(MR.strings.account_password_too_short))
         } else {
-            if (selectedTab == 0) onLogin(username, password) else onSignUp(username, password)
+            if (isLogin) onLogin(username, password) else onSignUp(username, password)
         }
-        Unit
     }
 
-    // Header
     Icon(
         painter = painterResource(R.drawable.ic_mihon),
         contentDescription = null,
         modifier = Modifier.size(80.dp),
-        tint = MaterialTheme.colorScheme.primary
+        tint = MaterialTheme.colorScheme.primary,
     )
     Spacer(modifier = Modifier.height(16.dp))
     Text(
-        text = if (selectedTab == 0) "Welcome Back" else "Create Account",
+        text = stringResource(if (isLogin) MR.strings.account_welcome_back else MR.strings.account_create),
         fontSize = 28.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
     )
     Text(
-        text = if (selectedTab == 0) "Log in to continue" else "Sign up to get started",
+        text = stringResource(if (isLogin) MR.strings.account_login_summary else MR.strings.account_signup_summary),
         fontSize = 14.sp,
-        color = MaterialTheme.colorScheme.outline
+        color = MaterialTheme.colorScheme.outline,
     )
 
     Spacer(modifier = Modifier.height(32.dp))
 
-    // Tabs
     TabRow(
         selectedTabIndex = selectedTab,
         containerColor = MaterialTheme.colorScheme.surface,
-        divider = {}
+        divider = {},
     ) {
-        Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-            Text("Log In", modifier = Modifier.padding(16.dp))
+        Tab(selected = isLogin, onClick = { selectedTab = 0 }) {
+            Text(stringResource(MR.strings.account_login), modifier = Modifier.padding(16.dp))
         }
-        Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-            Text("Sign Up", modifier = Modifier.padding(16.dp))
+        Tab(selected = !isLogin, onClick = { selectedTab = 1 }) {
+            Text(stringResource(MR.strings.account_signup), modifier = Modifier.padding(16.dp))
         }
     }
 
     Spacer(modifier = Modifier.height(24.dp))
 
-    // Inputs
     OutlinedTextField(
         value = username,
         onValueChange = { username = it },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Username") },
+        placeholder = { Text(stringResource(MR.strings.account_username)) },
         leadingIcon = { Icon(MaterialSymbols.Rounded.Person, null) },
         shape = RoundedCornerShape(12.dp),
         singleLine = true,
-        textStyle = TextStyle(fontSize = 20.sp)
+        textStyle = TextStyle(fontSize = 20.sp),
     )
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -197,10 +204,13 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         value = password,
         onValueChange = { password = it },
         modifier = Modifier.fillMaxWidth(),
-        placeholder = { Text("Password") },
+        placeholder = { Text(stringResource(MR.strings.account_password)) },
         leadingIcon = { Icon(MaterialSymbols.Rounded.Security, null) },
         trailingIcon = {
-            val icon = if (passwordVisible) MaterialSymbols.Rounded.Visibility else MaterialSymbols.Rounded.VisibilityOff
+            val icon = when {
+                passwordVisible -> MaterialSymbols.Rounded.Visibility
+                else -> MaterialSymbols.Rounded.VisibilityOff
+            }
             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                 Icon(icon, null)
             }
@@ -209,186 +219,269 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
         shape = RoundedCornerShape(12.dp),
         singleLine = true,
-        textStyle = TextStyle(fontSize = 20.sp)
+        textStyle = TextStyle(fontSize = 20.sp),
     )
+
+    if (!isLogin) {
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
+            text = stringResource(MR.strings.account_no_recovery),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 
     Spacer(modifier = Modifier.height(32.dp))
 
-    // Action Button
     Button(
         onClick = onAction,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
     ) {
-        Text(if (selectedTab == 0) "Log In" else "Create Account", color = MaterialTheme.colorScheme.onPrimary)
+        Text(
+            text = stringResource(if (isLogin) MR.strings.account_login else MR.strings.account_create),
+            color = MaterialTheme.colorScheme.onPrimary,
+        )
     }
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    // Switch link
-    TextButton(onClick = { selectedTab = if (selectedTab == 0) 1 else 0 }) {
+    TextButton(onClick = { selectedTab = if (isLogin) 1 else 0 }) {
         Text(
-            text = if (selectedTab == 0) "Don't have an account? Sign Up" else "Already have an account? Log In",
-            fontSize = 13.sp
+            text = stringResource(if (isLogin) MR.strings.account_no_account else MR.strings.account_has_account),
+            fontSize = 13.sp,
         )
     }
 }
 
 @Composable
-private fun SyncProgressOverlay(progress: Pair<Int, Int>?) {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.scrim.copy(alpha = 0.8f)
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize().padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = MaterialSymbols.Rounded.Sync,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = Color.White
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Text(
-                "Syncing with cloud",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Please do not leave this screen until finished",
-                color = Color.White.copy(alpha = 0.8f),
-                fontSize = 16.sp
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            if (progress != null) {
-                val (current, total) = progress
-                val percent = if (total > 0) current.toFloat() / total else 0f
-                LinearProgressIndicator(
-                    progress = { percent },
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = Color.White.copy(alpha = 0.2f),
-                    strokeCap = StrokeCap.Round
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    "Processing: $current / $total",
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium
-                )
-            } else {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-            }
-        }
-    }
-}
-
-@Composable
-private fun SyncErrorDialog(failedMangas: List<String>, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(MaterialSymbols.Rounded.Error, null, tint = MaterialTheme.colorScheme.error) },
-        title = { Text("Sync Finished with Errors") },
-        text = {
-            Column {
-                Text("${failedMangas.size} mangas failed to sync. You might want to check your connection and try again.")
-                if (failedMangas.size <= 5) {
-                    Spacer(Modifier.height(8.dp))
-                    failedMangas.forEach {
-                        Text("• $it", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) { Text("OK") }
-        }
-    )
-}
-
-@Composable
 private fun ProfileView(
     username: String,
-    syncStatus: AccountViewModel.SyncStatus,
+    syncState: CloudSync.State,
     onLogout: () -> Unit,
     onContinue: () -> Unit,
     onCloudLibrary: () -> Unit,
-    onUpdateAccount: () -> Unit,
+    onSyncNow: () -> Unit,
     onFullResync: () -> Unit,
+    onRemoveLocalOnly: () -> Unit,
+    onKeepLocalOnly: () -> Unit,
 ) {
-    val isSyncing = syncStatus == AccountViewModel.SyncStatus.Syncing
+    var showAdvanced by remember { mutableStateOf(false) }
 
     Icon(
         painter = painterResource(R.drawable.ic_mihon),
         contentDescription = null,
         modifier = Modifier.size(100.dp),
-        tint = MaterialTheme.colorScheme.primary
+        tint = MaterialTheme.colorScheme.primary,
     )
     Spacer(modifier = Modifier.height(24.dp))
     Text(
-        text = "Welcome, $username",
+        text = stringResource(MR.strings.account_welcome, username),
         fontSize = 24.sp,
-        fontWeight = FontWeight.Bold
+        fontWeight = FontWeight.Bold,
     )
-    Spacer(modifier = Modifier.height(48.dp))
+    Spacer(modifier = Modifier.height(32.dp))
 
-    ProfileActionButton(
-        text = "My Cloud Library",
-        icon = MaterialSymbols.Rounded.LocalLibrary,
-        enabled = !isSyncing,
-        onClick = onCloudLibrary
-    )
+    SyncStatusCard(syncState = syncState, onSyncNow = onSyncNow)
 
-    Spacer(modifier = Modifier.height(8.dp))
-
-    ProfileActionButton(
-        text = "Update Account",
-        icon = MaterialSymbols.Rounded.Sync,
-        enabled = !isSyncing,
-        onClick = onUpdateAccount
-    )
-
-    TextButton(
-        onClick = onFullResync,
-        enabled = !isSyncing,
-        modifier = Modifier.fillMaxWidth().height(40.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = MaterialTheme.colorScheme.outline,
-            disabledContentColor = Color.Gray.copy(alpha = 0.5f),
-        ),
-    ) {
-        Text("Full resync", fontSize = 14.sp)
+    if (syncState.localOnly.isNotEmpty()) {
+        Spacer(modifier = Modifier.height(12.dp))
+        LocalOnlyCard(
+            mangas = syncState.localOnly,
+            enabled = !syncState.running,
+            onRemove = onRemoveLocalOnly,
+            onKeep = onKeepLocalOnly,
+        )
     }
-
-    Spacer(modifier = Modifier.height(8.dp))
-
-    ProfileActionButton(
-        text = "Continue to app",
-        icon = MaterialSymbols.RoundedFilled.PlayArrow,
-        onClick = onContinue
-    )
 
     Spacer(modifier = Modifier.height(24.dp))
 
+    ProfileActionButton(
+        text = stringResource(MR.strings.account_cloud_library),
+        icon = MaterialSymbols.Rounded.LocalLibrary,
+        onClick = onCloudLibrary,
+    )
+
+    Spacer(modifier = Modifier.height(8.dp))
+
+    ProfileActionButton(
+        text = stringResource(MR.strings.account_continue),
+        icon = MaterialSymbols.RoundedFilled.PlayArrow,
+        onClick = onContinue,
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    TextButton(
+        onClick = { showAdvanced = !showAdvanced },
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.outline),
+    ) {
+        Text(stringResource(MR.strings.pref_category_advanced), fontSize = 14.sp)
+        Spacer(Modifier.width(4.dp))
+        Icon(
+            imageVector = if (showAdvanced) MaterialSymbols.Rounded.ExpandLess else MaterialSymbols.Rounded.ExpandMore,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+
+    if (showAdvanced) {
+        Surface(
+            onClick = onFullResync,
+            enabled = !syncState.running,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(MR.strings.cloud_sync_full_resync),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(MR.strings.cloud_sync_full_resync_summary),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+
     TextButton(
         onClick = onLogout,
-        enabled = !isSyncing,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        enabled = !syncState.running,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
     ) {
         Icon(MaterialSymbols.Rounded.Close, null, modifier = Modifier.size(20.dp))
         Spacer(Modifier.size(8.dp))
-        Text("Logout", fontWeight = FontWeight.Bold)
+        Text(stringResource(MR.strings.account_logout), fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun SyncStatusCard(syncState: CloudSync.State, onSyncNow: () -> Unit) {
+    // Atualiza o "há X minutos" de vez em quando
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            tick++
+        }
+    }
+    val now = remember(tick, syncState.lastSyncAt) { System.currentTimeMillis() }
+
+    val text = when {
+        syncState.running ->
+            syncState.progress
+                ?.let { (current, total) -> stringResource(MR.strings.cloud_sync_running_progress, current, total) }
+                ?: stringResource(MR.strings.cloud_sync_running)
+        syncState.error && syncState.failedMangas.isNotEmpty() -> {
+            val count = syncState.failedMangas.size
+            pluralStringResource(MR.plurals.cloud_sync_failed_mangas, count, count)
+        }
+        syncState.error -> stringResource(MR.strings.cloud_sync_error)
+        syncState.lastSyncAt == 0L -> stringResource(MR.strings.cloud_sync_never)
+        now - syncState.lastSyncAt < DateUtils.MINUTE_IN_MILLIS -> stringResource(MR.strings.cloud_sync_just_now)
+        else -> stringResource(
+            MR.strings.cloud_sync_last,
+            DateUtils.getRelativeTimeSpanString(syncState.lastSyncAt, now, DateUtils.MINUTE_IN_MILLIS).toString(),
+        )
+    }
+
+    Surface(
+        onClick = onSyncNow,
+        enabled = !syncState.running,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (syncState.running) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+            } else {
+                Icon(
+                    imageVector = if (syncState.error) MaterialSymbols.Rounded.Error else MaterialSymbols.Rounded.Sync,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = if (syncState.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+                )
+            }
+            Spacer(modifier = Modifier.width(16.dp))
+            Column {
+                Text(text = text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                if (!syncState.running) {
+                    Text(
+                        text = stringResource(MR.strings.cloud_sync_tap_to_sync),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LocalOnlyCard(
+    mangas: List<Manga>,
+    enabled: Boolean,
+    onRemove: () -> Unit,
+    onKeep: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+    ) {
+        Column(modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 8.dp, bottom = 8.dp)) {
+            Text(
+                text = pluralStringResource(MR.plurals.cloud_sync_local_only_title, mangas.size, mangas.size),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(MR.strings.cloud_sync_local_only_summary),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            mangas.take(MAX_TITLES).forEach {
+                Text(
+                    text = "• ${it.title}",
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            if (mangas.size > MAX_TITLES) {
+                Text(text = "…", style = MaterialTheme.typography.bodySmall)
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                TextButton(onClick = onRemove, enabled = enabled) {
+                    Text(stringResource(MR.strings.cloud_sync_local_only_remove))
+                }
+                TextButton(onClick = onKeep, enabled = enabled) {
+                    Text(stringResource(MR.strings.cloud_sync_local_only_keep))
+                }
+            }
+        }
     }
 }
 
@@ -397,21 +490,24 @@ private fun ProfileActionButton(
     text: String,
     icon: ImageVector,
     enabled: Boolean = true,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     TextButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(56.dp),
         shape = RoundedCornerShape(12.dp),
         colors = ButtonDefaults.textButtonColors(
-            contentColor = Color.White,
-            disabledContentColor = Color.Gray.copy(alpha = 0.5f)
-        )
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContentColor = Color.Gray.copy(alpha = 0.5f),
+        ),
     ) {
         Icon(icon, null, modifier = Modifier.size(28.dp))
         Spacer(Modifier.size(16.dp))
-        // ExtraBold to make it look clickable without background
         Text(text, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp)
     }
 }
+
+private const val MAX_TITLES = 5

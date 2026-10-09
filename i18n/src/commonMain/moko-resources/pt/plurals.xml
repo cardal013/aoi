@@ -110,4 +110,21 @@
         <item quantity="many">%1$s páginas</item>
         <item quantity="other">%1$s páginas</item>
     </plurals>
+
+    <!-- Aoi -->
+    <plurals name="cloud_sync_failed_mangas">
+        <item quantity="one">O último sync falhou em %1$d manga</item>
+        <item quantity="many">O último sync falhou em %1$d mangas</item>
+        <item quantity="other">O último sync falhou em %1$d mangas</item>
+    </plurals>
+    <plurals name="cloud_sync_local_only_title">
+        <item quantity="one">%1$d manga já não está na tua biblioteca na cloud</item>
+        <item quantity="many">%1$d mangas já não estão na tua biblioteca na cloud</item>
+        <item quantity="other">%1$d mangas já não estão na tua biblioteca na cloud</item>
+    </plurals>
+    <plurals name="cloud_sync_local_only_toast">
+        <item quantity="one">%1$d manga já não está na tua biblioteca na cloud. Vê em Mais → Conta</item>
+        <item quantity="many">%1$d mangas já não estão na tua biblioteca na cloud. Vê em Mais → Conta</item>
+        <item quantity="other">%1$d mangas já não estão na tua biblioteca na cloud. Vê em Mais → Conta</item>
+    </plurals>
 </resources>
