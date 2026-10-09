@@ -90,8 +90,11 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.20.9
+- The app icon (blue square) shows when the app opens; the account screen logo is back to how it was
+
 ### 0.20.8
-- Account: no *Advanced*/*Full resync*, the logo is shown like the app icon (blue square)
+- Account: no *Advanced*/*Full resync*
 
 ### 0.20.7
 - Automatic sync (on open, after login, whenever the connection comes back, and a few seconds after each change); no sync buttons, the account screen only shows when it last synced

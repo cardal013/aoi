@@ -14,9 +14,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.20.9] - 2026-10-09
+### Changed
+- The splash screen shows the app icon (white 青い on a blue rounded square) over the app background, instead of a fully blue screen
+- The account screen logo is back to the plain one
+
 ## [Aoi v0.20.8] - 2026-10-09
 ### Changed
-- Account screen: *Advanced* and *Full resync* removed; the logo is shown like the app icon (white on a blue square)
+- Account screen: *Advanced* and *Full resync* removed
 
 ## [Aoi v0.20.7] - 2026-10-09
 ### Added
