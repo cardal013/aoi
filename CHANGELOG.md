@@ -10,6 +10,54 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 - `Fixed` - for any bug fixes.
 - `Other` - for technical stuff.
 
+# Aoi
+
+Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
+
+## [Aoi Unreleased]
+### Added
+- Automatic sync with the cloud: pulls what changed when the app opens or after logging in, and sends local changes a few seconds after they happen
+- Manga missing from the cloud are shown in *Account* to remove here or keep and upload again, instead of being removed silently
+- Manga deleted from the local database before syncing (e.g. *Clear database*) are removed from the cloud too
+- Portuguese translation for the account screen and the reading status names
+
+### Changed
+- *Upload to cloud* / *Import from cloud* buttons removed; the account screen shows when the library last synced
+- *Full resync* moved under *Advanced* and asks for confirmation; it refuses to mirror an empty library
+- The first sync of an account on a device merges both libraries and never moves read progress backwards
+- Full upload sends manga in batches of 100 and pages every cloud query
+
+### Fixed
+- Importing could undo a removal from the library that had not been uploaded yet
+- Cleaning the cloud during a full resync read at most 1000 library entries
+- Live reading progress was sent for manga outside the library
+
+### Other
+- Username and internal email no longer written to the logs; website debug logs removed
+- Supabase: `rls_check.sql` and a migration with the row level security policies
+
+## [Aoi v0.20.5] - 2026-10-09
+### Added
+- Incremental sync with the cloud (only what changed) and a *Full resync* button
+- New manga go to *Plan to Read* by default
+
+### Other
+- Local database migration for dirty tracking and Supabase migration for `user_library.updated_at`
+
+## [Aoi v0.20.4] - 2026-09-20
+### Fixed
+- Import no longer removes local chapters when a source fails
+- Import reads progress in pages of 1000 rows
+
+## [Aoi v0.1.0] - 2026-09-09
+### Added
+- Accounts with username and password (Supabase), without a real email
+- Reading status per manga (Reading, Completed, Dropped, Plan to Read) as library tabs
+- Cloud library with upload/import, live reading progress and the website `aoi-mangas.vercel.app`
+- Aoi name, icon and splash screen
+
+# Mihon
+
 ## [Unreleased]
 ### Added
 - Add `id:` prefix search to remaining trackers (AniList, Bangumi, Kitsu, MangaUpdates, Shikimori, and Hikka) ([@MajorTanya](https://github.com/MajorTanya)) ([#3776](https://github.com/mihonapp/mihon/pull/3776))

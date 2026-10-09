@@ -43,7 +43,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |🗂️|**Reading status categories**|Save each manga as Reading, Completed, Dropped, or Plan to Read.|
 |📖|**Clean, focused reader**|Inherited from Mihon.|
 |☁️|**Cloud-backed library**|Backed by a database — access your library from the website too.|
-|🔄|**Incremental sync**|*Update Account* only uploads what changed since your last successful sync (library, reading status, read progress and removals), in batches. *Import from cloud* only pulls what changed in the cloud. A *Full resync* button re-sends everything if something gets out of sync.|
+|🔄|**Automatic sync**|Your library, reading status and progress sync on their own: changes go up a few seconds after you make them and the app pulls what changed in the cloud when it opens. A *Full resync* (under *Advanced*) re-sends everything if something gets out of sync.|
 |📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
 
 ### Reading status categories
@@ -55,13 +55,15 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |❌ Dropped|Stopped, not continuing|
 |📌 Plan to Read|Saved for later|
 
-### How the incremental sync works
+### How the sync works
 
-- Each account remembers the time of its last successful sync, on the device.
-- The app marks locally what changed (library entries, reading status, chapter read/page) and *Update Account* sends only those records. Manga removed from the library are removed from the cloud one by one.
-- The timestamp only moves forward when everything was sent; if something fails, the next sync sends it again.
-- The first sync of an account, and *Full resync*, send the whole library.
-- *Import from cloud* reads only the rows changed since your last import (`updated_at`), 1000 at a time.
+- Opening the app (or logging in) pulls what changed in the cloud since the last sync, then sends what changed on the device.
+- Every local change (library entries, reading status, chapter read/page) is marked on the device and sent about 5 seconds later, in batches. Reading progress is also sent live while you read.
+- The sync remembers the time of its last success; if something fails, the next sync sends it again.
+- The first sync of an account on a device merges both libraries: nothing is deleted and read progress never goes backwards.
+- If manga in your library are no longer in the cloud (removed on another device), the app asks before removing them here.
+- *Full resync* replaces the cloud library with the one on the device, after a confirmation.
+
 
 ## Installation
 
@@ -78,7 +80,7 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
    SUPABASE_ANON_KEY=<anon key>
    ```
    Without it the app builds but cannot connect to the cloud.
-3. Run the SQL in [`supabase/migrations`](supabase/migrations) on your Supabase project (needed for the incremental import).
+3. Run the SQL in [`supabase/migrations`](supabase/migrations) on your Supabase project, in order (incremental import and row level security). [`supabase/rls_check.sql`](supabase/rls_check.sql) shows the current tables, policies and grants without changing anything.
 4. Build:
    ```powershell
    .\gradlew.bat :app:assembleDebug     # app/build/outputs/apk/debug/app-universal-debug.apk
@@ -87,6 +89,14 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
    The debug build installs next to the release one (`com.cardal.aoi.dev`).
 
 ## Changelog
+
+### Unreleased
+- Automatic sync: no more *Upload*/*Import* buttons, the account screen shows when it last synced
+- The first sync on a device merges both libraries instead of overwriting one with the other
+- Manga missing from the cloud are no longer removed from the device without asking
+- Manga deleted from the local database (e.g. *Clear database*) are also removed from the cloud
+- Account screen translated (English and Portuguese), reading status names in Portuguese
+- No more username or internal email in the logs; the website warns that passwords can't be recovered
 
 ### 0.20.5
 - Incremental sync with the cloud (only what changed), with a *Full resync* button
