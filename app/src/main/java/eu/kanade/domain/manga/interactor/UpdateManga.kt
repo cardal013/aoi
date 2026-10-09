@@ -7,6 +7,7 @@ import kotlinx.datetime.toLocalDateTime
 import tachiyomi.domain.manga.interactor.FetchInterval
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.manga.repository.MangaRepository
 import kotlin.time.Clock
 
@@ -54,7 +55,12 @@ class UpdateManga(
             false -> 0
         }
         return mangaRepository.update(
-            MangaUpdate(id = mangaId, favorite = favorite, dateAdded = dateAdded),
+            MangaUpdate(
+                id = mangaId,
+                favorite = favorite,
+                dateAdded = dateAdded,
+                readingStatus = ReadingStatus.PLAN_TO_READ.takeIf { favorite },
+            ),
         )
     }
 }

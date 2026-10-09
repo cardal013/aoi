@@ -52,6 +52,7 @@ import tachiyomi.domain.manga.interactor.GetDuplicateLibraryManga
 import tachiyomi.domain.manga.interactor.GetManga
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaWithChapterCount
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.manga.model.toMangaUpdate
 import tachiyomi.domain.source.interactor.GetRemoteManga
 import tachiyomi.domain.source.service.SourceManager
@@ -239,6 +240,7 @@ class BrowseSourceViewModel(
                     true -> 0
                     false -> Clock.System.now().toEpochMilliseconds()
                 },
+                readingStatus = if (manga.favorite) manga.readingStatus else ReadingStatus.PLAN_TO_READ,
             )
 
             if (!new.favorite) {

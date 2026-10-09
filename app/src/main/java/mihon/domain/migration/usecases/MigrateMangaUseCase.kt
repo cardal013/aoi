@@ -18,6 +18,7 @@ import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.toChapterUpdate
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
+import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.source.service.SourceManager
 import tachiyomi.domain.track.interactor.GetTracks
 import tachiyomi.domain.track.interactor.InsertTrack
@@ -128,6 +129,7 @@ class MigrateMangaUseCase(
                 viewerFlags = current.viewerFlags,
                 dateAdded = if (replace) current.dateAdded else Clock.System.now().toEpochMilliseconds(),
                 notes = if (MigrationFlag.NOTES in flags) current.notes else null,
+                readingStatus = if (replace) current.readingStatus else ReadingStatus.PLAN_TO_READ,
             )
 
             updateManga.awaitAll(listOfNotNull(currentMangaUpdate, targetMangaUpdate))
