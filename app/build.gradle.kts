@@ -40,8 +40,8 @@ android {
     defaultConfig {
         applicationId = "com.cardal.aoi"
 
-        versionCode = 31
-        versionName = "0.20.6"
+        versionCode = 32
+        versionName = "0.20.7"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")
@@ -53,6 +53,11 @@ android {
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${ignoranceProperties.getProperty("SUPABASE_ANON_KEY") ?: ""}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // O Aoi fica sempre em inglês, seja qual for a língua do telemóvel
+    androidResources {
+        localeFilters += "en"
     }
 
     if (System.getenv("MIHON_GITHUB_RELEASE").toBoolean()) {
