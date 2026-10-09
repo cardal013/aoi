@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.data.account
 
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -41,6 +43,7 @@ import kotlin.time.Duration.Companion.seconds
  * Sync automático da biblioteca com a cloud, para a app toda:
  * - ao entrar na conta e ao abrir a app: import do que mudou na cloud e depois upload do que mudou localmente
  * - poucos segundos depois de cada alteração local (favoritos, estados, progresso): upload incremental
+ * - quando volta a haver internet: import e upload, para enviar o que falhou sem rede
  * O primeiro sync de um utilizador num aparelho junta as duas bibliotecas e nunca apaga nada.
  */
 @Inject
@@ -84,14 +87,22 @@ class CloudSync(
             .debounce(UPLOAD_DEBOUNCE)
             .onEach { sync(Mode.UPLOAD) }
             .launchIn(scope)
+
+        context.getSystemService(ConnectivityManager::class.java)
+            ?.registerDefaultNetworkCallback(
+                object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        // Também é chamado ao registar se já houver rede; o intervalo evita repetir o sync do arranque
+                        if (System.currentTimeMillis() - lastAutoSync >= NETWORK_MIN_INTERVAL_MS) sync(Mode.AUTO)
+                    }
+                },
+            )
     }
 
     fun onAppForeground() {
         if (System.currentTimeMillis() - lastAutoSync < FOREGROUND_MIN_INTERVAL_MS) return
         sync(Mode.AUTO)
     }
-
-    fun syncNow() = sync(Mode.AUTO)
 
     fun fullResync() = sync(Mode.FULL_RESYNC)
 
@@ -130,7 +141,7 @@ class CloudSync(
                     throw e
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Sync: falhou ($mode)" }
-                    mutableState.update { it.copy(running = false, progress = null, error = true) }
+                    mutableState.update { it.copy(running = false, progress = null) }
                 }
             }
         }
@@ -145,13 +156,8 @@ class CloudSync(
         // O upload a seguir a uma alteração só precisa do import se for o primeiro sync
         val doImport = mode == Mode.AUTO || (mode == Mode.UPLOAD && firstSync)
 
-        mutableState.update { it.copy(running = true, progress = null, error = false, failedMangas = emptyList()) }
-        val failed = mutableListOf<String>()
+        mutableState.update { it.copy(running = true, progress = null) }
         val onProgress = { current: Int, total: Int -> mutableState.update { it.copy(progress = current to total) } }
-        val onFailed = { title: String ->
-            failed.add(title)
-            Unit
-        }
 
         var ok = true
         if (doImport) {
@@ -161,7 +167,6 @@ class CloudSync(
                 pendingSince = uploadMarker.get(),
                 updateChapter = updateChapter,
                 onProgress = onProgress,
-                onMangaFailed = onFailed,
             )
             if (result.ok) downloadMarker.set(start) else ok = false
             showLocalOnly(result.localOnly)
@@ -176,7 +181,6 @@ class CloudSync(
                     getChapters = getChaptersByMangaId,
                     mirror = true,
                     onProgress = onProgress,
-                    onMangaFailed = onFailed,
                 )
                 firstSync -> repo.reconcileLocalToCloud(
                     userId = userId,
@@ -184,13 +188,11 @@ class CloudSync(
                     getChapters = getChaptersByMangaId,
                     mirror = false,
                     onProgress = onProgress,
-                    onMangaFailed = onFailed,
                 )
                 else -> repo.syncLocalChangesToCloud(
                     userId = userId,
                     since = uploadMarker.get(),
                     onProgress = onProgress,
-                    onMangaFailed = onFailed,
                 )
             }
             if (result.ok) {
@@ -210,8 +212,6 @@ class CloudSync(
             it.copy(
                 running = false,
                 progress = null,
-                error = !ok,
-                failedMangas = failed.distinct(),
                 lastSyncAt = if (ok) start else it.lastSyncAt,
             )
         }
@@ -239,8 +239,6 @@ class CloudSync(
         val running: Boolean = false,
         val progress: Pair<Int, Int>? = null,
         val lastSyncAt: Long = 0L,
-        val error: Boolean = false,
-        val failedMangas: List<String> = emptyList(),
         // Favoritos locais que já não estão na cloud, à espera de o utilizador decidir
         val localOnly: List<Manga> = emptyList(),
     )
@@ -250,5 +248,6 @@ class CloudSync(
     private companion object {
         val UPLOAD_DEBOUNCE = 5.seconds
         const val FOREGROUND_MIN_INTERVAL_MS = 60_000L
+        const val NETWORK_MIN_INTERVAL_MS = 10_000L
     }
 }

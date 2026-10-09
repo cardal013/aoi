@@ -131,12 +131,8 @@
     <string name="account_error_no_internet">No internet connection</string>
     <string name="account_error_unknown">Something went wrong</string>
     <string name="cloud_sync_running">Syncing…</string>
-    <string name="cloud_sync_running_progress">Syncing… %1$d/%2$d</string>
     <string name="cloud_sync_never">Not synced yet</string>
-    <string name="cloud_sync_just_now">Synced just now</string>
-    <string name="cloud_sync_last">Synced %1$s</string>
-    <string name="cloud_sync_error">Last sync failed</string>
-    <string name="cloud_sync_tap_to_sync">Tap to sync now</string>
+    <string name="cloud_sync_just_now">Last synced just now</string>
     <string name="cloud_sync_local_only_summary">They were removed on another device, or never made it to the cloud.</string>
     <string name="cloud_sync_local_only_remove">Remove here</string>
     <string name="cloud_sync_local_only_keep">Keep and upload</string>

@@ -1,6 +1,5 @@
 package eu.kanade.presentation.more.account
 
-import android.text.format.DateUtils
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -19,7 +18,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,13 +56,11 @@ import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.delay
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Close
-import mihon.icons.materialsymbols.rounded.Error
 import mihon.icons.materialsymbols.rounded.ExpandLess
 import mihon.icons.materialsymbols.rounded.ExpandMore
 import mihon.icons.materialsymbols.rounded.LocalLibrary
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
-import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.rounded.Visibility
 import mihon.icons.materialsymbols.rounded.VisibilityOff
 import mihon.icons.materialsymbols.roundedfilled.PlayArrow
@@ -81,7 +77,6 @@ fun AccountScreenContent(
     syncState: CloudSync.State,
     onNavigateBack: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
-    onSyncNow: () -> Unit,
     onFullResync: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
@@ -122,7 +117,6 @@ fun AccountScreenContent(
                         onLogout = onLogout,
                         onContinue = onNavigateBack,
                         onCloudLibrary = onNavigateToCloudLibrary,
-                        onSyncNow = onSyncNow,
                         onFullResync = onFullResync,
                         onRemoveLocalOnly = onRemoveLocalOnly,
                         onKeepLocalOnly = onKeepLocalOnly,
@@ -264,7 +258,6 @@ private fun ProfileView(
     onLogout: () -> Unit,
     onContinue: () -> Unit,
     onCloudLibrary: () -> Unit,
-    onSyncNow: () -> Unit,
     onFullResync: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
@@ -283,9 +276,8 @@ private fun ProfileView(
         fontSize = 24.sp,
         fontWeight = FontWeight.Bold,
     )
-    Spacer(modifier = Modifier.height(32.dp))
-
-    SyncStatusCard(syncState = syncState, onSyncNow = onSyncNow)
+    Spacer(modifier = Modifier.height(4.dp))
+    SyncStatus(syncState)
 
     if (syncState.localOnly.isNotEmpty()) {
         Spacer(modifier = Modifier.height(12.dp))
@@ -369,8 +361,8 @@ private fun ProfileView(
 }
 
 @Composable
-private fun SyncStatusCard(syncState: CloudSync.State, onSyncNow: () -> Unit) {
-    // Atualiza o "há X minutos" de vez em quando
+private fun SyncStatus(syncState: CloudSync.State) {
+    // Atualiza o "X minutes ago" de vez em quando
     var tick by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -379,59 +371,31 @@ private fun SyncStatusCard(syncState: CloudSync.State, onSyncNow: () -> Unit) {
         }
     }
     val now = remember(tick, syncState.lastSyncAt) { System.currentTimeMillis() }
+    val elapsed = now - syncState.lastSyncAt
 
     val text = when {
-        syncState.running ->
-            syncState.progress
-                ?.let { (current, total) -> stringResource(MR.strings.cloud_sync_running_progress, current, total) }
-                ?: stringResource(MR.strings.cloud_sync_running)
-        syncState.error && syncState.failedMangas.isNotEmpty() -> {
-            val count = syncState.failedMangas.size
-            pluralStringResource(MR.plurals.cloud_sync_failed_mangas, count, count)
-        }
-        syncState.error -> stringResource(MR.strings.cloud_sync_error)
+        syncState.running -> stringResource(MR.strings.cloud_sync_running)
         syncState.lastSyncAt == 0L -> stringResource(MR.strings.cloud_sync_never)
-        now - syncState.lastSyncAt < DateUtils.MINUTE_IN_MILLIS -> stringResource(MR.strings.cloud_sync_just_now)
-        else -> stringResource(
-            MR.strings.cloud_sync_last,
-            DateUtils.getRelativeTimeSpanString(syncState.lastSyncAt, now, DateUtils.MINUTE_IN_MILLIS).toString(),
-        )
+        elapsed < MINUTE_MS -> stringResource(MR.strings.cloud_sync_just_now)
+        elapsed < HOUR_MS -> {
+            val minutes = (elapsed / MINUTE_MS).toInt()
+            pluralStringResource(MR.plurals.cloud_sync_minutes_ago, minutes, minutes)
+        }
+        elapsed < DAY_MS -> {
+            val hours = (elapsed / HOUR_MS).toInt()
+            pluralStringResource(MR.plurals.cloud_sync_hours_ago, hours, hours)
+        }
+        else -> {
+            val days = (elapsed / DAY_MS).toInt()
+            pluralStringResource(MR.plurals.cloud_sync_days_ago, days, days)
+        }
     }
 
-    Surface(
-        onClick = onSyncNow,
-        enabled = !syncState.running,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
-    ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (syncState.running) {
-                CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-            } else {
-                Icon(
-                    imageVector = if (syncState.error) MaterialSymbols.Rounded.Error else MaterialSymbols.Rounded.Sync,
-                    contentDescription = null,
-                    modifier = Modifier.size(24.dp),
-                    tint = if (syncState.error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(text = text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-                if (!syncState.running) {
-                    Text(
-                        text = stringResource(MR.strings.cloud_sync_tap_to_sync),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-    }
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary,
+    )
 }
 
 @Composable
@@ -511,3 +475,6 @@ private fun ProfileActionButton(
 }
 
 private const val MAX_TITLES = 5
+private const val MINUTE_MS = 60_000L
+private const val HOUR_MS = 60 * MINUTE_MS
+private const val DAY_MS = 24 * HOUR_MS

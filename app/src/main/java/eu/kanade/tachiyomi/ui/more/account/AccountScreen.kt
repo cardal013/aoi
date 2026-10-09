@@ -46,7 +46,6 @@ class AccountScreen : Screen() {
             syncState = syncState,
             onNavigateBack = navigator::pop,
             onNavigateToCloudLibrary = { uriHandler.openUri(CLOUD_LIBRARY_URL) },
-            onSyncNow = viewModel::syncNow,
             onFullResync = { showFullResyncDialog = true },
             onRemoveLocalOnly = viewModel::removeLocalOnly,
             onKeepLocalOnly = viewModel::keepLocalOnly,
