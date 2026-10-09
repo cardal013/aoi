@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.20.8] - 2026-10-09
+### Changed
+- Account screen: *Advanced* and *Full resync* removed; the logo is shown like the app icon (white on a blue square)
+
 ## [Aoi v0.20.7] - 2026-10-09
 ### Added
 - Automatic sync with the cloud: pulls what changed when the app opens, after logging in and when the connection comes back, and sends local changes a few seconds after they happen

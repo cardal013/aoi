@@ -90,6 +90,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.20.8
+- Account: no *Advanced*/*Full resync*, the logo is shown like the app icon (blue square)
+
 ### 0.20.7
 - Automatic sync (on open, after login, whenever the connection comes back, and a few seconds after each change); no sync buttons, the account screen only shows when it last synced
 - The first sync on a device merges both libraries instead of overwriting one with the other
