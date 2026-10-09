@@ -574,7 +574,7 @@
 
     <!--== Splash Theme ==-->
     <style name="Theme.Tachiyomi.SplashScreen" parent="Theme.SplashScreen.IconBackground">
-        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_mihon</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_aoi_splash</item>
         <item name="windowSplashScreenBackground">@color/splash</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/splash</item>
         <item name="postSplashScreenTheme">@style/Theme.Tachiyomi</item>

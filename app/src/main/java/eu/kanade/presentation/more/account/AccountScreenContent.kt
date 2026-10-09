@@ -1,8 +1,6 @@
 package eu.kanade.presentation.more.account
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -39,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -50,7 +46,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.AppBar
@@ -147,7 +142,12 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
         }
     }
 
-    AoiLogo(size = 80.dp)
+    Icon(
+        painter = painterResource(R.drawable.ic_mihon),
+        contentDescription = null,
+        modifier = Modifier.size(80.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
     Spacer(modifier = Modifier.height(16.dp))
     Text(
         text = stringResource(if (isLogin) MR.strings.account_welcome_back else MR.strings.account_create),
@@ -257,7 +257,12 @@ private fun ProfileView(
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
 ) {
-    AoiLogo(size = 100.dp)
+    Icon(
+        painter = painterResource(R.drawable.ic_mihon),
+        contentDescription = null,
+        modifier = Modifier.size(100.dp),
+        tint = MaterialTheme.colorScheme.primary,
+    )
     Spacer(modifier = Modifier.height(24.dp))
     Text(
         text = stringResource(MR.strings.account_welcome, username),
@@ -424,28 +429,7 @@ private fun ProfileActionButton(
     }
 }
 
-// Logo como o ícone da app: quadrado azul de cantos redondos com o 青い a branco
-@Composable
-private fun AoiLogo(size: Dp) {
-    Box(
-        modifier = Modifier
-            .size(size)
-            .clip(RoundedCornerShape(size * 0.22f))
-            .background(AOI_BLUE),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.ic_mihon),
-            contentDescription = null,
-            // O vetor do logo tem margem própria: maior que o quadrado para o 青い ocupar o mesmo que no ícone
-            modifier = Modifier.requiredSize(size * 1.25f),
-            tint = Color.White,
-        )
-    }
-}
-
 private const val MAX_TITLES = 5
 private const val MINUTE_MS = 60_000L
 private const val HOUR_MS = 60 * MINUTE_MS
 private const val DAY_MS = 24 * HOUR_MS
-private val AOI_BLUE = Color(0xFF0253D2)

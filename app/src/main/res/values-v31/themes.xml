@@ -43,7 +43,7 @@
     </style>
 
     <style name="Theme.Tachiyomi.SplashScreen" parent="Theme.SplashScreen.IconBackground">
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_mihon</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_aoi_splash</item>
         <item name="android:windowSplashScreenBackground">@color/splash</item>
         <item name="android:windowSplashScreenIconBackgroundColor">@color/splash</item>
         <item name="postSplashScreenTheme">@style/Theme.Tachiyomi</item>
