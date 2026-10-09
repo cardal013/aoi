@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -436,7 +437,8 @@ private fun AoiLogo(size: Dp) {
         Icon(
             painter = painterResource(R.drawable.ic_mihon),
             contentDescription = null,
-            modifier = Modifier.size(size * 0.75f),
+            // O vetor do logo tem margem própria: maior que o quadrado para o 青い ocupar o mesmo que no ícone
+            modifier = Modifier.requiredSize(size * 1.25f),
             tint = Color.White,
         )
     }
