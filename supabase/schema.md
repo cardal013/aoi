@@ -80,6 +80,23 @@ Unique `(manga_source_id, source_chapter_id)`.
 
 Unique `(user_id, chapter_id)`.
 
+### user_anime (desde 22/10/2026, [`20261022_anime.sql`](migrations/20261022_anime.sql))
+| Coluna | Tipo |
+|-|-|
+| user_id | uuid not null default auth.uid() (FK auth.users) |
+| anilist_id | integer not null (ID do anime no AniList) |
+| title, title_english, cover_url, format | text (só `title` é not null) |
+| episodes, season_year | integer |
+| status | text not null default 'PLAN_TO_WATCH', check em `WATCHING`, `PLAN_TO_WATCH`, `COMPLETED` |
+| episodes_watched | integer not null default 0 |
+| deleted | boolean not null default false (remover só marca, para sincronizar) |
+| added_at | timestamptz not null default now() |
+| updated_at | timestamptz not null default now() (trigger `user_anime_set_updated_at`) |
+
+PK `(user_id, anilist_id)`. RLS com uma política `ALL` própria (`user_anime_own`), sem acesso para `anon`.
+
+A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert e update): o `updated_at` do progresso passou a ser a hora do servidor.
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.

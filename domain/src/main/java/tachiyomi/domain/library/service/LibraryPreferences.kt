@@ -232,6 +232,15 @@ class LibraryPreferences(
         0L,
     )
 
+    /** Último estado escolhido na aba Anime (nome de AnimeStatus). */
+    val animeLastStatus: Preference<String> = preferenceStore.getString("aoi_anime_last_status", "WATCHING")
+
+    /** Se o progresso todo da cloud já foi relido depois da correção da 0.21.0, por utilizador. */
+    fun cloudProgressRecovered(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
+        "cloud_progress_recovered_$userId",
+        false,
+    )
+
     /** Instante (ms) do início do último import da cloud concluído com sucesso, por utilizador. */
     fun lastCloudDownloadSync(userId: String): Preference<Long> = preferenceStore.getLong(
         "last_cloud_download_sync_$userId",

@@ -159,14 +159,20 @@ class CloudSync(
 
         var ok = true
         if (doImport) {
+            val since = if (firstSync) 0L else downloadMarker.get()
+            // Uma vez por utilizador: volta a ler todo o progresso, que as versões antigas perdiam
+            val progressRecovered = libraryPreferences.cloudProgressRecovered(userId)
             val result = repo.reconcileCloudToLocal(
                 userId = userId,
-                since = if (firstSync) 0L else downloadMarker.get(),
+                since = since,
                 pendingSince = uploadMarker.get(),
                 updateChapter = updateChapter,
+                fullProgress = !firstSync && !progressRecovered.get(),
                 onProgress = onProgress,
             )
-            if (result.ok) downloadMarker.set(start) else ok = false
+            val animeOk = repo.importAnime(userId, since)
+            if (result.ok) progressRecovered.set(true)
+            if (result.ok && animeOk) downloadMarker.set(start) else ok = false
             showLocalOnly(result.localOnly)
         }
 
@@ -193,6 +199,8 @@ class CloudSync(
             } else {
                 ok = false
             }
+            // Os animes têm marca própria (dirty_at), que só sai depois de chegarem à cloud
+            if (!repo.uploadAnime(userId)) ok = false
         }
 
         mutableState.update {

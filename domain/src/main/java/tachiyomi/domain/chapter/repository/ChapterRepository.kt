@@ -3,6 +3,7 @@ package tachiyomi.domain.chapter.repository
 import kotlinx.coroutines.flow.Flow
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.PendingCloudProgress
 
 interface ChapterRepository {
 
@@ -32,4 +33,10 @@ interface ChapterRepository {
     suspend fun getFavoriteChaptersModifiedSince(since: Long): List<Chapter>
 
     suspend fun clearCloudDirty(chapterIds: List<Long>)
+
+    /**
+     * Guarda progresso da cloud de capítulos que ainda não existem no aparelho.
+     * Aplica-se sozinho quando os capítulos forem inseridos (trigger cloud_pending_progress_on_chapter_insert).
+     */
+    suspend fun savePendingCloudProgress(progress: List<PendingCloudProgress>)
 }

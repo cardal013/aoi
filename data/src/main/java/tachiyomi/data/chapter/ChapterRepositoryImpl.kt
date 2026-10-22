@@ -17,6 +17,7 @@ import tachiyomi.data.MemoColumnAdapter
 import tachiyomi.data.subscribeToList
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.PendingCloudProgress
 import tachiyomi.domain.chapter.repository.ChapterRepository
 
 @Inject
@@ -145,6 +146,19 @@ class ChapterRepositoryImpl(
 
     override suspend fun clearCloudDirty(chapterIds: List<Long>) {
         chapterIds.chunked(500).forEach { database.cloud_syncQueries.clearDirtyChapters(it) }
+    }
+
+    override suspend fun savePendingCloudProgress(progress: List<PendingCloudProgress>) {
+        database.transaction {
+            progress.forEach {
+                database.cloud_syncQueries.savePendingProgress(
+                    mangaId = it.mangaId,
+                    chapterUrl = it.chapterUrl,
+                    read = if (it.read) 1L else 0L,
+                    lastPageRead = it.lastPageRead,
+                )
+            }
+        }
     }
 
     @Suppress("UNUSED_PARAMETER")

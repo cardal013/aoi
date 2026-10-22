@@ -16,8 +16,10 @@ internal fun LibraryTabs(
     pagerState: PagerState,
     getItemCountForCategory: (Category) -> Int?,
     onTabItemClick: (Int) -> Unit,
+    extraPage: LibraryExtraPage? = null,
 ) {
-    val currentPageIndex = pagerState.currentPage.coerceAtMost(categories.lastIndex)
+    val lastIndex = categories.lastIndex + if (extraPage != null) 1 else 0
+    val currentPageIndex = pagerState.currentPage.coerceAtMost(lastIndex)
     PrimaryScrollableTabRow(
         selectedTabIndex = currentPageIndex,
         edgePadding = 0.dp,
@@ -32,6 +34,15 @@ internal fun LibraryTabs(
                         badgeCount = getItemCountForCategory(category),
                     )
                 },
+                unselectedContentColor = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (extraPage != null) {
+            val index = categories.size
+            Tab(
+                selected = currentPageIndex == index,
+                onClick = { onTabItemClick(index) },
+                text = { TabText(text = extraPage.title, badgeCount = extraPage.count) },
                 unselectedContentColor = MaterialTheme.colorScheme.onSurface,
             )
         }

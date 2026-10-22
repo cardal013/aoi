@@ -1,0 +1,74 @@
+import kotlin.Boolean;
+
+-- Animes de cada utilizador (Aoi), com dados do AniList.
+-- status: WATCHING, PLAN_TO_WATCH, COMPLETED (iguais aos da cloud).
+-- dirty_at (ms) fica preenchido enquanto a alteracao local nao chega a cloud.
+-- Remover um anime so marca deleted = 1, para a remocao tambem sincronizar.
+
+CREATE TABLE anime(
+    anilist_id INTEGER NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    title_english TEXT,
+    cover_url TEXT,
+    format TEXT,
+    episodes INTEGER,
+    season_year INTEGER,
+    status TEXT NOT NULL,
+    episodes_watched INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER AS Boolean NOT NULL DEFAULT 0,
+    added_at INTEGER NOT NULL,
+    dirty_at INTEGER
+);
+
+CREATE INDEX anime_dirty_index ON anime(dirty_at) WHERE dirty_at IS NOT NULL;
+
+getAll:
+SELECT * FROM anime
+WHERE deleted = 0
+ORDER BY title COLLATE NOCASE;
+
+getById:
+SELECT * FROM anime WHERE anilist_id = :anilistId;
+
+getDirty:
+SELECT * FROM anime WHERE dirty_at IS NOT NULL;
+
+add:
+INSERT INTO anime(anilist_id, title, title_english, cover_url, format, episodes, season_year, status, added_at, dirty_at)
+VALUES (:anilistId, :title, :titleEnglish, :coverUrl, :format, :episodes, :seasonYear, :status, :now, :now)
+ON CONFLICT(anilist_id) DO UPDATE SET
+    title = excluded.title,
+    title_english = excluded.title_english,
+    cover_url = excluded.cover_url,
+    format = excluded.format,
+    episodes = excluded.episodes,
+    season_year = excluded.season_year,
+    status = excluded.status,
+    episodes_watched = CASE WHEN deleted = 1 THEN 0 ELSE episodes_watched END,
+    added_at = CASE WHEN deleted = 1 THEN excluded.added_at ELSE added_at END,
+    deleted = 0,
+    dirty_at = excluded.dirty_at;
+
+setStatus:
+UPDATE anime SET status = :status, dirty_at = :now WHERE anilist_id = :anilistId;
+
+setEpisodesWatched:
+UPDATE anime SET episodes_watched = :episodesWatched, dirty_at = :now WHERE anilist_id = :anilistId;
+
+markDeleted:
+UPDATE anime SET deleted = 1, dirty_at = :now WHERE anilist_id = :anilistId;
+
+-- O que vem da cloud substitui a linha local e nao fica por enviar
+upsertFromCloud:
+INSERT OR REPLACE INTO anime(
+    anilist_id, title, title_english, cover_url, format, episodes, season_year,
+    status, episodes_watched, deleted, added_at, dirty_at
+)
+VALUES (
+    :anilistId, :title, :titleEnglish, :coverUrl, :format, :episodes, :seasonYear,
+    :status, :episodesWatched, :deleted, :addedAt, NULL
+);
+
+-- So limpa se nao houve outra alteracao entretanto
+clearDirty:
+UPDATE anime SET dirty_at = NULL WHERE anilist_id = :anilistId AND dirty_at = :dirtyAt;

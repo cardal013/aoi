@@ -43,8 +43,10 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |🗂️|**Reading status categories**|Save each manga as Reading, Completed, Dropped, or Plan to Read.|
 |📖|**Clean, focused reader**|Inherited from Mihon.|
 |☁️|**Cloud-backed library**|Backed by a database — access your library from the website too.|
-|🔄|**Automatic sync**|Your library, reading status and progress sync on their own: changes go up a few seconds after you make them and the app pulls what changed in the cloud when it opens. A *Full resync* (under *Advanced*) re-sends everything if something gets out of sync.|
+|🔄|**Automatic sync**|Your library, reading status and progress sync on their own: changes go up a few seconds after you make them and the app pulls what changed in the cloud when it opens. Your anime list syncs the same way.|
 |📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
+|📺|**Anime list**|Keep the anime you watch, want to watch or finished in an *Anime* tab, after *Plan to Read*. Search and covers come from AniList, no AniList login needed.|
+|💾|**Backup**|*More → Backup* imports a backup file or exports your library to one.|
 
 ### Reading status categories
 
@@ -55,6 +57,10 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |❌ Dropped|Stopped, not continuing|
 |📌 Plan to Read|Saved for later|
 
+### Anime
+
+Swipe past *Plan to Read* in the library to reach the *Anime* tab. At the top you pick *Watching*, *Plan to Watch* or *Completed*; tap **+** to search AniList and add one. Tapping an anime lets you change its status, count the episodes you've watched or remove it. The website has the same list.
+
 ### How the sync works
 
 - Opening the app, logging in or getting back online pulls what changed in the cloud since the last sync, then sends what changed on the device.
@@ -62,7 +68,8 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 - The sync remembers the time of its last success; if something fails, the next sync sends it again.
 - The first sync of an account on a device merges both libraries: nothing is deleted and read progress never goes backwards.
 - If manga in your library are no longer in the cloud (removed on another device), the app asks before removing them here.
-- *Full resync* replaces the cloud library with the one on the device, after a confirmation.
+- Read progress for chapters that aren't on the device yet (a manga that just came from the cloud) is kept and applied as soon as the chapters load.
+- Nothing in the app wipes the cloud: there is no full resync.
 
 
 ## Installation
@@ -89,6 +96,12 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
    The debug build installs next to the release one (`com.cardal.aoi.dev`).
 
 ## Changelog
+
+### 0.21.0
+- *Anime* tab in the library (after *Plan to Read*): Watching, Plan to Watch and Completed, with AniList search, episode count and cloud sync
+- Read chapters synced from the cloud no longer show as unread on a new device; this version also recovers the progress lost before
+- *More → Backup* with *Import* and *Export*
+- Website: Anime tab to view, add, change and remove anime
 
 ### 0.20.9
 - The app icon (blue square) shows when the app opens; the account screen logo is back to how it was

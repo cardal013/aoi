@@ -1,6 +1,7 @@
 package tachiyomi.data
 
 import app.cash.sqldelight.async.coroutines.await
+import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.kotest.matchers.shouldBe
@@ -137,6 +138,57 @@ class CloudSyncTriggersTest {
 
         dirtyMangas() shouldBe listOf(1L)
         dirtyChapters() shouldBe listOf(10L)
+    }
+
+    @Test
+    fun `progresso pendente da cloud aplica-se quando o capítulo chega e não fica para enviar`() {
+        insertManga(id = 1, url = "/a", favorite = true)
+        exec("INSERT INTO cloud_pending_progress VALUES (1, '/c10', 1, 7), (1, '/c11', 0, 3)")
+
+        insertChapter(id = 10, mangaId = 1, read = false)
+        insertChapter(id = 11, mangaId = 1, read = false)
+        insertChapter(id = 12, mangaId = 1, read = false)
+
+        longs("SELECT read FROM chapters ORDER BY _id") shouldBe listOf(1L, 0L, 0L)
+        longs("SELECT last_page_read FROM chapters ORDER BY _id") shouldBe listOf(7L, 3L, 0L)
+        longs("SELECT count(*) FROM cloud_pending_progress") shouldBe listOf(0L)
+        dirtyChapters() shouldBe emptyList()
+    }
+
+    @Test
+    fun `progresso pendente nunca recua o capítulo`() {
+        insertManga(id = 1, url = "/a", favorite = true)
+        exec("INSERT INTO cloud_pending_progress VALUES (1, '/c10', 0, 2)")
+
+        insertChapter(id = 10, mangaId = 1, read = true)
+
+        longs("SELECT read FROM chapters") shouldBe listOf(1L)
+        longs("SELECT last_page_read FROM chapters") shouldBe listOf(2L)
+        // Já tinha progresso ao ser inserido: continua por enviar
+        dirtyChapters() shouldBe listOf(10L)
+    }
+
+    @Test
+    fun `migration 18 cria os animes e o progresso pendente`() = runBlocking<Unit> {
+        exec("DROP TRIGGER cloud_pending_progress_on_chapter_insert")
+        exec("DROP TABLE cloud_pending_progress")
+        exec("DROP TABLE anime")
+
+        Database.Schema.migrate(driver, 18, 19).await()
+
+        insertManga(id = 1, url = "/a", favorite = true)
+        exec("INSERT INTO cloud_pending_progress VALUES (1, '/c10', 1, 0)")
+        insertChapter(id = 10, mangaId = 1, read = false)
+        longs("SELECT read FROM chapters") shouldBe listOf(1L)
+        exec("INSERT INTO anime(anilist_id, title, status, added_at) VALUES (1, 'Frieren', 'WATCHING', 0)")
+    }
+
+    @Test
+    fun `alterar animes acorda o upload`() {
+        exec(
+            "INSERT INTO anime(anilist_id, title, status, added_at, dirty_at) VALUES (1, 'Frieren', 'WATCHING', 5, 5)",
+        )
+        runBlocking { db.cloud_syncQueries.lastLocalChange().awaitAsOne().last } shouldBe 5L
     }
 
     private fun insertManga(id: Long, url: String, favorite: Boolean) = exec(

@@ -42,6 +42,8 @@ fun LibraryPager(
     onClickManga: (Category, LibraryManga) -> Unit,
     onLongClickManga: (Category, LibraryManga) -> Unit,
     onClickContinueReading: ((LibraryManga) -> Unit)?,
+    categoryCount: Int = Int.MAX_VALUE,
+    extraPage: LibraryExtraPage? = null,
 ) {
     HorizontalPager(
         modifier = Modifier.fillMaxSize(),
@@ -50,6 +52,10 @@ fun LibraryPager(
     ) { page ->
         if (page !in ((state.currentPage - 1)..(state.currentPage + 1))) {
             // To make sure only one offscreen page is being composed
+            return@HorizontalPager
+        }
+        if (page >= categoryCount) {
+            extraPage?.content?.invoke(contentPadding)
             return@HorizontalPager
         }
         val category = getCategoryForPage(page)

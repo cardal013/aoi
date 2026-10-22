@@ -45,6 +45,8 @@ fun LibraryContent(
     getDisplayMode: (Int) -> PreferenceMutableState<LibraryDisplayMode>,
     getColumnsForOrientation: (Boolean) -> PreferenceMutableState<Int>,
     getItemsForCategory: (Category) -> List<LibraryItem>,
+    extraPage: LibraryExtraPage? = null,
+    onExtraPageSelected: (Boolean) -> Unit = {},
 ) {
     Column(
         modifier = Modifier.padding(
@@ -53,15 +55,18 @@ fun LibraryContent(
             end = contentPadding.calculateEndPadding(LocalLayoutDirection.current),
         ),
     ) {
-        val pagerState = rememberPagerState(currentPage) { categories.size }
+        // A página extra fica sempre no fim, só se chega lá a deslizar
+        val pageCount = categories.size + if (extraPage != null) 1 else 0
+        val pagerState = rememberPagerState(currentPage) { pageCount }
+        val onExtraPage = extraPage != null && pagerState.currentPage == categories.size
 
         val scope = rememberCoroutineScope()
         var isRefreshing by remember(pagerState.currentPage) { mutableStateOf(false) }
 
-        if (showPageTabs && categories.isNotEmpty() && (categories.size > 1 || !categories.first().isSystemCategory)) {
-            LaunchedEffect(categories) {
-                if (categories.size <= pagerState.currentPage) {
-                    pagerState.scrollToPage(categories.size - 1)
+        if (showPageTabs && categories.isNotEmpty() && (pageCount > 1 || !categories.first().isSystemCategory)) {
+            LaunchedEffect(pageCount) {
+                if (pageCount <= pagerState.currentPage) {
+                    pagerState.scrollToPage(pageCount - 1)
                 }
             }
             LibraryTabs(
@@ -73,12 +78,13 @@ fun LibraryContent(
                         pagerState.animateScrollToPage(it)
                     }
                 },
+                extraPage = extraPage,
             )
         }
 
         PullRefresh(
             refreshing = isRefreshing,
-            enabled = selection.isEmpty(),
+            enabled = selection.isEmpty() && !onExtraPage,
             onRefresh = {
                 val started = onRefresh()
                 if (!started) return@PullRefresh
@@ -110,11 +116,14 @@ fun LibraryContent(
                 },
                 onLongClickManga = onToggleRangeSelection,
                 onClickContinueReading = onContinueReadingClicked,
+                categoryCount = categories.size,
+                extraPage = extraPage,
             )
         }
 
-        LaunchedEffect(pagerState.currentPage) {
-            onChangeCurrentPage(pagerState.currentPage)
+        LaunchedEffect(pagerState.currentPage, onExtraPage) {
+            if (!onExtraPage) onChangeCurrentPage(pagerState.currentPage)
+            onExtraPageSelected(onExtraPage)
         }
     }
 }

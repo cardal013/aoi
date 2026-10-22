@@ -14,6 +14,20 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.21.0] - 2026-10-22
+### Added
+- *Anime* tab in the library, after *Plan to Read* (only reachable by swiping): *Watching*, *Plan to Watch* and *Completed* filters, AniList search (public API, no login), episode counter and removal
+- Anime list synced with the cloud (`user_anime`), on the same automatic sync as the library
+- Website: *Anime* tab to view, add (AniList search), change status/episodes and remove anime
+- *More → Backup* asks whether to *Import* or *Export*
+
+### Fixed
+- Read progress pulled from the cloud was dropped for chapters not yet on the device (a manga just imported), so they showed as unread. It is now kept and applied when the chapters load, and this version re-reads the whole cloud progress once to recover what was lost
+- Chapter progress `updated_at` comes from the server, so a phone with a late clock no longer hides changes from the incremental import
+
+### Other
+- Local database migration 18 (`anime`, `cloud_pending_progress`) and Supabase migration `20261022_anime.sql`
+
 ## [Aoi v0.20.9] - 2026-10-09
 ### Changed
 - The splash screen shows the app icon (white 青い on a blue rounded square) over the app background, instead of a fully blue screen

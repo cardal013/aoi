@@ -1,0 +1,39 @@
+-- Aoi: animes e progresso da cloud a espera de capitulos.
+CREATE TABLE anime(
+    anilist_id INTEGER NOT NULL PRIMARY KEY,
+    title TEXT NOT NULL,
+    title_english TEXT,
+    cover_url TEXT,
+    format TEXT,
+    episodes INTEGER,
+    season_year INTEGER,
+    status TEXT NOT NULL,
+    episodes_watched INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    added_at INTEGER NOT NULL,
+    dirty_at INTEGER
+);
+
+CREATE INDEX anime_dirty_index ON anime(dirty_at) WHERE dirty_at IS NOT NULL;
+
+CREATE TABLE cloud_pending_progress(
+    manga_id INTEGER NOT NULL,
+    chapter_url TEXT NOT NULL,
+    read INTEGER NOT NULL,
+    last_page_read INTEGER NOT NULL,
+    PRIMARY KEY(manga_id, chapter_url),
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE
+);
+
+CREATE TRIGGER cloud_pending_progress_on_chapter_insert
+AFTER INSERT ON chapters
+WHEN EXISTS (SELECT 1 FROM cloud_pending_progress WHERE manga_id = new.manga_id AND chapter_url = new.url)
+BEGIN
+  UPDATE chapters SET
+    read = max(read, (SELECT P.read FROM cloud_pending_progress P WHERE P.manga_id = new.manga_id AND P.chapter_url = new.url)),
+    last_page_read = max(last_page_read, (SELECT P.last_page_read FROM cloud_pending_progress P WHERE P.manga_id = new.manga_id AND P.chapter_url = new.url))
+  WHERE _id = new._id;
+  DELETE FROM cloud_dirty_chapters WHERE chapter_id = new._id AND new.read = 0 AND new.last_page_read = 0;
+  DELETE FROM cloud_pending_progress WHERE manga_id = new.manga_id AND chapter_url = new.url;
+END;

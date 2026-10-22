@@ -25,6 +25,18 @@ CREATE TABLE cloud_removed_mangas(
     PRIMARY KEY(source, url)
 );
 
+-- Progresso da cloud de capitulos que ainda nao existem no aparelho (manga importado sem capitulos).
+-- Aplica-se sozinho quando os capitulos chegam da fonte (trigger cloud_pending_progress_on_chapter_insert).
+CREATE TABLE cloud_pending_progress(
+    manga_id INTEGER NOT NULL,
+    chapter_url TEXT NOT NULL,
+    read INTEGER NOT NULL,
+    last_page_read INTEGER NOT NULL,
+    PRIMARY KEY(manga_id, chapter_url),
+    FOREIGN KEY(manga_id) REFERENCES mangas (_id)
+    ON DELETE CASCADE
+);
+
 CREATE INDEX cloud_dirty_mangas_modified_index ON cloud_dirty_mangas(modified_at);
 CREATE INDEX cloud_dirty_chapters_modified_index ON cloud_dirty_chapters(modified_at);
 
@@ -84,6 +96,19 @@ BEGIN
   VALUES (new._id, CAST(strftime('%s', 'now') AS INTEGER) * 1000 + CAST(substr(strftime('%f', 'now'), 4) AS INTEGER));
 END;
 
+-- Nunca recua o que o capitulo ja tinha e nao o marca para enviar: o valor veio da cloud
+CREATE TRIGGER cloud_pending_progress_on_chapter_insert
+AFTER INSERT ON chapters
+WHEN EXISTS (SELECT 1 FROM cloud_pending_progress WHERE manga_id = new.manga_id AND chapter_url = new.url)
+BEGIN
+  UPDATE chapters SET
+    read = max(read, (SELECT P.read FROM cloud_pending_progress P WHERE P.manga_id = new.manga_id AND P.chapter_url = new.url)),
+    last_page_read = max(last_page_read, (SELECT P.last_page_read FROM cloud_pending_progress P WHERE P.manga_id = new.manga_id AND P.chapter_url = new.url))
+  WHERE _id = new._id;
+  DELETE FROM cloud_dirty_chapters WHERE chapter_id = new._id AND new.read = 0 AND new.last_page_read = 0;
+  DELETE FROM cloud_pending_progress WHERE manga_id = new.manga_id AND chapter_url = new.url;
+END;
+
 getFavoritesModifiedSince:
 SELECT M.*
 FROM mangas M
@@ -140,5 +165,10 @@ lastLocalChange:
 SELECT max(
   coalesce((SELECT max(modified_at) FROM cloud_dirty_mangas), 0),
   coalesce((SELECT max(modified_at) FROM cloud_dirty_chapters), 0),
-  coalesce((SELECT max(removed_at) FROM cloud_removed_mangas), 0)
+  coalesce((SELECT max(removed_at) FROM cloud_removed_mangas), 0),
+  coalesce((SELECT max(dirty_at) FROM anime), 0)
 ) AS last;
+
+savePendingProgress:
+INSERT OR REPLACE INTO cloud_pending_progress(manga_id, chapter_url, read, last_page_read)
+VALUES (:mangaId, :chapterUrl, :read, :lastPageRead);

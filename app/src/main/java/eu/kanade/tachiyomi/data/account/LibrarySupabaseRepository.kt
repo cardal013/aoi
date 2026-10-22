@@ -17,10 +17,14 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.anime.model.Anime
+import tachiyomi.domain.anime.model.AnimeStatus
+import tachiyomi.domain.anime.repository.AnimeRepository
 import tachiyomi.domain.chapter.interactor.GetChaptersByMangaId
 import tachiyomi.domain.chapter.interactor.UpdateChapter
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.chapter.model.ChapterUpdate
+import tachiyomi.domain.chapter.model.PendingCloudProgress
 import tachiyomi.domain.chapter.repository.ChapterRepository
 import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
@@ -37,6 +41,7 @@ class LibrarySupabaseRepository(
     private val mangaRepository: MangaRepository,
     private val chapterRepository: ChapterRepository,
     private val sourceManager: SourceManager,
+    private val animeRepository: AnimeRepository,
 ) {
 
     private val sessionMutex = Mutex()
@@ -436,19 +441,25 @@ class LibrarySupabaseRepository(
      *   Não toca no que está por enviar localmente (alterado depois de [pendingSince]).
      *   Os favoritos locais que já não estão na cloud não são removidos: vêm em [SyncResult.localOnly]
      *   para o utilizador decidir.
+     * - [fullProgress]: lê todo o progresso da cloud (não só o que mudou) e junta-o sem nunca recuar.
+     *   Serve para recuperar o progresso que as versões até à 0.20.9 deitavam fora.
+     * O progresso de capítulos que ainda não existem no aparelho fica guardado e aplica-se quando chegarem da fonte.
      */
     suspend fun reconcileCloudToLocal(
         userId: String,
         since: Long,
         pendingSince: Long,
         updateChapter: UpdateChapter,
+        fullProgress: Boolean = false,
         onProgress: (current: Int, total: Int) -> Unit = { _, _ -> },
         onMangaFailed: (mangaTitle: String) -> Unit = {},
     ): SyncResult {
         val incremental = since > 0L
         val updatedSince = if (incremental) Instant.ofEpochMilli(since - DOWNLOAD_OVERLAP_MS).toString() else null
+        val progressIncremental = incremental && !fullProgress
         logcat(LogPriority.INFO) {
-            "Sync: import ${if (incremental) "INCREMENTAL" else "COMPLETO"} | since=$since | updatedSince=$updatedSince"
+            "Sync: import ${if (incremental) "INCREMENTAL" else "COMPLETO"} | since=$since | " +
+                "updatedSince=$updatedSince | progressoCompleto=$fullProgress"
         }
 
         ensureValidSession()
@@ -497,7 +508,7 @@ class LibrarySupabaseRepository(
             }
 
             // 2. Progresso alterado (paginado de 1000 em 1000) e os metadados dos capítulos respetivos
-            progressList = fetchRemoteProgress(userId, updatedSince)
+            progressList = fetchRemoteProgress(userId, updatedSince.takeIf { progressIncremental })
             progressList.map { it.chapterId }.distinct().chunked(UPSERT_BATCH_SIZE).forEach { chunk ->
                 val results = withRetry {
                     supabase.postgrest["chapters"]
@@ -515,6 +526,7 @@ class LibrarySupabaseRepository(
 
         var mangasApplied = 0
         var chaptersApplied = 0
+        var chaptersWaiting = 0
         val touchedMangaIds = mutableListOf<Long>()
 
         // 3. Favoritos: acrescentar os que faltam e atualizar o estado
@@ -553,24 +565,42 @@ class LibrarySupabaseRepository(
             onProgress(++index, progressByManga.size)
             try {
                 val localChapters = chapterRepository.getChapterByMangaId(manga.id).associateBy { it.url }
+                val waiting = mutableListOf<PendingCloudProgress>()
                 val updates = entries.mapNotNull { entry ->
                     val metadata = chapterMetadataMap[entry.chapterId] ?: return@mapNotNull null
-                    val local = localChapters[metadata.sourceChapterId] ?: return@mapNotNull null
+                    val local = localChapters[metadata.sourceChapterId]
+                    if (local == null) {
+                        // Ainda não veio da fonte (manga acabado de importar ou capítulo novo): fica à espera.
+                        // No incremental também se guarda o "não lido", para substituir um pendente antigo
+                        if (progressIncremental || entry.read || entry.lastPageRead > 0) {
+                            waiting += PendingCloudProgress(
+                                mangaId = manga.id,
+                                chapterUrl = metadata.sourceChapterId,
+                                read = entry.read,
+                                lastPageRead = entry.lastPageRead.toLong(),
+                            )
+                        }
+                        return@mapNotNull null
+                    }
                     if (local.id in pendingChapterIds) return@mapNotNull null
                     val (read, page) = mergeChapterProgress(
                         localRead = local.read,
                         localPage = local.lastPageRead,
                         remoteRead = entry.read,
                         remotePage = entry.lastPageRead.toLong(),
-                        incremental = incremental,
+                        incremental = progressIncremental,
                     ) ?: return@mapNotNull null
                     ChapterUpdate(id = local.id, read = read, lastPageRead = page)
                 }
                 if (updates.isNotEmpty()) {
                     updateChapter.awaitAll(updates)
-                    // No import completo o que subiu por causa da junção ainda tem de ir para a cloud
-                    if (incremental) chapterRepository.clearCloudDirty(updates.map { it.id })
+                    // Na junção o que subiu ainda tem de ir para a cloud
+                    if (progressIncremental) chapterRepository.clearCloudDirty(updates.map { it.id })
                     chaptersApplied += updates.size
+                }
+                if (waiting.isNotEmpty()) {
+                    chapterRepository.savePendingCloudProgress(waiting)
+                    chaptersWaiting += waiting.size
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -590,7 +620,7 @@ class LibrarySupabaseRepository(
         )
         logcat(LogPriority.INFO) {
             "Sync: import ${if (incremental) "INCREMENTAL" else "COMPLETO"} | ${result.summary()} | " +
-                "soLocais=${localOnly.size} | falhas=${failedTitles.size}"
+                "soLocais=${localOnly.size} | capitulosAEspera=$chaptersWaiting | falhas=${failedTitles.size}"
         }
         return result
     }
@@ -700,6 +730,102 @@ class LibrarySupabaseRepository(
         }
         return progressList
     }
+
+    /** Envia os animes alterados ou removidos neste aparelho. @return false se algum lote falhou. */
+    suspend fun uploadAnime(userId: String): Boolean {
+        val dirty = animeRepository.getDirty()
+        if (dirty.isEmpty()) return true
+        ensureValidSession()
+
+        var ok = true
+        dirty.chunked(UPSERT_BATCH_SIZE).forEach { chunk ->
+            try {
+                withRetry {
+                    supabase.postgrest["user_anime"].upsert(chunk.map { it.toRemote(userId) }) {
+                        onConflict = "user_id,anilist_id"
+                    }
+                }
+                chunk.forEach { anime -> anime.dirtyAt?.let { animeRepository.clearDirty(anime.anilistId, it) } }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Sync: falhou o envio de ${chunk.size} animes" }
+                ok = false
+            }
+        }
+        logcat(LogPriority.INFO) { "Sync: animes enviados=${dirty.size} | ok=$ok" }
+        return ok
+    }
+
+    /**
+     * Aplica os animes que mudaram na cloud desde [since] (0 = todos).
+     * O que foi alterado aqui e ainda não foi enviado ganha à cloud.
+     */
+    suspend fun importAnime(userId: String, since: Long): Boolean {
+        ensureValidSession()
+        val updatedSince = if (since > 0L) Instant.ofEpochMilli(since - DOWNLOAD_OVERLAP_MS).toString() else null
+        return try {
+            val remote = mutableListOf<UserAnimeRemote>()
+            var offset = 0
+            while (true) {
+                val chunk = withRetry {
+                    supabase.postgrest["user_anime"]
+                        .select {
+                            filter {
+                                eq("user_id", userId)
+                                if (updatedSince != null) gte("updated_at", updatedSince)
+                            }
+                            order("anilist_id", Order.ASCENDING)
+                            range(offset.toLong(), (offset + PAGE_SIZE - 1).toLong())
+                        }
+                        .decodeList<UserAnimeRemote>()
+                }
+                remote.addAll(chunk)
+                if (chunk.size < PAGE_SIZE) break
+                offset += PAGE_SIZE
+            }
+            val pending = animeRepository.getDirty().map { it.anilistId }.toSet()
+            val toApply = remote.filter { it.anilistId !in pending }.map { it.toDomain() }
+            animeRepository.upsertFromCloud(toApply)
+            logcat(LogPriority.INFO) { "Sync: animes recebidos=${remote.size} | aplicados=${toApply.size}" }
+            true
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: falhou o import dos animes" }
+            false
+        }
+    }
+
+    private fun Anime.toRemote(userId: String) = UserAnimeRemote(
+        userId = userId,
+        anilistId = anilistId,
+        title = title,
+        titleEnglish = titleEnglish,
+        coverUrl = coverUrl,
+        format = format,
+        episodes = episodes,
+        seasonYear = seasonYear,
+        status = status.name,
+        episodesWatched = episodesWatched,
+        deleted = deleted,
+        addedAt = Instant.ofEpochMilli(addedAt).toString(),
+    )
+
+    private fun UserAnimeRemote.toDomain() = Anime(
+        anilistId = anilistId,
+        title = title,
+        titleEnglish = titleEnglish,
+        coverUrl = coverUrl,
+        format = format,
+        episodes = episodes,
+        seasonYear = seasonYear,
+        status = AnimeStatus.fromRemote(status),
+        episodesWatched = episodesWatched,
+        deleted = deleted,
+        addedAt = addedAt?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+            ?: System.currentTimeMillis(),
+    )
 
     private companion object {
         const val PAGE_SIZE = 1000
@@ -859,4 +985,20 @@ data class ChapterProgressRemote(
     @SerialName("last_page_read") val lastPageRead: Int,
     val read: Boolean,
     @SerialName("updated_at") val updatedAt: String,
+)
+
+@Serializable
+data class UserAnimeRemote(
+    @SerialName("user_id") val userId: String,
+    @SerialName("anilist_id") val anilistId: Long,
+    val title: String,
+    @SerialName("title_english") val titleEnglish: String?,
+    @SerialName("cover_url") val coverUrl: String?,
+    val format: String?,
+    val episodes: Long?,
+    @SerialName("season_year") val seasonYear: Long?,
+    val status: String,
+    @SerialName("episodes_watched") val episodesWatched: Long,
+    val deleted: Boolean,
+    @SerialName("added_at") val addedAt: String?,
 )

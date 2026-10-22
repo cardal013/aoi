@@ -11,8 +11,11 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -26,17 +29,22 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
+import eu.kanade.presentation.anime.AnimeListPage
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.LibraryContent
+import eu.kanade.presentation.library.components.LibraryExtraPage
 import eu.kanade.presentation.library.components.LibraryToolbar
+import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.ui.anime.AnimeListViewModel
+import eu.kanade.tachiyomi.ui.anime.AnimeSearchScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
@@ -95,6 +103,11 @@ data object LibraryTab : Tab {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
+        val animeViewModel = metroViewModel<AnimeListViewModel>()
+        val animeState by animeViewModel.state.collectAsStateWithLifecycle()
+        var onAnimePage by rememberSaveable { mutableStateOf(false) }
+        val animeTitle = stringResource(MR.strings.anime_tab)
+
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = LibraryUpdateJob.startNow(context.workManager, category)
             scope.launch {
@@ -112,11 +125,15 @@ data object LibraryTab : Tab {
             topBar = { scrollBehavior ->
                 val activeCategory = state.activeCategory
                 val categoryName = activeCategory?.visualName ?: stringResource(MR.strings.label_default)
-                val title = state.getToolbarTitle(
-                    defaultTitle = stringResource(MR.strings.label_library),
-                    page = state.coercedActiveCategoryIndex,
-                    categoryName = categoryName,
-                )
+                val title = if (onAnimePage) {
+                    LibraryToolbarTitle(animeTitle, animeState.animes.size.takeIf { state.showMangaCount })
+                } else {
+                    state.getToolbarTitle(
+                        defaultTitle = stringResource(MR.strings.label_library),
+                        page = state.coercedActiveCategoryIndex,
+                        categoryName = categoryName,
+                    )
+                }
                 LibraryToolbar(
                     hasActiveFilters = state.hasActiveFilters,
                     selectedCount = state.selection.size,
@@ -143,6 +160,7 @@ data object LibraryTab : Tab {
                     onSearchQueryChange = viewModel::search,
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
+                    showMangaActions = !onAnimePage,
                 )
             },
             bottomBar = {
@@ -202,6 +220,22 @@ data object LibraryTab : Tab {
                     getDisplayMode = { viewModel.getDisplayMode() },
                     getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
                     getItemsForCategory = { state.getItemsForCategory(it) },
+                    extraPage = LibraryExtraPage(
+                        title = animeTitle,
+                        count = animeState.animes.size.takeIf { state.showMangaCount },
+                    ) { pagePadding ->
+                        AnimeListPage(
+                            state = animeState,
+                            searchQuery = state.searchQuery,
+                            contentPadding = pagePadding,
+                            onSelectStatus = animeViewModel::selectStatus,
+                            onClickAdd = { navigator.push(AnimeSearchScreen(animeState.status)) },
+                            onChangeStatus = animeViewModel::setStatus,
+                            onChangeEpisodes = animeViewModel::setEpisodesWatched,
+                            onRemove = animeViewModel::remove,
+                        )
+                    },
+                    onExtraPageSelected = { onAnimePage = it },
                 )
             }
         }

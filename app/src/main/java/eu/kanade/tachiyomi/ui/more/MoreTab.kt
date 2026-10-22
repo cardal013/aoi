@@ -2,9 +2,14 @@ package eu.kanade.tachiyomi.ui.more
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -24,6 +29,7 @@ import eu.kanade.core.preference.PreferenceMutableState
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.presentation.more.MoreScreen
+import eu.kanade.presentation.more.settings.screen.data.CreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
@@ -76,7 +82,10 @@ data object MoreTab : Tab {
             object : ActivityResultContracts.GetContent() {
                 override fun createIntent(context: android.content.Context, input: String): android.content.Intent {
                     val intent = super.createIntent(context, input)
-                    return android.content.Intent.createChooser(intent, context.stringResource(MR.strings.file_select_backup))
+                    return android.content.Intent.createChooser(
+                        intent,
+                        context.stringResource(MR.strings.file_select_backup),
+                    )
                 }
             },
         ) {
@@ -86,6 +95,28 @@ data object MoreTab : Tab {
             }
 
             navigator.push(RestoreBackupScreen(it.toString()))
+        }
+
+        var showBackupDialog by remember { mutableStateOf(false) }
+        if (showBackupDialog) {
+            BackupDialog(
+                onDismissRequest = { showBackupDialog = false },
+                onImport = {
+                    showBackupDialog = false
+                    if (!BackupRestoreJob.isRunning(context.workManager)) {
+                        if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
+                            context.toast(MR.strings.restore_miui_warning)
+                        }
+                        chooseBackup.launch("*/*")
+                    } else {
+                        context.toast(MR.strings.restore_in_progress)
+                    }
+                },
+                onExport = {
+                    showBackupDialog = false
+                    navigator.push(CreateBackupScreen())
+                },
+            )
         }
 
         MoreScreen(
@@ -98,16 +129,7 @@ data object MoreTab : Tab {
             onClickCategories = { navigator.push(CategoryScreen()) },
             onClickStats = { navigator.push(StatsScreen()) },
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
-            onClickImportBackup = {
-                if (!BackupRestoreJob.isRunning(context.workManager)) {
-                    if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
-                        context.toast(MR.strings.restore_miui_warning)
-                    }
-                    chooseBackup.launch("*/*")
-                } else {
-                    context.toast(MR.strings.restore_in_progress)
-                }
-            },
+            onClickBackup = { showBackupDialog = true },
             onClickAccount = { navigator.push(AccountScreen()) },
             onClickSettings = { navigator.push(SettingsScreen()) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
@@ -153,4 +175,27 @@ sealed interface DownloadQueueState {
     data object Stopped : DownloadQueueState
     data class Paused(val pending: Int) : DownloadQueueState
     data class Downloading(val pending: Int) : DownloadQueueState
+}
+
+@Composable
+private fun BackupDialog(
+    onDismissRequest: () -> Unit,
+    onImport: () -> Unit,
+    onExport: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        title = { Text(stringResource(MR.strings.more_backup)) },
+        text = { Text(stringResource(MR.strings.more_backup_summary)) },
+        confirmButton = {
+            TextButton(onClick = onExport) {
+                Text(stringResource(MR.strings.more_backup_export))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onImport) {
+                Text(stringResource(MR.strings.more_backup_import))
+            }
+        },
+    )
 }

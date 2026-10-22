@@ -559,6 +559,28 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .manga-cover svg path{ stroke:var(--accent); fill:none; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
 .manga-card .title{ font-weight:700; font-size:13.5px; line-height:1.3; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 
+.cover-wrap{ position:relative; }
+.cover-wrap .manga-cover{ width:100%; }
+.ep-badge{ position:absolute; top:8px; left:8px; font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--accent); color:#fff; }
+.anime-head-actions{ display:flex; gap:8px; align-items:center; }
+.anime-info{ color:var(--text-muted); font-size:13px; margin-top:6px; }
+.anime-status-options{ grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); }
+.ep-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:20px 0 4px; font-weight:700; }
+.ep-row .ep-btns{ display:flex; gap:8px; }
+.ep-row button{ width:40px; height:40px; border-radius:50%; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:18px; line-height:1; }
+.ep-row button:disabled{ opacity:.4; }
+.anime-modal-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
+.anime-modal-actions a{ color:var(--accent); font-weight:700; font-size:14px; }
+.anime-query{ width:100%; padding:12px 16px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:15px; }
+.anime-results{ display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; margin-top:14px; }
+.anime-results .hint{ color:var(--text-muted); font-size:13.5px; padding:14px 4px; }
+.anime-result{ display:flex; gap:12px; align-items:center; padding:8px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text); text-align:left; width:100%; }
+.anime-result:hover{ border-color:var(--accent); }
+.anime-result img, .anime-result .noimg{ width:46px; aspect-ratio:2/3; object-fit:cover; border-radius:6px; flex-shrink:0; background:var(--bg-elevated-2); }
+.anime-result .t{ font-weight:700; font-size:14px; }
+.anime-result .m{ color:var(--text-muted); font-size:12px; margin-top:2px; }
+.anime-result .in{ color:var(--accent); font-size:12px; margin-top:2px; font-weight:700; }
+
 .report-list{ display:flex; flex-direction:column; gap:10px; }
 .report-row{ display:flex; align-items:center; gap:16px; padding:15px 18px; border:1px solid var(--border); background:var(--bg-elevated); border-radius:var(--radius-m); width:100%; text-align:left; }
 .report-row .rmain{ flex:1; min-width:0; }
@@ -677,6 +699,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <div class="user-menu" id="userMenu">
           <button type="button" id="menuProfileBtn">Profile</button>
           <button type="button" id="menuLibraryBtn">Library</button>
+          <button type="button" id="menuAnimeBtn">Anime</button>
           <hr>
           <button type="button" id="menuLogoutBtn" class="danger">Logout</button>
         </div>
@@ -702,6 +725,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <div id="mobileUserButtons" style="display:none;">
     <button type="button" id="mobileProfileBtn">Profile</button>
     <button type="button" id="mobileLibraryBtn">Library</button>
+    <button type="button" id="mobileAnimeBtn">Anime</button>
     <button type="button" id="mobileLogoutBtn" class="danger">Logout</button>
   </div>
 </div>
@@ -828,6 +852,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <div class="app-tabs-bar">
     <div class="container app-tabs" id="appTabs">
       <button type="button" data-app-view="library" class="active">Library</button>
+      <button type="button" data-app-view="anime">Anime</button>
     </div>
   </div>
 
@@ -854,6 +879,34 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div class="empty-state" id="libraryEmpty" style="display:none;">
       <h3>Nothing here yet</h3>
       <p>No titles match this tab.</p>
+    </div>
+  </section>
+
+  <!-- ANIME -->
+  <section id="app-view-anime" class="container">
+    <div class="app-view-head">
+      <h1>Anime</h1>
+      <div class="anime-head-actions">
+        <button class="icon-btn" id="animeSearchToggle" type="button" aria-label="Search anime">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+        <button class="btn btn-primary btn-sm" id="openAnimeAdd" type="button">Add anime</button>
+      </div>
+    </div>
+    <div class="lib-toolbar">
+      <div class="status-tabs" id="animeTabs">
+        <button type="button" data-status="WATCHING" class="active">Watching</button>
+        <button type="button" data-status="PLAN_TO_WATCH">Plan to Watch</button>
+        <button type="button" data-status="COMPLETED">Completed</button>
+      </div>
+      <div class="search-field" id="animeSearchField">
+        <input type="search" id="animeSearch" placeholder="Search this list…">
+      </div>
+    </div>
+    <div class="manga-grid" id="animeGrid"></div>
+    <div class="empty-state" id="animeEmpty" style="display:none;">
+      <h3>Nothing here yet</h3>
+      <p>Add an anime with the button above, or from the Anime tab in the app.</p>
     </div>
   </section>
 
@@ -907,6 +960,54 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </button>
     </div>
     <div class="status-options" id="statusOptions"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — ANIME (estado, episódios, remover)
+============================================================ -->
+<div class="modal-scrim" id="animeScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="animeModalTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="animeModalTitle">Anime</h3>
+        <div class="anime-info" id="animeModalInfo"></div>
+      </div>
+      <button type="button" class="modal-close" id="closeAnimeModal" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="status-options anime-status-options" id="animeStatusOptions"></div>
+    <div class="ep-row">
+      <span id="animeEpisodes">Episode 0</span>
+      <span class="ep-btns">
+        <button type="button" id="animeEpMinus" aria-label="One episode less">−</button>
+        <button type="button" id="animeEpPlus" aria-label="One episode more">+</button>
+      </span>
+    </div>
+    <div class="anime-modal-actions">
+      <a id="animeAniListLink" href="#" target="_blank" rel="noopener">Open on AniList</a>
+      <button type="button" class="btn btn-danger btn-sm" id="animeRemoveBtn">Remove from list</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — ADD ANIME (pesquisa no AniList)
+============================================================ -->
+<div class="modal-scrim" id="animeAddScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="animeAddTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="animeAddTitle">Add anime</h3>
+        <p id="animeAddSub">Search AniList</p>
+      </div>
+      <button type="button" class="modal-close" id="closeAnimeAdd" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <input type="search" class="anime-query" id="animeQuery" placeholder="Frieren, One Piece…" autocomplete="off">
+    <div class="anime-results" id="animeResults"></div>
   </div>
 </div>
 
@@ -1189,6 +1290,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'block';
     showAppView('library');
     fetchLibrary();
+    fetchAnime();
   }
 
   async function logOut(){
@@ -1382,6 +1484,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   qs('menuLibraryBtn').onclick = () => showAppView('library');
   qs('mobileProfileBtn').onclick = () => showAppView('profile');
   qs('mobileLibraryBtn').onclick = () => showAppView('library');
+  qs('menuAnimeBtn').onclick = () => showAppView('anime');
+  qs('mobileAnimeBtn').onclick = () => showAppView('anime');
 
   // --- LIBRARY RENDERING ---
   function mangaCardHTML(m){
@@ -1452,6 +1556,223 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (error) { alert(error.message); return; }
     fetchLibrary();
     closeModal(statusScrim);
+  };
+
+  // --- ANIME ---
+  // Lista de animes do utilizador (tabela user_anime). Remover só marca deleted, para a app também saber.
+  const ANIME_STATUSES = ['WATCHING', 'PLAN_TO_WATCH', 'COMPLETED'];
+  const ANIME_LABEL = { WATCHING:'Watching', PLAN_TO_WATCH:'Plan to Watch', COMPLETED:'Completed' };
+  const ANIME_DOT = { WATCHING:'var(--accent)', PLAN_TO_WATCH:'#8D8B93', COMPLETED:'#1E9E6B' };
+  const ANILIST_QUERY = `query ($search: String) {
+    Page(perPage: 20) {
+      media(search: $search, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {
+        id title { romaji english } coverImage { large } format episodes seasonYear
+      }
+    }
+  }`;
+  const ANIME_PAGE = 1000;
+
+  var animeState = { list: [], filter: 'WATCHING', searchOpen: false, searchQuery: '', activeId: null };
+
+  function esc(s){
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+  function animeInfo(a){
+    return [a.format ? a.format.replace('_', ' ') : null, a.season_year, a.episodes ? a.episodes + ' eps' : null]
+      .filter(Boolean).join(' · ');
+  }
+
+  async function fetchAnime(){
+    if (!currentUser) return;
+    var all = [];
+    for (var from = 0; ; from += ANIME_PAGE) {
+      const { data, error } = await supabase
+        .from('user_anime')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .eq('deleted', false)
+        .order('title')
+        .range(from, from + ANIME_PAGE - 1);
+      if (error) { console.error(error); return; }
+      all = all.concat(data);
+      if (data.length < ANIME_PAGE) break;
+    }
+    animeState.list = all;
+    renderAnime();
+  }
+
+  function animeCardHTML(a){
+    const cover = a.cover_url ?
+      `<img src="${esc(a.cover_url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy">` :
+      `<div class="manga-cover">${BOOK_ICON}</div>`;
+    const badge = a.status === 'WATCHING' ? `<span class="ep-badge">${a.episodes_watched}/${a.episodes ?? '?'}</span>` : '';
+    return `<button type="button" class="manga-card" data-id="${a.anilist_id}"><div class="cover-wrap">${cover}${badge}</div><div class="title">${esc(a.title)}</div></button>`;
+  }
+  function renderAnime(){
+    const q = animeState.searchQuery.toLowerCase();
+    const filtered = animeState.list.filter(a => a.status === animeState.filter &&
+      (a.title.toLowerCase().includes(q) || (a.title_english || '').toLowerCase().includes(q)));
+    qs('animeGrid').innerHTML = filtered.map(animeCardHTML).join('');
+    qs('animeEmpty').style.display = filtered.length ? 'none' : 'block';
+    qs('animeTabs').querySelectorAll('button').forEach(b => {
+      const count = animeState.list.filter(a => a.status === b.dataset.status).length;
+      b.textContent = `${ANIME_LABEL[b.dataset.status]} · ${count}`;
+    });
+  }
+  qs('animeTabs').onclick = (e) => {
+    const btn = e.target.closest('button[data-status]');
+    if (!btn) return;
+    qs('animeTabs').querySelectorAll('button').forEach(b => b.classList.toggle('active', b === btn));
+    animeState.filter = btn.dataset.status;
+    renderAnime();
+  };
+  qs('animeSearchToggle').onclick = () => {
+    animeState.searchOpen = !animeState.searchOpen;
+    qs('animeSearchField').classList.toggle('open', animeState.searchOpen);
+    qs('animeSearchToggle').classList.toggle('active', animeState.searchOpen);
+    if (animeState.searchOpen) qs('animeSearch').focus();
+  };
+  qs('animeSearch').oninput = (e) => { animeState.searchQuery = e.target.value; renderAnime(); };
+
+  async function updateAnime(id, patch){
+    const { error } = await supabase.from('user_anime').update(patch).eq('user_id', currentUser.id).eq('anilist_id', id);
+    if (error) { alert(error.message); return false; }
+    const a = animeState.list.find(x => x.anilist_id === id);
+    if (a) Object.assign(a, patch);
+    if (patch.deleted) animeState.list = animeState.list.filter(x => x.anilist_id !== id);
+    renderAnime();
+    return true;
+  }
+
+  var animeScrim = qs('animeScrim');
+  function renderAnimeModal(){
+    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    if (!a) { closeModal(animeScrim); return; }
+    qs('animeModalTitle').textContent = a.title;
+    qs('animeModalInfo').textContent = [a.title_english !== a.title ? a.title_english : null, animeInfo(a)].filter(Boolean).join(' — ');
+    qs('animeStatusOptions').innerHTML = ANIME_STATUSES.map(s => `<button type="button" class="status-option ${s === a.status ? 'current' : ''}" data-status="${s}"><span class="dot" style="background:${ANIME_DOT[s]}"></span>${ANIME_LABEL[s]}</button>`).join('');
+    qs('animeEpisodes').textContent = `Episode ${a.episodes_watched} of ${a.episodes ?? '?'}`;
+    qs('animeEpMinus').disabled = a.episodes_watched <= 0;
+    qs('animeEpPlus').disabled = a.episodes != null && a.episodes_watched >= a.episodes;
+    qs('animeAniListLink').href = `https://anilist.co/anime/${a.anilist_id}`;
+  }
+  function openAnimeModal(id){
+    animeState.activeId = id;
+    renderAnimeModal();
+    openModal(animeScrim);
+  }
+  registerModal(animeScrim, () => closeModal(animeScrim));
+  qs('closeAnimeModal').onclick = () => closeModal(animeScrim);
+  qs('animeGrid').onclick = (e) => { const card = e.target.closest('.manga-card'); if (card) openAnimeModal(Number(card.dataset.id)); };
+  qs('animeStatusOptions').onclick = async (e) => {
+    const opt = e.target.closest('.status-option');
+    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    if (!opt || !a) return;
+    const patch = { status: opt.dataset.status };
+    // Acabar um anime põe os episódios no total, como na app
+    if (patch.status === 'COMPLETED' && a.episodes != null) patch.episodes_watched = a.episodes;
+    if (await updateAnime(a.anilist_id, patch)) renderAnimeModal();
+  };
+  function changeEpisodes(delta){
+    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    if (!a) return;
+    const next = Math.max(0, Math.min(a.episodes ?? Infinity, a.episodes_watched + delta));
+    updateAnime(a.anilist_id, { episodes_watched: next }).then(ok => { if (ok) renderAnimeModal(); });
+  }
+  qs('animeEpMinus').onclick = () => changeEpisodes(-1);
+  qs('animeEpPlus').onclick = () => changeEpisodes(1);
+  qs('animeRemoveBtn').onclick = async () => {
+    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    if (!a || !confirm(`Remove "${a.title}" from your list?`)) return;
+    if (await updateAnime(a.anilist_id, { deleted: true })) closeModal(animeScrim);
+  };
+
+  // Acrescentar: pesquisa na API pública do AniList (sem login) e entra no estado do separador aberto
+  var animeAddScrim = qs('animeAddScrim');
+  var animeResults = [];
+  var animeSearchTimer = null;
+  var animeSearchSeq = 0;
+  registerModal(animeAddScrim, () => closeModal(animeAddScrim));
+  qs('closeAnimeAdd').onclick = () => closeModal(animeAddScrim);
+  qs('openAnimeAdd').onclick = () => {
+    qs('animeAddSub').textContent = `Search AniList · adds to ${ANIME_LABEL[animeState.filter]}`;
+    qs('animeQuery').value = '';
+    animeResults = [];
+    renderAnimeResults('Type at least 2 letters.');
+    openModal(animeAddScrim);
+    qs('animeQuery').focus();
+  };
+  qs('animeQuery').oninput = (e) => {
+    clearTimeout(animeSearchTimer);
+    const query = e.target.value.trim();
+    if (query.length < 2) { animeResults = []; renderAnimeResults('Type at least 2 letters.'); return; }
+    animeSearchTimer = setTimeout(() => searchAniList(query), 400);
+  };
+  async function searchAniList(query){
+    const seq = ++animeSearchSeq;
+    renderAnimeResults('Searching…');
+    try {
+      const res = await fetch('https://graphql.anilist.co', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ query: ANILIST_QUERY, variables: { search: query } })
+      });
+      if (!res.ok) throw new Error('AniList ' + res.status);
+      const json = await res.json();
+      if (seq !== animeSearchSeq) return;
+      animeResults = json.data.Page.media.map(m => ({
+        anilist_id: m.id,
+        title: m.title.romaji || m.title.english || ('#' + m.id),
+        title_english: m.title.english,
+        cover_url: m.coverImage ? m.coverImage.large : null,
+        format: m.format,
+        episodes: m.episodes,
+        season_year: m.seasonYear
+      }));
+      renderAnimeResults(animeResults.length ? null : 'No results.');
+    } catch (err) {
+      if (seq !== animeSearchSeq) return;
+      console.error('anilist', err);
+      animeResults = [];
+      renderAnimeResults("Couldn't reach AniList. Try again.");
+    }
+  }
+  function renderAnimeResults(hint){
+    if (hint) { qs('animeResults').innerHTML = `<div class="hint">${esc(hint)}</div>`; return; }
+    qs('animeResults').innerHTML = animeResults.map(r => {
+      const inList = animeState.list.find(a => a.anilist_id === r.anilist_id);
+      const img = r.cover_url ? `<img src="${esc(r.cover_url)}" alt="" loading="lazy">` : '<span class="noimg"></span>';
+      const tag = inList ? `<div class="in">In your list: ${ANIME_LABEL[inList.status]}</div>` : '';
+      return `<button type="button" class="anime-result" data-id="${r.anilist_id}">${img}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(animeInfo(r))}</div>${tag}</div></button>`;
+    }).join('');
+  }
+  qs('animeResults').onclick = async (e) => {
+    const row = e.target.closest('.anime-result');
+    if (!row || !currentUser) return;
+    const r = animeResults.find(x => x.anilist_id === Number(row.dataset.id));
+    if (!r) return;
+    if (animeState.list.some(a => a.anilist_id === r.anilist_id)) {
+      closeModal(animeAddScrim);
+      openAnimeModal(r.anilist_id);
+      return;
+    }
+    const { error } = await supabase.from('user_anime').upsert({
+      user_id: currentUser.id,
+      anilist_id: r.anilist_id,
+      title: r.title,
+      title_english: r.title_english,
+      cover_url: r.cover_url,
+      format: r.format,
+      episodes: r.episodes,
+      season_year: r.season_year,
+      status: animeState.filter,
+      episodes_watched: 0,
+      deleted: false,
+      added_at: new Date().toISOString()
+    }, { onConflict: 'user_id,anilist_id' });
+    if (error) { alert(error.message); return; }
+    await fetchAnime();
+    renderAnimeResults(null);
   };
 
   // --- PROFILE ---

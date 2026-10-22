@@ -40,7 +40,7 @@ fun MoreScreen(
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
     onClickDataAndStorage: () -> Unit,
-    onClickImportBackup: () -> Unit,
+    onClickBackup: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAccount: () -> Unit,
     onClickSupport: () -> Unit,
@@ -83,9 +83,9 @@ fun MoreScreen(
 
             item {
                 TextPreferenceWidget(
-                    title = "Import backup",
+                    title = stringResource(MR.strings.more_backup),
                     icon = MaterialSymbols.Rounded.Storage,
-                    onPreferenceClick = onClickImportBackup,
+                    onPreferenceClick = onClickBackup,
                 )
             }
 
