@@ -97,6 +97,14 @@ PK `(user_id, anilist_id)`. RLS com uma política `ALL` própria (`user_anime_ow
 
 A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert e update): o `updated_at` do progresso passou a ser a hora do servidor.
 
+### admins e admin_data (desde 22/10/2026, [`20261022_admin.sql`](migrations/20261022_admin.sql))
+| Tabela | Colunas | Acesso |
+|-|-|-|
+| admins | `user_id` uuid PK (FK auth.users), `created_at` | select só da própria linha; ninguém escreve pela API (só no SQL Editor) |
+| admin_data | `user_id`, `key` text (PK juntos), `value` jsonb, `updated_at` (trigger) | `ALL` só se `auth.uid() = user_id` **e** `is_admin()` |
+
+`public.is_admin()` (security definer) diz se a conta com sessão está em `admins`. O admin é pelo id da conta, por isso mudar o username não o tira.
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.

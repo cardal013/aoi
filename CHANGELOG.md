@@ -14,6 +14,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.22.0] - 2026-10-22
+### Added
+- *Admin* in *More* (below *Account*), only for admin accounts: Savearth (work hours, pay, fuel, Excel export), Gits and Settings, the same as the Aoc app. Savearth data and settings are saved to the cloud (`admin_data`); the GitHub token stays on the phone
+- Admin accounts are set by account id in Supabase (`admins`), so changing the username keeps them
+
+### Other
+- Supabase migration `20261022_admin.sql`
+
 ## [Aoi v0.21.0] - 2026-10-22
 ### Added
 - *Anime* tab in the library, after *Plan to Read* (only reachable by swiping): *Watching*, *Plan to Watch* and *Completed* filters, AniList search (public API, no login), episode counter and removal

@@ -99,3 +99,8 @@
     public <init>();
     public void destroy();
 }
+
+# Aoi: métodos chamados pelo JavaScript da página do Admin (window.Aoi)
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}

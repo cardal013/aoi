@@ -40,8 +40,8 @@ android {
     defaultConfig {
         applicationId = "com.cardal.aoi"
 
-        versionCode = 35
-        versionName = "0.21.0"
+        versionCode = 36
+        versionName = "0.22.0"
 
         buildConfigField("String", "COMMIT_COUNT", "\"${getLatestCommitCount()}\"")
         buildConfigField("String", "COMMIT_SHA", "\"${getLatestCommitSha()}\"")

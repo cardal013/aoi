@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin</title>
+<script src="xlsx.full.min.js"></script>
+<!-- Savearth, Gits e Definições iguais aos da app Aoc (repo cardal013/aoc), dentro do Aoi para admins.
+     Os dados ficam no localStorage e sincronizam com a tabela admin_data do Supabase (ponte window.Aoi). -->
+<style>
+  :root{
+    --bg:#0f1115; --card:#1a1d24; --card2:#232731; --line:#2a2f3a; --text:#eef0f4;
+    --muted:#8b92a3; --accent:#6c8cff; --accent2:#4ade80; --danger:#ff6b6b;
+    --bottom-space: 120px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  /* Sem vh: na WebView do Android fica a 0 quando a página carrega antes de a vista ter tamanho */
+  html{height:100%}
+  body{background:var(--bg);color:var(--text);min-height:100%;display:flex;justify-content:center}
+  .app{width:100%;max-width:1200px;min-height:100%;position:relative;overflow:hidden;display:flex;flex-direction:column}
+  header{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:16px 18px;position:sticky;top:0;background:var(--bg);z-index:5}
+  header h1{font-size:18px;font-weight:600}
+  header .right{justify-self:end;display:flex}
+  .icon-btn{background:var(--card);border:1px solid var(--line);color:var(--text);width:42px;height:42px;border-radius:12px;font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+  .icon-btn:active{transform:scale(.94)}
+  .pill-btn{background:var(--card);border:1px solid var(--line);color:var(--text);height:42px;padding:0 14px;border-radius:12px;font-size:14px;cursor:pointer;white-space:nowrap}
+  .pill-btn:hover{background:var(--card2)}
+  .page{display:none;padding:0 18px 18px}
+  .page.active{display:flex;flex-direction:column;flex:1}
+  #pageSave{padding-bottom: var(--bottom-space);}
+
+  /* Calendário */
+  .cal-nav{display:flex;align-items:center;justify-content:space-between;margin:4px 0 14px}
+  .cal-nav .mid{display:flex;align-items:center;gap:12px}
+  .cal-nav h2{font-size:20px;text-transform:capitalize}
+  .cal-nav button{background:var(--card);border:1px solid var(--line);color:var(--text);height:38px;min-width:38px;padding:0 12px;border-radius:10px;cursor:pointer;font-size:16px}
+  .cal-nav button:hover{background:var(--card2)}
+  .cal-nav .today-btn{font-size:13px;height:30px}
+  .cal{flex:1;display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden;min-height:440px}
+  .weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));background:var(--card);border-bottom:1px solid var(--line)}
+  .weekdays div{text-align:center;color:var(--muted);font-size:13px;font-weight:600;padding:12px 0}
+  .days{flex:1;display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .day{border-top:1px solid var(--line);border-left:1px solid var(--line);padding:6px;cursor:pointer;min-height:84px;overflow:hidden;display:flex;flex-direction:column;gap:4px;background:var(--bg);transition:background .15s}
+  .day:nth-child(7n+1){border-left:none}
+  .day:nth-child(-n+7){border-top:none}
+  .day:hover{background:var(--card)}
+  .day .num{font-size:14px;color:#c9cdd8}
+  .day.other .num,.day.other .chips{opacity:.35}
+  .day.today{background:rgba(108,140,255,.18)}
+  .day.today .num{color:var(--accent);font-weight:700}
+  .chips{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .chip{--c:#8aa4ff;background:color-mix(in srgb,var(--c) 22%,transparent);color:var(--c);font-size:12px;font-weight:600;padding:3px 7px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .more{font-size:11px;color:var(--muted);padding-left:6px}
+
+  /* Savearth */
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;align-items:center}
+  .toolbar .pill-btn{height:36px;font-size:13px}
+  .fpill{display:inline-flex;align-items:center;gap:8px;background:rgba(108,140,255,.18);color:var(--accent);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+  .fpill button{background:none;border:none;color:var(--accent);cursor:pointer;font-size:14px}
+  .stats-container{position:fixed;left:14px;right:14px;bottom:14px;display:flex;gap:12px;align-items:stretch;z-index:6}
+  .stat-box{flex:1 1 0;min-width:0;background:var(--card);border:1px solid var(--accent);border-radius:16px;padding:12px 16px;box-shadow:0 8px 30px rgba(0,0,0,.45);display:flex;flex-direction:column;justify-content:space-between}
+  .stat-box small{display:block;color:var(--muted);font-size:11px;margin-bottom:6px;text-transform:capitalize}
+  .stat-box .stat{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+  .stat-box .stat + .stat{margin-top:4px}
+  .stat-box .stat span{color:var(--muted);font-size:12px}
+  .stat-box .stat b{font-size:20px;color:var(--accent)}
+
+  /* Menu lateral */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:.25s;z-index:10}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .drawer{position:fixed;top:0;left:0;height:100%;width:260px;background:var(--card);transform:translateX(-100%);transition:.25s;z-index:11;padding:24px 16px}
+  .drawer.show{transform:translateX(0)}
+  .drawer h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px}
+  .drawer button{width:100%;text-align:left;background:transparent;border:none;color:var(--text);padding:14px 12px;border-radius:12px;font-size:16px;cursor:pointer;display:flex;gap:12px;align-items:center}
+  .drawer button:hover,.drawer button.active{background:var(--card2)}
+  .drawer .sync{margin-top:18px;padding:0 12px;font-size:12px;color:var(--muted)}
+
+  /* Definições */
+  #pageSettings{max-width:720px;width:100%;margin:0 auto}
+  .settings{display:flex;flex-direction:column;gap:12px}
+  .set-card{background:var(--card);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .set-card h4{font-size:16px}
+  .set-card h5{font-size:14px;margin-top:8px;padding-top:12px;border-top:1px solid var(--line)}
+  .set-card p{font-size:13px;color:var(--muted)}
+  .seg{display:flex;gap:8px}
+  .seg button{flex:1;background:var(--card2);border:1px solid transparent;color:var(--text);border-radius:12px;padding:12px;font-size:15px;cursor:pointer}
+  .seg button.active{border-color:var(--accent);color:var(--accent);font-weight:600}
+  .set-card .hint{margin-top:0}
+
+  /* Gits */
+  #pageGits{max-width:720px;width:100%;margin:0 auto}
+  .gh{width:18px;height:18px;flex:none}
+  .repos{display:flex;flex-direction:column;gap:10px}
+  .repo{background:var(--card);border-radius:16px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+  .repo a{color:var(--accent);font-size:16px;font-weight:600;text-decoration:none;display:flex;align-items:center;gap:8px;cursor:pointer}
+  .repo p{font-size:13px;color:var(--muted)}
+  .gits-msg{font-size:13px;color:var(--muted);margin-bottom:10px}
+  .gits-msg.err{color:var(--danger)}
+  .set-card .link{color:var(--accent);cursor:pointer;text-decoration:underline}
+  .tag{font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:1px 8px;font-weight:500}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:20}
+  .modal.show{display:flex}
+  .sheet{background:var(--card);width:100%;max-width:480px;border-radius:22px 22px 0 0;padding:20px;max-height:85%;overflow:auto;animation:up .25s}
+  @keyframes up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+  .sheet h3{margin-bottom:14px;font-size:18px;text-transform:capitalize}
+  input{width:100%;background:var(--card2);border:1px solid transparent;color:var(--text);border-radius:12px;padding:12px;font-size:15px;outline:none;color-scheme:dark}
+  input:focus{border-color:var(--accent)}
+  .row{display:flex;gap:8px;margin-top:10px}
+  .field{display:flex;flex-direction:column;gap:4px;flex:1;font-size:12px;color:var(--muted)}
+  .hint{margin-top:10px;font-size:13px;color:var(--accent)}
+  .btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;cursor:pointer;font-weight:600}
+  .btn.ghost{background:var(--card2);color:var(--text)}
+  .actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+  .rem{--c:#8aa4ff;display:flex;align-items:center;justify-content:space-between;background:var(--card2);border-left:4px solid var(--c);padding:10px 12px;border-radius:10px;margin-top:8px;font-size:14px}
+  .rem small{color:var(--c);margin-right:8px;font-weight:600}
+  .rem button{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer}
+
+  @media (min-width:700px){
+    .modal{align-items:center}
+    .sheet{border-radius:22px}
+  }
+  @media (max-width:600px){
+    .page{padding:0 8px 12px}
+    #pageSave{padding-bottom: var(--bottom-space)}
+    .day{padding:3px;min-height:70px}
+    .day .num{font-size:12px}
+    .chip{font-size:9px;padding:2px 4px;border-radius:4px}
+    .more{font-size:9px;padding-left:2px}
+    .weekdays div{font-size:11px;padding:8px 0}
+    .cal-nav h2{font-size:16px}
+    .stats-container{left:10px;right:10px;bottom:10px;gap:8px}
+    .stat-box{padding:10px 12px}
+    .stat-box small{font-size:10px;margin-bottom:4px}
+    .stat-box .stat b{font-size:17px}
+    .stat-box .stat span{font-size:11px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div><button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button></div>
+    <h1 id="title">Savearth</h1>
+    <div class="right"></div>
+  </header>
+
+  <!-- Página Savearth -->
+  <section class="page" id="pageSave">
+    <div class="toolbar">
+      <button class="pill-btn" id="filterBtn">🔎 Filtrar dias</button>
+      <button class="pill-btn" id="exportBtn">⬇️ Exportar Excel</button>
+      <span class="fpill" id="filterPill" style="display:none"><span id="filterText"></span><button id="filterX" aria-label="Limpar filtro">✕</button></span>
+    </div>
+    <div class="cal-nav">
+      <button id="prev2" aria-label="Mês anterior">‹</button>
+      <div class="mid">
+        <h2 id="monthLabel2"></h2>
+        <button class="today-btn" id="today2">Hoje</button>
+      </div>
+      <button id="next2" aria-label="Mês seguinte">›</button>
+    </div>
+    <div class="cal">
+      <div class="weekdays"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div>
+      <div class="days" id="days2"></div>
+    </div>
+    <div class="stats-container">
+      <div class="stat-box">
+        <small>Salário − Combustível</small>
+        <div class="stat"><span>Total</span><b id="statTotal">0,00 €</b></div>
+      </div>
+      <div class="stat-box">
+        <small id="statLabel"></small>
+        <div class="stat"><span>Salário</span><b id="statPay">0,00 €</b></div>
+        <div class="stat"><span>Combustível</span><b id="statFuel">0,00 €</b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Página Definições -->
+  <section class="page" id="pageSettings">
+    <div class="settings">
+      <div class="set-card">
+        <h4>Ecrã inicial</h4>
+        <p>O que abre primeiro quando entras no Admin.</p>
+        <div class="seg">
+          <button id="homeSave">🌍 Savearth</button>
+          <button id="homeGits">Gits</button>
+        </div>
+      </div>
+      <div class="set-card">
+        <h4>Savearth</h4>
+        <p>Horário que aparece ao tocar num dia do calendário.</p>
+        <div class="row">
+          <label class="field">Das <input type="time" id="setShiftStart"></label>
+          <label class="field">Até às <input type="time" id="setShiftEnd"></label>
+        </div>
+        <label class="field">€ por hora <input type="number" id="setRate" min="0" step="0.01" placeholder="ex: 5.50"></label>
+        <h5>Combustível</h5>
+        <p>Conta sempre 20 km a mais por cada dia trabalhado.</p>
+        <div class="row">
+          <label class="field">Preço (€/L) <input type="number" id="setFuelPrice" min="0" step="0.01" placeholder="ex: 2.00"></label>
+          <label class="field">Consumo (L/100 km) <input type="number" id="setConsumption" min="0" step="0.1" placeholder="ex: 7.5"></label>
+        </div>
+        <div class="hint" id="fuelHint"></div>
+      </div>
+      <div class="set-card">
+        <h4>GitHub</h4>
+        <p id="ghStatus"></p>
+        <div id="ghLogin">
+          <p>Cola um token do GitHub (<span class="link" id="ghHelp">criar aqui</span>: "Fine-grained token", acesso a "All repositories", permissão "Metadata: Read-only").</p>
+          <div class="row">
+            <input type="password" id="ghToken" placeholder="github_pat_..." autocomplete="off">
+            <button class="btn" id="ghSave">Entrar</button>
+          </div>
+        </div>
+        <button class="btn ghost" id="ghLogout">Terminar sessão</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Página Gits -->
+  <section class="page" id="pageGits">
+    <div class="gits-msg" id="gitsMsg"></div>
+    <div class="repos" id="repos"></div>
+  </section>
+
+  <!-- Menu lateral -->
+  <div class="overlay" id="overlay"></div>
+  <aside class="drawer" id="drawer">
+    <h3>Menu</h3>
+    <button id="goSave">🌍 Savearth</button>
+    <button id="goGits"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Gits</button>
+    <button id="goSettings">⚙️ Definições</button>
+    <p class="sync" id="syncState"></p>
+  </aside>
+
+  <!-- Modal turnos (Savearth) -->
+  <div class="modal" id="shiftModal">
+    <div class="sheet">
+      <h3 id="shiftTitle"></h3>
+      <div id="shiftList"></div>
+      <div class="row">
+        <label class="field">Das <input type="time" id="shiftStart" value="09:00"></label>
+        <label class="field">Até às <input type="time" id="shiftEnd" value="13:00"></label>
+      </div>
+      <div class="hint" id="shiftHint"></div>
+      <div class="actions">
+        <button class="btn ghost" id="shiftClose">Fechar</button>
+        <button class="btn" id="shiftAdd">Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal intervalo (filtrar / exportar) -->
+  <div class="modal" id="rangeModal">
+    <div class="sheet">
+      <h3 id="rTitle"></h3>
+      <div class="row">
+        <label class="field">Do dia <input type="date" id="rFrom"></label>
+        <label class="field">Até ao dia <input type="date" id="rTo"></label>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="rCancel">Cancelar</button>
+        <button class="btn ghost" id="rClear" style="display:none">Limpar</button>
+        <button class="btn" id="rOk"></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const FUEL_KM = 20;                       // km a mais por dia trabalhado
+const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
+
+/* ---------- Dados: localStorage + cloud ---------- */
+// Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter'];
+const SAVE_DELAY = 800;
+const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
+const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
+// Por enviar: { chave: instante da alteração }. Só sai quando a cloud confirma esse mesmo instante
+const getDirty = () => readRaw('__dirty', {});
+const setDirty = d => writeRaw('__dirty', d);
+const saveTimers = {};
+
+const store = {
+  get(k, d){ return readRaw(k, d) },
+  set(k, v){
+    writeRaw(k, v);
+    if(!SYNCED.includes(k)) return;
+    const d = getDirty(); d[k] = Date.now(); setDirty(d);
+    clearTimeout(saveTimers[k]);
+    saveTimers[k] = setTimeout(() => sendKey(k), SAVE_DELAY);
+    renderSync();
+  }
+};
+function sendKey(k){
+  const stamp = getDirty()[k];
+  if(!Aoi || stamp === undefined) return;
+  Aoi.save(k, localStorage.getItem(k) ?? 'null', String(stamp));
+}
+window.onSaved = (k, stamp) => {
+  const d = getDirty();
+  if(String(d[k]) === String(stamp)){ delete d[k]; setDirty(d); }
+  renderSync();
+};
+window.onSaveFailed = () => renderSync('Sem ligação: as alterações vão quando voltares a abrir o Admin.');
+// Dados da cloud ao abrir: o que tem alterações locais por enviar não é substituído
+window.onCloud = (uid, json) => {
+  if(localStorage.getItem('__uid') !== uid){
+    SYNCED.concat(['__dirty']).forEach(k => localStorage.removeItem(k));
+    localStorage.setItem('__uid', uid);
+  }
+  const data = JSON.parse(json), d = getDirty();
+  Object.keys(data).forEach(k => { if(SYNCED.includes(k) && d[k] === undefined) writeRaw(k, data[k]); });
+  Object.keys(d).forEach(sendKey);
+  loadState();
+  go(current);
+  renderSync();
+};
+window.onCloudFailed = () => renderSync('Sem ligação à cloud: a mostrar os dados deste telemóvel.');
+function renderSync(msg){
+  const pending = Object.keys(getDirty()).length;
+  $('syncState').textContent = msg || (pending ? 'A guardar na cloud…' : 'Guardado na cloud.');
+}
+
+let shifts, rate, fuelPrice, consumption, shiftDefault, home, filter, sview;
+function loadState(){
+  shifts       = store.get('shifts', {});        // { 'YYYY-MM-DD': [{start,end}] }
+  rate         = store.get('rate', 0);           // € por hora
+  fuelPrice    = store.get('fuelPrice', 2.00);   // € por litro
+  consumption  = store.get('consumption', 7.5);  // L/100 km
+  shiftDefault = store.get('shiftDefault', {start:'09:00', end:'13:00'}); // horário ao abrir um dia
+  home         = store.get('home', 'save');      // ecrã inicial: 'save' ou 'gits'
+  filter       = store.get('filter', null);      // intervalo das contas do Savearth: {from,to}
+  sview = filter ? new Date(filter.from + 'T00:00:00') : new Date(); sview.setDate(1);
+}
+loadState();
+let selDate = null, rangeMode = 'filter';
+const MAX_CHIPS = 3;
+
+const fmt = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const fmtPT = k => k.split('-').reverse().join('/');
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const eur = n => n.toLocaleString('pt-PT',{style:'currency',currency:'EUR'});
+const toMin = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+const dur = s => { let d = toMin(s.end)-toMin(s.start); if(d<=0) d += 1440; return d; };   // turno que passa da meia-noite conta
+const fuelPerDay = () => FUEL_KM * consumption / 100 * fuelPrice;
+const fmtH = min => { const h = Math.floor(min/60), m = min%60; return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`; };
+
+/* Grelha de calendário */
+function renderGrid(box, labelEl, v, chipsFor, onDay){
+  labelEl.textContent = v.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  const first = new Date(v.getFullYear(), v.getMonth(), 1);
+  const daysInMonth = new Date(v.getFullYear(), v.getMonth()+1, 0).getDate();
+  const offset = (first.getDay()+6)%7;
+  const rows = Math.ceil((offset+daysInMonth)/7);
+  const start = new Date(first); start.setDate(1-offset);
+  const todayStr = fmt(new Date());
+  box.innerHTML = '';
+  box.style.gridTemplateRows = `repeat(${rows}, minmax(84px, 1fr))`;
+  for(let i=0;i<rows*7;i++){
+    const d = new Date(start); d.setDate(start.getDate()+i);
+    const key = fmt(d);
+    const el = document.createElement('div');
+    el.className = 'day' + (d.getMonth()!==v.getMonth()?' other':'') + (key===todayStr?' today':'');
+    const list = chipsFor(key);
+    let html = `<span class="num">${d.getDate()}</span><div class="chips">`;
+    const shown = list.length > MAX_CHIPS ? MAX_CHIPS-1 : list.length;
+    for(let j=0;j<shown;j++) html += `<div class="chip">${esc(list[j])}</div>`;
+    if(list.length > shown) html += `<div class="more">+${list.length-shown} mais</div>`;
+    html += '</div>';
+    el.innerHTML = html;
+    el.onclick = () => onDay(key, d);
+    box.appendChild(el);
+  }
+}
+
+/* ---------- Savearth (horas de trabalho) ---------- */
+function renderSave(){
+  renderGrid($('days2'), $('monthLabel2'), sview,
+    key => (shifts[key]||[]).map(s => `${s.start}–${s.end} (${fmtH(dur(s))})`), openShift);
+  $('filterPill').style.display = filter ? 'inline-flex' : 'none';
+  if(filter) $('filterText').textContent = `${fmtPT(filter.from)} → ${fmtPT(filter.to)}`;
+  renderStats();
+}
+function currentRange(){
+  if(filter) return filter;
+  const y = sview.getFullYear(), m = sview.getMonth();
+  return { from: fmt(new Date(y,m,1)), to: fmt(new Date(y,m+1,0)) };
+}
+function sumRange(r){
+  let min = 0, days = 0;
+  Object.keys(shifts).forEach(k => {
+    if(k>=r.from && k<=r.to && shifts[k].length){ days++; shifts[k].forEach(s => min += dur(s)); }
+  });
+  return { min, days };
+}
+function renderStats(){
+  const r = currentRange(), t = sumRange(r);
+  const fuel = t.days * fuelPerDay();
+  const pay = t.min / 60 * rate;
+  const total = pay - fuel;
+  const rangeText = filter
+    ? `${fmtPT(r.from)} – ${fmtPT(r.to)}`
+    : sview.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  $('statLabel').textContent = `${rangeText} · ${t.days} ${t.days===1?'dia':'dias'} · ${fmtH(t.min)}`;
+  $('statPay').textContent = eur(pay);
+  $('statFuel').textContent = eur(fuel);
+  const totalEl = $('statTotal');
+  totalEl.textContent = eur(total);
+  totalEl.style.color = total < 0 ? 'var(--danger)' : 'var(--accent)';
+}
+$('prev2').onclick = () => { sview.setMonth(sview.getMonth()-1); renderSave(); };
+$('next2').onclick = () => { sview.setMonth(sview.getMonth()+1); renderSave(); };
+$('today2').onclick = () => { sview = new Date(); sview.setDate(1); renderSave(); };
+
+/* Turnos de um dia */
+function openShift(key, d){
+  selDate = key;
+  $('shiftTitle').textContent = d.toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+  $('shiftStart').value = shiftDefault.start; $('shiftEnd').value = shiftDefault.end;
+  renderShifts(); updateHint();
+  $('shiftModal').classList.add('show');
+}
+function renderShifts(){
+  const list = shifts[selDate]||[];
+  $('shiftList').innerHTML = list.length ? '' : '<p style="color:var(--muted);font-size:14px">Sem horas neste dia.</p>';
+  list.forEach((s,i)=>{
+    const div = document.createElement('div'); div.className='rem';
+    div.innerHTML = `<span><small>${esc(s.start)} – ${esc(s.end)}</small>${fmtH(dur(s))}</span>`;
+    const b = document.createElement('button'); b.textContent='✕';
+    b.onclick = () => { list.splice(i,1); if(!list.length) delete shifts[selDate]; store.set('shifts',shifts); renderShifts(); renderSave(); };
+    div.appendChild(b); $('shiftList').appendChild(div);
+  });
+}
+function updateHint(){
+  const s = $('shiftStart').value, e = $('shiftEnd').value;
+  $('shiftHint').textContent = (s && e) ? `= ${fmtH(dur({start:s,end:e}))}` : '';
+}
+$('shiftStart').oninput = updateHint;
+$('shiftEnd').oninput = updateHint;
+$('shiftAdd').onclick = () => {
+  const start = $('shiftStart').value, end = $('shiftEnd').value;
+  if(!start || !end) return;
+  (shifts[selDate] ||= []).push({start, end});
+  shifts[selDate].sort((a,b)=>a.start.localeCompare(b.start));
+  store.set('shifts',shifts); renderSave();
+  $('shiftModal').classList.remove('show');
+};
+$('shiftClose').onclick = () => $('shiftModal').classList.remove('show');
+$('shiftModal').onclick = e => { if(e.target===$('shiftModal')) $('shiftModal').classList.remove('show'); };
+
+/* Filtrar / Exportar por intervalo de dias */
+function openRange(mode){
+  rangeMode = mode;
+  const r = currentRange();
+  $('rFrom').value = r.from; $('rTo').value = r.to;
+  $('rTitle').textContent = mode==='filter' ? 'Filtrar por dias' : 'Exportar para Excel';
+  $('rOk').textContent = mode==='filter' ? 'Aplicar' : 'Exportar';
+  $('rClear').style.display = (mode==='filter' && filter) ? 'block' : 'none';
+  $('rangeModal').classList.add('show');
+}
+$('filterBtn').onclick = () => openRange('filter');
+$('exportBtn').onclick = () => openRange('export');
+const setFilter = f => { filter = f; store.set('filter', filter); };
+$('filterX').onclick = () => { setFilter(null); renderSave(); };
+$('rCancel').onclick = () => $('rangeModal').classList.remove('show');
+$('rClear').onclick = () => { setFilter(null); $('rangeModal').classList.remove('show'); renderSave(); };
+$('rOk').onclick = () => {
+  const from = $('rFrom').value, to = $('rTo').value;
+  if(!from || !to || from > to) return alert('Escolhe um intervalo de datas válido.');
+  if(rangeMode === 'filter'){
+    setFilter({ from, to });
+    const f = new Date(from + 'T00:00:00'); sview = new Date(f.getFullYear(), f.getMonth(), 1);
+    $('rangeModal').classList.remove('show'); renderSave();
+  } else {
+    if(exportRange(from, to)) $('rangeModal').classList.remove('show');
+  }
+};
+
+function exportRange(from, to){
+  const keys = Object.keys(shifts).filter(k => k>=from && k<=to && shifts[k].length).sort();
+  if(!keys.length){ alert('Sem horas registadas neste intervalo.'); return false; }
+  const rows = [['Data','Início','Fim','Horas']];
+  let total = 0;
+  keys.forEach(k => shifts[k].forEach(s => {
+    const m = dur(s); total += m;
+    rows.push([fmtPT(k), s.start, s.end, +(m/60).toFixed(2)]);
+  }));
+  rows.push([]);
+  rows.push(['Total horas','','', +(total/60).toFixed(2)]);
+  rows.push(['€ por hora','','', rate]);
+  const payTotal = total / 60 * rate;
+  rows.push(['Salário (€)','','', +payTotal.toFixed(2)]);
+  const daysWorked = keys.length;
+  const fuelTotal = daysWorked * fuelPerDay();
+  rows.push(['Dias trabalhados','','', daysWorked]);
+  rows.push([`Combustível por dia (${FUEL_KM} km)`,'','', +fuelPerDay().toFixed(2)]);
+  rows.push(['Combustível (€)','','', +fuelTotal.toFixed(2)]);
+  const netTotal = payTotal - fuelTotal;
+  rows.push(['Total (€)','','', +netTotal.toFixed(2)]);
+  const name = `savearth_${from}_a_${to}`;
+  if(window.XLSX){
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:14},{wch:8},{wch:8},{wch:10}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Horas');
+    const wbout = XLSX.write(wb, {bookType:'xlsx', type:'base64'});
+    if(Aoi) Aoi.saveExcel(wbout, name + '.xlsx');
+    else XLSX.writeFile(wb, name + '.xlsx');
+  } else {
+    // Sem a biblioteca: CSV que o Excel abre normalmente
+    const csv = '﻿' + rows.map(r => r.map(c => typeof c==='number' ? String(c).replace('.',',') : c).join(';')).join('\r\n');
+    const base64 = btoa(unescape(encodeURIComponent(csv)));
+    if(Aoi) Aoi.saveExcel(base64, name + '.csv');
+    else {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+      a.download = name + '.csv'; a.click();
+    }
+  }
+  return true;
+}
+
+/* ---------- Menu / navegação ---------- */
+const openMenu = v => { $('drawer').classList.toggle('show',v); $('overlay').classList.toggle('show',v); };
+$('menuBtn').onclick = () => openMenu(true);
+$('overlay').onclick = () => openMenu(false);
+
+const PAGES  = { save:'pageSave', gits:'pageGits', settings:'pageSettings' };
+const TITLES = { save:'Savearth', gits:'Gits', settings:'Definições' };
+let current = PAGES[home] ? home : 'save';
+function go(page){
+  current = page;
+  Object.entries(PAGES).forEach(([k,id]) => $(id).classList.toggle('active', k===page));
+  $('title').textContent = TITLES[page];
+  $('goSave').classList.toggle('active', page==='save');
+  $('goGits').classList.toggle('active', page==='gits');
+  $('goSettings').classList.toggle('active', page==='settings');
+  openMenu(false);
+  if(page==='save') renderSave();
+  if(page==='gits') renderGits();
+  if(page==='settings') renderSettings();
+}
+$('goSave').onclick = () => go('save');
+$('goGits').onclick = () => go('gits');
+$('goSettings').onclick = () => go('settings');
+
+// Botão Voltar do Android: fecha modal, depois o menu, depois volta ao ecrã inicial; false = sair do Admin
+window.aoiBack = () => {
+  const open = document.querySelector('.modal.show');
+  if(open){ open.classList.remove('show'); return true; }
+  if($('drawer').classList.contains('show')){ openMenu(false); return true; }
+  const start = PAGES[home] ? home : 'save';
+  if(current !== start){ go(start); return true; }
+  return false;
+};
+
+/* ---------- Gits ---------- */
+const GH_USER = 'cardal013';
+const GH_ICON = '<svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+const REPOS = [
+  { name:'Mestrado_Documentos', desc:'Material do mestrado em Sistemas Autónomos', priv:true },
+  { name:'open', desc:'Robô seguidor de linha para o Open de Robótica', priv:true },
+  { name:'claude-config', desc:'Vault do Obsidian', priv:true },
+  { name:'aoi', desc:'Leitor de manga Android (fork do Mihon)', priv:false },
+  { name:'aoc', desc:'Calendário, Savearth e notas', priv:true },
+  { name:'PESTA', desc:'PDU modular STM32 para ROV (INESC TEC)', priv:true },
+  { name:'IA', desc:'', priv:true },
+  { name:'dispensador', desc:'', priv:true },
+  { name:'labsi', desc:'', priv:true },
+];
+function openUrl(url){
+  if(Aoi) Aoi.openUrl(url);
+  else window.open(url, '_blank');
+}
+const hasGh = () => !!(Aoi && Aoi.hasGithubToken());
+let ghRepos = store.get('ghRepos', null);   // última lista vinda do GitHub
+function setGitsMsg(text, err){ $('gitsMsg').textContent = text; $('gitsMsg').classList.toggle('err', !!err); }
+window.onRepos = json => {
+  const data = JSON.parse(json);
+  if(data.repos){
+    ghRepos = data.repos; store.set('ghRepos', ghRepos);
+    setGitsMsg(`${ghRepos.length} repositórios de ${ghRepos[0] ? ghRepos[0].user : GH_USER}`);
+  } else {
+    setGitsMsg(data.error + (ghRepos ? ' — a mostrar a última lista' : ''), true);
+  }
+  if(current === 'gits') drawRepos();
+  if(current === 'settings') renderGhSettings(data.error);
+};
+function renderGits(){
+  if(hasGh()){
+    setGitsMsg('A carregar do GitHub…');
+    Aoi.fetchRepos();
+  } else {
+    setGitsMsg('Lista fixa. Inicia sessão no GitHub nas Definições para veres todos os repositórios.');
+  }
+  drawRepos();
+}
+function drawRepos(){
+  const list = (hasGh() && ghRepos) ? ghRepos
+    : REPOS.map(r => ({...r, url:`https://github.com/${GH_USER}/${r.name}`}));
+  $('repos').innerHTML = '';
+  list.forEach(r => {
+    const url = r.url;
+    const el = document.createElement('div'); el.className = 'repo';
+    el.innerHTML = `<a>${GH_ICON}<span>${esc(r.name)}</span><span class="tag">${r.priv?'privado':'público'}</span></a>`
+      + (r.desc ? `<p>${esc(r.desc)}</p>` : '');
+    el.querySelector('a').onclick = () => openUrl(url);
+    $('repos').appendChild(el);
+  });
+}
+
+/* ---------- Definições ---------- */
+function renderGhSettings(err){
+  const on = hasGh();
+  $('ghStatus').textContent = !Aoi ? 'Só disponível dentro da app.'
+    : err ? err
+    : on ? `Sessão iniciada${ghRepos && ghRepos[0] ? ' como ' + ghRepos[0].user : ''}.`
+    : 'Sem sessão: a aba Gits mostra uma lista fixa.';
+  $('ghStatus').style.color = err ? 'var(--danger)' : '';
+  $('ghLogin').style.display = (Aoi && !on) ? 'block' : 'none';
+  $('ghLogout').style.display = (Aoi && on) ? 'block' : 'none';
+}
+$('ghHelp').onclick = () => openUrl('https://github.com/settings/personal-access-tokens/new');
+$('ghSave').onclick = () => {
+  const tok = $('ghToken').value.trim(); if(!tok) return;
+  Aoi.setGithubToken(tok); $('ghToken').value = '';
+  $('ghStatus').textContent = 'A verificar…';
+  Aoi.fetchRepos();
+};
+$('ghLogout').onclick = () => {
+  Aoi.setGithubToken(''); ghRepos = null; store.set('ghRepos', null); renderGhSettings();
+};
+
+function renderSettings(){
+  renderGhSettings();
+  $('homeSave').classList.toggle('active', home==='save');
+  $('homeGits').classList.toggle('active', home==='gits');
+  $('setShiftStart').value = shiftDefault.start;
+  $('setShiftEnd').value = shiftDefault.end;
+  $('setRate').value = rate || '';
+  $('setFuelPrice').value = fuelPrice;
+  $('setConsumption').value = consumption;
+  updateFuelHint();
+}
+function updateFuelHint(){
+  const litres = FUEL_KM * consumption / 100;
+  $('fuelHint').textContent = `${FUEL_KM} km × ${consumption.toLocaleString('pt-PT')} L/100 km = ${litres.toLocaleString('pt-PT',{maximumFractionDigits:2})} L → ${eur(fuelPerDay())} por dia`;
+}
+const setHome = h => { home = h; store.set('home', home); renderSettings(); };
+$('homeSave').onclick = () => setHome('save');
+$('homeGits').onclick = () => setHome('gits');
+const saveShiftDefault = () => {
+  const start = $('setShiftStart').value, end = $('setShiftEnd').value;
+  if(start && end){ shiftDefault = {start, end}; store.set('shiftDefault', shiftDefault); }
+};
+$('setShiftStart').oninput = saveShiftDefault;
+$('setShiftEnd').oninput = saveShiftDefault;
+$('setRate').oninput = () => { rate = Math.max(0, parseFloat($('setRate').value) || 0); store.set('rate', rate); };
+$('setFuelPrice').oninput = () => { fuelPrice = Math.max(0, parseFloat($('setFuelPrice').value) || 0); store.set('fuelPrice', fuelPrice); updateFuelHint(); };
+$('setConsumption').oninput = () => { consumption = Math.max(0, parseFloat($('setConsumption').value) || 0); store.set('consumption', consumption); updateFuelHint(); };
+
+go(current);
+renderSync(Aoi ? 'A ler da cloud…' : 'Fora da app: sem cloud.');
+if(Aoi) Aoi.ready();
+</script>
+</body>
+</html>

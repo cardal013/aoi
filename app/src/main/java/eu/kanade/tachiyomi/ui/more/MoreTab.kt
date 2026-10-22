@@ -33,21 +33,25 @@ import eu.kanade.presentation.more.settings.screen.data.CreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.account.AdminRepository
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.more.account.AccountScreen
+import eu.kanade.tachiyomi.ui.more.admin.AdminScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import mihon.feature.support.SupportUsScreen
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import tachiyomi.core.common.i18n.stringResource
@@ -77,6 +81,7 @@ data object MoreTab : Tab {
         val context = LocalContext.current
         val viewModel = metroViewModel<MoreViewModel>()
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
+        val isAdmin by viewModel.isAdmin.collectAsState()
 
         val chooseBackup = rememberLauncherForActivityResult(
             object : ActivityResultContracts.GetContent() {
@@ -131,6 +136,8 @@ data object MoreTab : Tab {
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
             onClickBackup = { showBackupDialog = true },
             onClickAccount = { navigator.push(AccountScreen()) },
+            isAdmin = isAdmin,
+            onClickAdmin = { navigator.push(AdminScreen()) },
             onClickSettings = { navigator.push(SettingsScreen()) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
             onClickAbout = { navigator.push(SettingsScreen(SettingsScreen.Destination.About)) },
@@ -143,6 +150,7 @@ data object MoreTab : Tab {
 @ContributesIntoMap(AppScope::class)
 class MoreViewModel(
     private val downloadManager: DownloadManager,
+    adminRepository: AdminRepository,
     preferences: BasePreferences,
 ) : ViewModel() {
 
@@ -151,6 +159,9 @@ class MoreViewModel(
 
     private var _downloadQueueState: MutableStateFlow<DownloadQueueState> = MutableStateFlow(DownloadQueueState.Stopped)
     val downloadQueueState: StateFlow<DownloadQueueState> = _downloadQueueState.asStateFlow()
+
+    val isAdmin: StateFlow<Boolean> = adminRepository.isAdmin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), false)
 
     init {
         // Handle running/paused status change and queue progress updating

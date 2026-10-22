@@ -19,6 +19,7 @@ import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Info
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.QueryStats
+import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Settings
 import mihon.icons.materialsymbols.rounded.Storage
 import mihon.icons.materialsymbols.rounded.VolunteerActivism
@@ -43,6 +44,8 @@ fun MoreScreen(
     onClickBackup: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAccount: () -> Unit,
+    isAdmin: Boolean,
+    onClickAdmin: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
 ) {
@@ -79,6 +82,15 @@ fun MoreScreen(
                     icon = MaterialSymbols.Rounded.Person,
                     onPreferenceClick = onClickAccount,
                 )
+            }
+            if (isAdmin) {
+                item {
+                    TextPreferenceWidget(
+                        title = stringResource(MR.strings.more_admin),
+                        icon = MaterialSymbols.Rounded.Security,
+                        onPreferenceClick = onClickAdmin,
+                    )
+                }
             }
 
             item {

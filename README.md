@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.22.0
+- *Admin* in *More* for admin accounts: Savearth, Gits and Settings (same as the Aoc app), with the Savearth data saved to the cloud
+
 ### 0.21.0
 - *Anime* tab in the library (after *Plan to Read*): Watching, Plan to Watch and Completed, with AniList search, episode count and cloud sync
 - Read chapters synced from the cloud no longer show as unread on a new device; this version also recovers the progress lost before
