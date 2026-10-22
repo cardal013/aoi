@@ -16,7 +16,7 @@ Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
 ## [Aoi v0.22.0] - 2026-10-22
 ### Added
-- *Admin* in *More* (below *Account*), only for admin accounts: Savearth (work hours, pay, fuel, Excel export), Gits and Settings, the same as the Aoc app. Savearth data and settings are saved to the cloud (`admin_data`); the GitHub token stays on the phone
+- *Admin* in *More* (below *Account*), only for admin accounts: Savearth (work hours, pay, fuel, Excel export), Gits and Settings, the same as the Aoc app. Savearth data and settings are saved to the cloud (`admin_data`); the GitHub token stays on the phone. The ✕ button (or *Voltar ao Aoi* in the menu) goes back to the app; changes are sent before leaving
 - Admin accounts are set by account id in Supabase (`admins`), so changing the username keeps them
 
 ### Other

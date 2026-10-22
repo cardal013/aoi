@@ -72,7 +72,9 @@ class AdminScreen : Screen() {
                 .fillMaxSize()
                 .background(BACKGROUND)
                 .windowInsetsPadding(WindowInsets.systemBars),
-            factory = { context -> createWebView(context, viewModel).also { webView = it } },
+            factory = { context ->
+                createWebView(context, viewModel, onClose = { navigator.pop() }).also { webView = it }
+            },
         )
 
         // A página é escura: ícones claros na barra de estado enquanto o Admin está aberto
@@ -94,13 +96,13 @@ class AdminScreen : Screen() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(context: Context, viewModel: AdminViewModel): WebView =
+    private fun createWebView(context: Context, viewModel: AdminViewModel, onClose: () -> Unit): WebView =
         WebView(context).apply {
             setBackgroundColor(BACKGROUND_ARGB)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             webViewClient = WebViewClient()
-            addJavascriptInterface(Bridge(context, this, viewModel), "Aoi")
+            addJavascriptInterface(Bridge(context, this, viewModel, onClose), "Aoi")
             loadUrl(PAGE_URL)
         }
 
@@ -109,6 +111,7 @@ class AdminScreen : Screen() {
         private val context: Context,
         private val webView: WebView,
         private val viewModel: AdminViewModel,
+        private val onClose: () -> Unit,
     ) {
         private val github get() = context.getSharedPreferences("aoi_admin_github", Context.MODE_PRIVATE)
 
@@ -118,6 +121,11 @@ class AdminScreen : Screen() {
 
         private fun toast(text: String) {
             webView.post { Toast.makeText(context, text, Toast.LENGTH_LONG).show() }
+        }
+
+        @JavascriptInterface
+        fun close() {
+            webView.post(onClose)
         }
 
         @JavascriptInterface

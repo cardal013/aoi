@@ -9,7 +9,10 @@ import io.github.jan.supabase.auth.status.SessionStatus
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.query.Columns
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
@@ -33,6 +36,9 @@ import tachiyomi.core.common.util.system.logcat
 class AdminRepository(
     private val preferenceStore: PreferenceStore,
 ) {
+
+    /** Para os envios acabarem mesmo depois de sair do ecrã Admin. */
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Se a conta com sessão é admin. Começa pelo último valor conhecido, para o botão aparecer logo sem rede. */
     @OptIn(ExperimentalCoroutinesApi::class)

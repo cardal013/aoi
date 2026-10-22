@@ -9,6 +9,7 @@ import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.tachiyomi.data.account.AdminRepository
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import logcat.LogPriority
@@ -37,9 +38,10 @@ class AdminViewModel(
         }
     }
 
+    /** Corre fora do ViewModel: sair do ecrã logo a seguir a uma alteração não a perde. */
     fun save(key: String, json: String, onSaved: () -> Unit, onFailure: () -> Unit) {
-        viewModelScope.launchIO {
-            val userId = adminRepository.currentUserId() ?: return@launchIO onFailure()
+        adminRepository.scope.launch {
+            val userId = adminRepository.currentUserId() ?: return@launch onFailure()
             try {
                 val value: JsonElement = Json.parseToJsonElement(json)
                 adminRepository.save(userId, key, value)
