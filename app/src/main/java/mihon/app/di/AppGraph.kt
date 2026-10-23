@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.extension.ExtensionManager
 import eu.kanade.tachiyomi.extension.util.ExtensionInstallActivity
 import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.network.NetworkPreferences
+import eu.kanade.tachiyomi.ui.anime.MalAuthActivity
 import eu.kanade.tachiyomi.ui.base.delegate.SecureActivityDelegateImpl
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
@@ -71,6 +72,7 @@ interface AppGraph : ViewModelGraph {
     fun inject(notificationReceiver: NotificationReceiver)
     fun inject(notificationReceiver: SecureActivityDelegateImpl)
     fun inject(extensionInstallActivity: ExtensionInstallActivity)
+    fun inject(malAuthActivity: MalAuthActivity)
 
     val context: Context
 

@@ -41,7 +41,7 @@ fun AnimeDetailsSheet(
     onChangeStatus: (AnimeStatus) -> Unit,
     onChangeEpisodes: (Long) -> Unit,
     onRemove: () -> Unit,
-    onOpenAniList: () -> Unit,
+    onOpenMyAnimeList: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
         Column(
@@ -94,7 +94,7 @@ fun AnimeDetailsSheet(
                     text = stringResource(
                         MR.strings.anime_episodes_watched,
                         anime.episodesWatched.toInt(),
-                        anime.episodes?.toString() ?: "?",
+                        anime.numEpisodes?.toString() ?: "?",
                     ),
                     style = MaterialTheme.typography.bodyLarge,
                     modifier = Modifier.weight(1f),
@@ -108,17 +108,17 @@ fun AnimeDetailsSheet(
                 Spacer(Modifier.width(8.dp))
                 FilledTonalIconButton(
                     onClick = { onChangeEpisodes(anime.episodesWatched + 1) },
-                    enabled = anime.episodesWatched < (anime.episodes ?: Long.MAX_VALUE),
+                    enabled = anime.episodesWatched < (anime.numEpisodes ?: Long.MAX_VALUE),
                 ) {
                     Icon(imageVector = MaterialSymbols.Rounded.Add, contentDescription = null)
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                TextButton(onClick = onOpenAniList) {
+                TextButton(onClick = onOpenMyAnimeList) {
                     Icon(imageVector = MaterialSymbols.AutoMirroredRounded.OpenInNew, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(stringResource(MR.strings.anime_open_anilist))
+                    Text(stringResource(MR.strings.anime_open_mal))
                 }
                 TextButton(onClick = onRemove) {
                     Icon(
@@ -135,9 +135,22 @@ fun AnimeDetailsSheet(
     }
 }
 
-/** "TV · 2023 · 28 eps", só com o que o AniList souber. */
+/** "TV · 2023 · 28 eps", só com o que o MAL souber (o ano vem da data de estreia, que pode ser parcial). */
 internal fun animeInfoLine(anime: Anime): String = listOfNotNull(
-    anime.format?.replace('_', ' '),
-    anime.seasonYear?.toString(),
-    anime.episodes?.let { "$it eps" },
+    anime.mediaType?.let(::mediaTypeLabel),
+    anime.startDate?.take(YEAR_LENGTH),
+    anime.numEpisodes?.let { "$it eps" },
 ).joinToString(" · ")
+
+private const val YEAR_LENGTH = 4
+
+// Tipos que o MAL escreve em minúsculas e que ficam melhor em maiúsculas
+private val UPPERCASE_MEDIA_TYPES = setOf("tv", "ova", "ona", "cm", "pv")
+
+/** "tv" -> "TV", "movie" -> "Movie", "tv_special" -> "Tv special". */
+private fun mediaTypeLabel(mediaType: String): String {
+    if (mediaType in UPPERCASE_MEDIA_TYPES) {
+        return mediaType.uppercase()
+    }
+    return mediaType.replace('_', ' ').replaceFirstChar { it.uppercase() }
+}

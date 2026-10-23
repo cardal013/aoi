@@ -51,6 +51,8 @@ android {
 
         buildConfigField("String", "SUPABASE_URL", "\"${ignoranceProperties.getProperty("SUPABASE_URL") ?: ""}\"")
         buildConfigField("String", "SUPABASE_ANON_KEY", "\"${ignoranceProperties.getProperty("SUPABASE_ANON_KEY") ?: ""}\"")
+        // Client ID da app do MyAnimeList (público), para a pesquisa ir direta ao MAL; sem ele vai pela edge function
+        buildConfigField("String", "MAL_CLIENT_ID", "\"${ignoranceProperties.getProperty("MAL_CLIENT_ID") ?: ""}\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -1,0 +1,100 @@
+import kotlin.Boolean;
+
+-- Aoi: lista de animes do MyAnimeList, copia local da user_mal_anime do Supabase.
+-- Uma linha por conta do Aoi (user_id) e anime do MAL (mal_id), para contas diferentes nao se misturarem.
+-- status: WATCHING, PLAN_TO_WATCH, COMPLETED (iguais aos da cloud).
+-- touched_at (ms): quando o anime foi mexido pela ultima vez (modo Recentes).
+-- dirty_at (ms): alteracao local ainda por enviar a edge function `mal` (fila offline); NULL = ja enviada.
+-- Remover so marca deleted = 1, para a remocao tambem ir na fila.
+-- folder_id, folder_position, manual_position e manual_tab vem da cloud (pastas e ordem a mao).
+
+CREATE TABLE mal_anime(
+    user_id TEXT NOT NULL,
+    mal_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    title_english TEXT,
+    cover_url TEXT,
+    media_type TEXT,
+    num_episodes INTEGER,
+    start_date TEXT,
+    status TEXT NOT NULL,
+    episodes_watched INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER AS Boolean NOT NULL DEFAULT 0,
+    touched_at INTEGER NOT NULL,
+    folder_id TEXT,
+    folder_position REAL,
+    manual_position REAL,
+    manual_tab TEXT,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, mal_id)
+);
+
+CREATE INDEX mal_anime_dirty_index ON mal_anime(user_id, dirty_at) WHERE dirty_at IS NOT NULL;
+
+-- Modo Recentes (por defeito): o ultimo mexido em cima
+getAll:
+SELECT * FROM mal_anime
+WHERE user_id = :userId AND deleted = 0
+ORDER BY touched_at DESC, title COLLATE NOCASE;
+
+getById:
+SELECT * FROM mal_anime WHERE user_id = :userId AND mal_id = :malId;
+
+getDirty:
+SELECT * FROM mal_anime WHERE user_id = :userId AND dirty_at IS NOT NULL;
+
+-- Acrescentar (ou voltar a acrescentar um removido, que volta solto e com 0 episodios)
+add:
+INSERT INTO mal_anime(
+    user_id, mal_id, title, title_english, cover_url, media_type, num_episodes, start_date,
+    status, touched_at, dirty_at
+)
+VALUES (
+    :userId, :malId, :title, :titleEnglish, :coverUrl, :mediaType, :numEpisodes, :startDate,
+    :status, :now, :now
+)
+ON CONFLICT(user_id, mal_id) DO UPDATE SET
+    title = excluded.title,
+    title_english = excluded.title_english,
+    cover_url = excluded.cover_url,
+    media_type = excluded.media_type,
+    num_episodes = excluded.num_episodes,
+    start_date = excluded.start_date,
+    status = excluded.status,
+    episodes_watched = CASE WHEN deleted = 1 THEN 0 ELSE episodes_watched END,
+    deleted = 0,
+    touched_at = excluded.touched_at,
+    dirty_at = excluded.dirty_at;
+
+setProgress:
+UPDATE mal_anime SET status = :status, episodes_watched = :episodesWatched, touched_at = :now, dirty_at = :now
+WHERE user_id = :userId AND mal_id = :malId;
+
+-- Remover tira tambem da pasta e da ordem a mao (como o trigger da cloud)
+markDeleted:
+UPDATE mal_anime SET
+    deleted = 1,
+    folder_id = NULL,
+    folder_position = NULL,
+    manual_position = NULL,
+    manual_tab = NULL,
+    touched_at = :now,
+    dirty_at = :now
+WHERE user_id = :userId AND mal_id = :malId;
+
+-- O que vem da cloud substitui a linha local e nao fica por enviar
+upsertFromCloud:
+INSERT OR REPLACE INTO mal_anime(
+    user_id, mal_id, title, title_english, cover_url, media_type, num_episodes, start_date,
+    status, episodes_watched, deleted, touched_at,
+    folder_id, folder_position, manual_position, manual_tab, dirty_at
+)
+VALUES (
+    :userId, :malId, :title, :titleEnglish, :coverUrl, :mediaType, :numEpisodes, :startDate,
+    :status, :episodesWatched, :deleted, :touchedAt,
+    :folderId, :folderPosition, :manualPosition, :manualTab, NULL
+);
+
+-- So limpa se nao houve outra alteracao entretanto
+clearDirty:
+UPDATE mal_anime SET dirty_at = NULL WHERE user_id = :userId AND mal_id = :malId AND dirty_at = :dirtyAt;

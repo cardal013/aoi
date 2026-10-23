@@ -7,6 +7,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.data.anime.MalAnimeSync
 import eu.kanade.tachiyomi.util.system.toast
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.status.SessionStatus
@@ -55,6 +56,7 @@ class CloudSync(
     private val getChaptersByMangaId: GetChaptersByMangaId,
     private val updateChapter: UpdateChapter,
     private val libraryPreferences: LibraryPreferences,
+    private val malAnimeSync: MalAnimeSync,
 ) {
 
     private val mutex = Mutex()
@@ -71,6 +73,7 @@ class CloudSync(
             return
         }
         this.scope = scope
+        malAnimeSync.start(scope)
 
         supabase.auth.sessionStatus
             .map { (it as? SessionStatus.Authenticated)?.session?.user?.id }
@@ -127,7 +130,11 @@ class CloudSync(
     private fun sync(mode: Mode) {
         val scope = scope ?: return
         val userId = supabase.auth.currentUserOrNull()?.id ?: return
-        if (mode == Mode.AUTO) lastAutoSync = System.currentTimeMillis()
+        if (mode == Mode.AUTO) {
+            lastAutoSync = System.currentTimeMillis()
+            // Os animes do MAL têm sync próprio: ao abrir a app, ao entrar e quando volta a rede
+            malAnimeSync.requestSync()
+        }
 
         scope.launchIO {
             mutex.withLock {
@@ -170,9 +177,8 @@ class CloudSync(
                 fullProgress = !firstSync && !progressRecovered.get(),
                 onProgress = onProgress,
             )
-            val animeOk = repo.importAnime(userId, since)
             if (result.ok) progressRecovered.set(true)
-            if (result.ok && animeOk) downloadMarker.set(start) else ok = false
+            if (result.ok) downloadMarker.set(start) else ok = false
             showLocalOnly(result.localOnly)
         }
 
@@ -199,8 +205,6 @@ class CloudSync(
             } else {
                 ok = false
             }
-            // Os animes têm marca própria (dirty_at), que só sai depois de chegarem à cloud
-            if (!repo.uploadAnime(userId)) ok = false
         }
 
         mutableState.update {

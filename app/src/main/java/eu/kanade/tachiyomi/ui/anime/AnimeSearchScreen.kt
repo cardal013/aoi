@@ -47,7 +47,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 
-/** Pesquisa no AniList para acrescentar animes. Os novos entram no estado [defaultStatus], que se pode mudar. */
+/** Pesquisa no MyAnimeList para acrescentar animes. Os novos entram no estado [defaultStatus], que se pode mudar. */
 class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
 
     @Composable
@@ -90,7 +90,7 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
                     ),
                 )
                 state.results.isEmpty() -> EmptyScreen(
-                    stringRes = if (state.query.trim().length < 2) {
+                    stringRes = if (state.query.trim().length < AnimeSearchViewModel.MIN_QUERY_LENGTH) {
                         MR.strings.anime_search_prompt
                     } else {
                         MR.strings.no_results_found
@@ -98,10 +98,10 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
                     modifier = Modifier.padding(contentPadding),
                 )
                 else -> LazyColumn(contentPadding = contentPadding) {
-                    items(state.results, key = { it.anilistId }) { anime ->
+                    items(state.results, key = { it.malId }) { anime ->
                         SearchResultRow(
                             anime = anime,
-                            status = inList[anime.anilistId],
+                            status = inList[anime.malId],
                             onClick = { picked = anime },
                         )
                     }
@@ -111,7 +111,7 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
 
         picked?.let { anime ->
             AddAnimeDialog(
-                initialStatus = inList[anime.anilistId] ?: defaultStatus,
+                initialStatus = inList[anime.malId] ?: defaultStatus,
                 onDismissRequest = { picked = null },
                 onConfirm = { status ->
                     viewModel.add(anime, status)

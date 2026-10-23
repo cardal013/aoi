@@ -1,6 +1,7 @@
 package tachiyomi.data
 
 import app.cash.sqldelight.async.coroutines.await
+import app.cash.sqldelight.async.coroutines.awaitAsList
 import app.cash.sqldelight.async.coroutines.awaitAsOne
 import app.cash.sqldelight.db.QueryResult
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
@@ -172,7 +173,6 @@ class CloudSyncTriggersTest {
     fun `migration 18 cria os animes e o progresso pendente`() = runBlocking<Unit> {
         exec("DROP TRIGGER cloud_pending_progress_on_chapter_insert")
         exec("DROP TABLE cloud_pending_progress")
-        exec("DROP TABLE anime")
 
         Database.Schema.migrate(driver, 18, 19).await()
 
@@ -184,11 +184,49 @@ class CloudSyncTriggersTest {
     }
 
     @Test
-    fun `alterar animes acorda o upload`() {
+    fun `migration 19 deita fora os animes do AniList e cria a lista do MAL`() = runBlocking<Unit> {
+        exec("DROP TRIGGER cloud_pending_progress_on_chapter_insert")
+        exec("DROP TABLE cloud_pending_progress")
+        exec("DROP TABLE mal_anime")
+        Database.Schema.migrate(driver, 18, 19).await()
+        exec("INSERT INTO anime(anilist_id, title, status, added_at) VALUES (1, 'Frieren', 'WATCHING', 0)")
+
+        Database.Schema.migrate(driver, 19, 20).await()
+
+        longs("SELECT count(*) FROM sqlite_master WHERE name = 'anime'") shouldBe listOf(0L)
         exec(
-            "INSERT INTO anime(anilist_id, title, status, added_at, dirty_at) VALUES (1, 'Frieren', 'WATCHING', 5, 5)",
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, dirty_at) " +
+                "VALUES ('u1', 52991, 'Frieren', 'WATCHING', 5, 5)",
         )
-        runBlocking { db.cloud_syncQueries.lastLocalChange().awaitAsOne().last } shouldBe 5L
+        longs("SELECT mal_id FROM mal_anime") shouldBe listOf(52991L)
+    }
+
+    @Test
+    fun `animes do MAL não acordam o upload dos mangas`() {
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, dirty_at) " +
+                "VALUES ('u1', 52991, 'Frieren', 'WATCHING', 5, 5)",
+        )
+        runBlocking { db.cloud_syncQueries.lastLocalChange().awaitAsOne().last } shouldBe 0L
+    }
+
+    @Test
+    fun `remover um anime do MAL tira-o da pasta e cada conta tem a sua lista`() = runBlocking<Unit> {
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, folder_id, manual_position) " +
+                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 'pasta', 2.0)",
+        )
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at) VALUES ('u2', 1, 'A', 'WATCHING', 1)",
+        )
+
+        db.mal_animeQueries.markDeleted(now = 9, userId = "u1", malId = 1)
+
+        val leftFolder = "SELECT count(*) FROM mal_anime " +
+            "WHERE folder_id IS NULL AND manual_position IS NULL AND deleted = 1"
+        longs(leftFolder) shouldBe listOf(1L)
+        db.mal_animeQueries.getAll("u2").awaitAsList().size shouldBe 1
+        db.mal_animeQueries.getAll("u1").awaitAsList().size shouldBe 0
     }
 
     private fun insertManga(id: Long, url: String, favorite: Boolean) = exec(

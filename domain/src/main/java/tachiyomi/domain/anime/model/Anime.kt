@@ -1,21 +1,31 @@
 package tachiyomi.domain.anime.model
 
-/** Anime da lista do utilizador, com os dados do AniList. */
+/**
+ * Anime da lista do utilizador no MyAnimeList (cópia local da user_mal_anime do Supabase).
+ * [touchedAt] é quando foi mexido pela última vez (modo Recentes); [dirtyAt] está preenchido enquanto
+ * a alteração local não chega à edge function `mal` (fila offline).
+ * [folderId], [folderPosition], [manualPosition] e [manualTab] são das pastas e da ordem à mão (só do Aoi).
+ */
 data class Anime(
-    val anilistId: Long,
+    val malId: Long,
     val title: String,
     val titleEnglish: String?,
     val coverUrl: String?,
-    val format: String?,
-    val episodes: Long?,
-    val seasonYear: Long?,
+    val mediaType: String?,
+    val numEpisodes: Long?,
+    val startDate: String?,
     val status: AnimeStatus,
     val episodesWatched: Long = 0,
     val deleted: Boolean = false,
-    val addedAt: Long = 0,
+    val touchedAt: Long = 0,
+    val folderId: String? = null,
+    val folderPosition: Double? = null,
+    val manualPosition: Double? = null,
+    val manualTab: String? = null,
     val dirtyAt: Long? = null,
 )
 
+/** Os 3 estados do Aoi. On Hold e Dropped do MAL passam a Plan to Watch no próprio MAL. */
 enum class AnimeStatus {
     WATCHING,
     PLAN_TO_WATCH,

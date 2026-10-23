@@ -165,8 +165,7 @@ lastLocalChange:
 SELECT max(
   coalesce((SELECT max(modified_at) FROM cloud_dirty_mangas), 0),
   coalesce((SELECT max(modified_at) FROM cloud_dirty_chapters), 0),
-  coalesce((SELECT max(removed_at) FROM cloud_removed_mangas), 0),
-  coalesce((SELECT max(dirty_at) FROM anime), 0)
+  coalesce((SELECT max(removed_at) FROM cloud_removed_mangas), 0)
 ) AS last;
 
 savePendingProgress:

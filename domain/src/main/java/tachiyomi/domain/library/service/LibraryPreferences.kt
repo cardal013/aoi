@@ -235,6 +235,24 @@ class LibraryPreferences(
     /** Último estado escolhido na aba Anime (nome de AnimeStatus). */
     val animeLastStatus: Preference<String> = preferenceStore.getString("aoi_anime_last_status", "WATCHING")
 
+    /** Nome da conta do MyAnimeList ligada à conta do Aoi (vazio = não ligada), por utilizador. */
+    fun malUsername(userId: String): Preference<String> = preferenceStore.getString(
+        "aoi_mal_username_$userId",
+        "",
+    )
+
+    /** Se já se perguntou ao servidor, neste aparelho, se o MAL está ligado, por utilizador. */
+    fun malConnectionChecked(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
+        "aoi_mal_connection_checked_$userId",
+        false,
+    )
+
+    /** Instante (ms) do início do último import da cópia da lista do MAL com sucesso, por utilizador. */
+    fun malAnimeDownloadSync(userId: String): Preference<Long> = preferenceStore.getLong(
+        "aoi_mal_anime_download_sync_$userId",
+        0L,
+    )
+
     /** Se o progresso todo da cloud já foi relido depois da correção da 0.21.0, por utilizador. */
     fun cloudProgressRecovered(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
         "cloud_progress_recovered_$userId",

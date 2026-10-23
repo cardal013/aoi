@@ -13,6 +13,7 @@ import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.model.AnimeStatus
 import tachiyomi.domain.anime.repository.AnimeRepository
 
+/** Lista de animes do MAL na base de dados local (tabela mal_anime, ver mal_anime.sq). */
 @Inject
 @SingleIn(AppScope::class)
 @ContributesBinding(AppScope::class)
@@ -20,91 +21,109 @@ class AnimeRepositoryImpl(
     private val database: Database,
 ) : AnimeRepository {
 
-    override fun getAllAsFlow(): Flow<List<Anime>> {
-        return database.animeQueries.getAll(::mapAnime).subscribeToList()
+    override fun getAllAsFlow(userId: String): Flow<List<Anime>> {
+        return database.mal_animeQueries.getAll(userId, ::mapAnime).subscribeToList()
     }
 
-    override suspend fun getById(anilistId: Long): Anime? {
-        return database.animeQueries.getById(anilistId, ::mapAnime).awaitAsOneOrNull()
+    override suspend fun getById(userId: String, malId: Long): Anime? {
+        return database.mal_animeQueries.getById(userId, malId, ::mapAnime).awaitAsOneOrNull()
     }
 
-    override suspend fun add(anime: Anime) {
-        database.animeQueries.add(
-            anilistId = anime.anilistId,
+    override suspend fun add(userId: String, anime: Anime) {
+        database.mal_animeQueries.add(
+            userId = userId,
+            malId = anime.malId,
             title = anime.title,
             titleEnglish = anime.titleEnglish,
             coverUrl = anime.coverUrl,
-            format = anime.format,
-            episodes = anime.episodes,
-            seasonYear = anime.seasonYear,
+            mediaType = anime.mediaType,
+            numEpisodes = anime.numEpisodes,
+            startDate = anime.startDate,
             status = anime.status.name,
             now = System.currentTimeMillis(),
         )
     }
 
-    override suspend fun setStatus(anilistId: Long, status: AnimeStatus) {
-        database.animeQueries.setStatus(status.name, System.currentTimeMillis(), anilistId)
+    override suspend fun setProgress(userId: String, malId: Long, status: AnimeStatus, episodesWatched: Long) {
+        database.mal_animeQueries.setProgress(
+            status = status.name,
+            episodesWatched = episodesWatched,
+            now = System.currentTimeMillis(),
+            userId = userId,
+            malId = malId,
+        )
     }
 
-    override suspend fun setEpisodesWatched(anilistId: Long, episodesWatched: Long) {
-        database.animeQueries.setEpisodesWatched(episodesWatched, System.currentTimeMillis(), anilistId)
+    override suspend fun remove(userId: String, malId: Long) {
+        database.mal_animeQueries.markDeleted(System.currentTimeMillis(), userId, malId)
     }
 
-    override suspend fun remove(anilistId: Long) {
-        database.animeQueries.markDeleted(System.currentTimeMillis(), anilistId)
+    override suspend fun getDirty(userId: String): List<Anime> {
+        return database.mal_animeQueries.getDirty(userId, ::mapAnime).awaitAsList()
     }
 
-    override suspend fun getDirty(): List<Anime> {
-        return database.animeQueries.getDirty(::mapAnime).awaitAsList()
+    override suspend fun clearDirty(userId: String, malId: Long, dirtyAt: Long) {
+        database.mal_animeQueries.clearDirty(userId, malId, dirtyAt)
     }
 
-    override suspend fun clearDirty(anilistId: Long, dirtyAt: Long) {
-        database.animeQueries.clearDirty(anilistId, dirtyAt)
-    }
-
-    override suspend fun upsertFromCloud(animes: List<Anime>) {
-        animes.forEach { anime ->
-            database.animeQueries.upsertFromCloud(
-                anilistId = anime.anilistId,
+    override suspend fun upsertFromCloud(userId: String, animes: List<Anime>) {
+        for (anime in animes) {
+            database.mal_animeQueries.upsertFromCloud(
+                userId = userId,
+                malId = anime.malId,
                 title = anime.title,
                 titleEnglish = anime.titleEnglish,
                 coverUrl = anime.coverUrl,
-                format = anime.format,
-                episodes = anime.episodes,
-                seasonYear = anime.seasonYear,
+                mediaType = anime.mediaType,
+                numEpisodes = anime.numEpisodes,
+                startDate = anime.startDate,
                 status = anime.status.name,
                 episodesWatched = anime.episodesWatched,
                 deleted = anime.deleted,
-                addedAt = anime.addedAt,
+                touchedAt = anime.touchedAt,
+                folderId = anime.folderId,
+                folderPosition = anime.folderPosition,
+                manualPosition = anime.manualPosition,
+                manualTab = anime.manualTab,
             )
         }
     }
 
+    @Suppress("UNUSED_PARAMETER")
     private fun mapAnime(
-        anilistId: Long,
+        userId: String,
+        malId: Long,
         title: String,
         titleEnglish: String?,
         coverUrl: String?,
-        format: String?,
-        episodes: Long?,
-        seasonYear: Long?,
+        mediaType: String?,
+        numEpisodes: Long?,
+        startDate: String?,
         status: String,
         episodesWatched: Long,
         deleted: Boolean,
-        addedAt: Long,
+        touchedAt: Long,
+        folderId: String?,
+        folderPosition: Double?,
+        manualPosition: Double?,
+        manualTab: String?,
         dirtyAt: Long?,
     ): Anime = Anime(
-        anilistId = anilistId,
+        malId = malId,
         title = title,
         titleEnglish = titleEnglish,
         coverUrl = coverUrl,
-        format = format,
-        episodes = episodes,
-        seasonYear = seasonYear,
+        mediaType = mediaType,
+        numEpisodes = numEpisodes,
+        startDate = startDate,
         status = AnimeStatus.fromRemote(status),
         episodesWatched = episodesWatched,
         deleted = deleted,
-        addedAt = addedAt,
+        touchedAt = touchedAt,
+        folderId = folderId,
+        folderPosition = folderPosition,
+        manualPosition = manualPosition,
+        manualTab = manualTab,
         dirtyAt = dirtyAt,
     )
 }

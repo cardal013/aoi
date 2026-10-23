@@ -51,6 +51,8 @@ import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
+import eu.kanade.tachiyomi.util.system.openInBrowser
+import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -233,9 +235,24 @@ data object LibraryTab : Tab {
                             onChangeStatus = animeViewModel::setStatus,
                             onChangeEpisodes = animeViewModel::setEpisodesWatched,
                             onRemove = animeViewModel::remove,
+                            onConnect = {
+                                animeViewModel.connect(
+                                    openUrl = { url -> context.openInBrowser(url) },
+                                    onError = { context.toast(MR.strings.anime_mal_connect_failed) },
+                                )
+                            },
+                            onDisconnect = {
+                                animeViewModel.disconnect(
+                                    onError = { context.toast(MR.strings.anime_mal_disconnect_failed) },
+                                )
+                            },
+                            onRefresh = animeViewModel::refresh,
                         )
                     },
-                    onExtraPageSelected = { onAnimePage = it },
+                    onExtraPageSelected = { selected ->
+                        onAnimePage = selected
+                        if (selected) animeViewModel.onPageOpened()
+                    },
                 )
             }
         }

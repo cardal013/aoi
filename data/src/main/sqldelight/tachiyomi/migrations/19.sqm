@@ -1,0 +1,26 @@
+-- Aoi 0.23.0: os animes passam do AniList para o MyAnimeList.
+-- Os animes antigos (ids do AniList) deitam-se fora, como combinado com o Afonso (sem migracao).
+DROP TABLE IF EXISTS anime;
+
+CREATE TABLE mal_anime(
+    user_id TEXT NOT NULL,
+    mal_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    title_english TEXT,
+    cover_url TEXT,
+    media_type TEXT,
+    num_episodes INTEGER,
+    start_date TEXT,
+    status TEXT NOT NULL,
+    episodes_watched INTEGER NOT NULL DEFAULT 0,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    touched_at INTEGER NOT NULL,
+    folder_id TEXT,
+    folder_position REAL,
+    manual_position REAL,
+    manual_tab TEXT,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, mal_id)
+);
+
+CREATE INDEX mal_anime_dirty_index ON mal_anime(user_id, dirty_at) WHERE dirty_at IS NOT NULL;

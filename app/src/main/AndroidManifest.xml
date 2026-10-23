@@ -179,6 +179,22 @@
             android:exported="false"
             android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
+        <!-- Aoi: regresso do login no MyAnimeList dos animes (edge function mal) -->
+        <activity
+            android:name=".ui.anime.MalAuthActivity"
+            android:exported="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="aoi" />
+                <data android:host="mal-anime-auth" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".ui.setting.track.TrackLoginActivity"
             android:exported="true"
