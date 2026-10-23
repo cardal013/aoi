@@ -79,7 +79,7 @@ export async function startLogin(service: SupabaseClient, userId: string, return
   return authorizeUrl.toString()
 }
 
-/** Resposta 302 para `returnUrl` com `?mal=<resultado>` (as edge functions no domínio supabase.co não servem HTML). */
+/** Resposta 302 para `returnUrl` com `?mal=<resultado>` (no domínio supabase.co as funções não servem HTML). */
 function redirectBack(returnUrl: string, result: string): Response {
   const location = new URL(returnUrl)
   location.searchParams.set("mal", result)
