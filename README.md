@@ -45,7 +45,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |☁️|**Cloud-backed library**|Backed by a database — access your library from the website too.|
 |🔄|**Automatic sync**|Your library, reading status and progress sync on their own: changes go up a few seconds after you make them and the app pulls what changed in the cloud when it opens. Your anime list syncs the same way.|
 |📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
-|📺|**Anime list**|Keep the anime you watch, want to watch or finished in an *Anime* tab, after *Plan to Read*. Search and covers come from AniList, no AniList login needed.|
+|📺|**Anime list**|Keep the anime you watch, want to watch or finished in an *Anime* tab, after *Plan to Read*. It uses your MyAnimeList anime list (never the manga list), with folders for seasons and your own order.|
 |💾|**Backup**|*More → Backup* imports a backup file or exports your library to one.|
 
 ### Reading status categories
@@ -59,7 +59,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 
 ### Anime
 
-Swipe past *Plan to Read* in the library to reach the *Anime* tab. At the top you pick *Watching*, *Plan to Watch* or *Completed*; tap **+** to search AniList and add one. Tapping an anime lets you change its status, count the episodes you've watched or remove it. The website has the same list.
+Swipe past *Plan to Read* in the library to reach the *Anime* tab and tap *Connect MyAnimeList* once. At the top you pick *Watching*, *Plan to Watch* or *Completed*; tap **+** to search MyAnimeList and add one. Tapping an anime lets you change its status, count the episodes you've watched or remove it; every change goes to MyAnimeList. Long-press an anime to put it in a folder, or long-press and move to drag it. The website has the same list.
 
 ### How the sync works
 
@@ -96,6 +96,11 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
    The debug build installs next to the release one (`com.cardal.aoi.dev`).
 
 ## Changelog
+
+### 0.23.0
+- *Anime* tab with your MyAnimeList anime list instead of AniList (connect once; the manga list is never touched), with folders for seasons and *Recent*/*Manual* order
+- *Users* in *Account* for admins
+- Website: the same MyAnimeList list and folders
 
 ### 0.22.0
 - *Admin* in *More* for admin accounts: Savearth, Gits and Settings (same as the Aoc app), with the Savearth data saved to the cloud

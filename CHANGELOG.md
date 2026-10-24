@@ -14,6 +14,24 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.23.0] - 2026-10-24
+### Changed
+- The *Anime* tab now uses your MyAnimeList anime list instead of AniList: *Connect MyAnimeList* once (the login stays on the server, so it also works on other phones and on the website), search MyAnimeList, and every change goes to MyAnimeList first. Only the anime list is used; your MyAnimeList manga list is never read or changed, and the manga tracker is untouched
+- *On Hold* and *Dropped* anime become *Plan to Watch* on MyAnimeList
+- Changes made while MyAnimeList is down wait in a queue and are sent when it is back; a copy of the list is kept in the cloud
+
+### Added
+- Anime folders: group seasons, movies and OVAs; a folder shows in *Watching*, *Plan to Watch* or *Completed* depending on what is inside, ordered by release date (or by hand), with a cover you choose. Empty folders are deleted
+- *Recent* and *Manual* order in each anime tab (drag to reorder)
+- *Users* in *Account* for admins: search accounts, make or remove admins and change another account's password
+- Website: MyAnimeList anime list and folders, the same as the app
+
+### Removed
+- AniList and the old anime list (`user_anime`)
+
+### Other
+- Supabase migrations `20261024_mal_anime.sql`, `20261024_users_admin.sql` and `20261025_drop_user_anime.sql`; edge functions `mal` and `admin-set-password`
+
 ## [Aoi v0.22.0] - 2026-10-22
 ### Added
 - *Admin* in *More* (below *Account*), only for admin accounts: Savearth (work hours, pay, fuel, Excel export), Gits and Settings, the same as the Aoc app. Savearth data and settings are saved to the cloud (`admin_data`); the GitHub token stays on the phone. The ✕ button (or *Voltar ao Aoi* in the menu) goes back to the app; changes are sent before leaving
