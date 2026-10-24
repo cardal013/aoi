@@ -1050,6 +1050,30 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 </div>
 
 <!-- ============================================================
+     MODAL — NOME DE UMA PASTA (criar ou mudar o nome)
+============================================================ -->
+<div class="modal-scrim" id="folderNameScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="folderNameTitle">
+    <div class="modal-head">
+      <div><h3 id="folderNameTitle">Create folder</h3></div>
+      <button type="button" class="modal-close" id="closeFolderNameModal" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <form id="folderNameForm" novalidate>
+      <div class="field">
+        <label for="folderNameInput">Folder name</label>
+        <input type="text" id="folderNameInput" required autocomplete="off">
+      </div>
+      <div class="modal-foot" style="display:flex; gap:10px; margin-top:6px;">
+        <button type="button" class="btn btn-ghost" id="cancelFolderNameModal" style="flex:1">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="saveFolderNameBtn" style="flex:1">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
      MODAL — MENU DE UM ANIME OU DE UMA PASTA (e listas para escolher pasta ou capa)
 ============================================================ -->
 <div class="modal-scrim" id="animeMenuScrim">
@@ -1628,8 +1652,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   const ANIME_LABEL = { WATCHING:'Watching', PLAN_TO_WATCH:'Plan to Watch', COMPLETED:'Completed' };
   const ANIME_DOT = { WATCHING:'var(--accent)', PLAN_TO_WATCH:'#8D8B93', COMPLETED:'#1E9E6B' };
   const FOLDER_SORT_LABEL = { DATE_ASC:'Oldest first', DATE_DESC:'Newest first', MANUAL:'Custom order' };
-  // Aba de uma pasta sem animes (as pastas vazias ficam; igual a AnimeShelf.EMPTY_FOLDER_TAB na app)
-  const EMPTY_FOLDER_TAB = 'WATCHING';
   // Abaixo disto, a meia distância entre duas posições já não é segura: renumera-se a aba
   const MIN_POSITION_GAP = 1e-6;
   const ANIME_PAGE = 1000;
@@ -1726,9 +1748,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     });
   }
 
-  // Todas Completed -> Completed; todas Plan to Watch -> Plan to Watch; mistura -> Watching
+  // Todas Completed -> Completed; todas Plan to Watch -> Plan to Watch; mistura -> Watching.
+  // Pasta vazia -> null: não aparece em nenhuma aba (decisão do Afonso: pasta vazia apaga-se sozinha)
   function folderTab(members){
-    if (members.length === 0) return EMPTY_FOLDER_TAB;
+    if (members.length === 0) return null;
     const allCompleted = members.every(a => a.status === 'COMPLETED');
     if (allCompleted) return 'COMPLETED';
     const allPlanned = members.every(a => a.status === 'PLAN_TO_WATCH');
@@ -2033,7 +2056,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (error) throw error;
   }
 
-  // Corre `change` e volta a ler a cópia; em erro avisa e mostra o que está no Supabase
+  // Corre `change`, volta a ler a cópia e apaga as pastas que ficaram vazias (decisão do Afonso; a app e a
+  // edge function fazem o mesmo). Em erro avisa e mostra o que está no Supabase
   async function changeShelf(change){
     try {
       await change();
@@ -2041,8 +2065,24 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       console.error('anime shelf', err);
       alert("Couldn't save the change. Try again.");
     }
-    try { await readAnimeCopy(); } catch (err) { console.error('anime copy', err); }
+    try {
+      await readAnimeCopy();
+      const deletedSome = await deleteEmptyFolders();
+      if (deletedSome) await readAnimeCopy();
+    } catch (err) {
+      console.error('anime copy', err);
+    }
     renderAnime();
+  }
+
+  // Apaga as pastas sem animes. Devolve true se apagou alguma
+  async function deleteEmptyFolders(){
+    const usedFolderIds = new Set(animeState.list.map(a => a.folder_id).filter(Boolean));
+    const emptyFolderIds = animeState.folders.map(f => f.id).filter(id => !usedFolderIds.has(id));
+    if (emptyFolderIds.length === 0) return false;
+    const { error } = await supabase.from('user_anime_folders').delete().eq('user_id', currentUser.id).in('id', emptyFolderIds);
+    if (error) throw error;
+    return true;
   }
 
   async function setTabMode(tab, mode){
@@ -2172,11 +2212,28 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (entry) entry.onClick();
   };
 
-  function askFolderName(initialName){
-    const name = prompt('Folder name', initialName || '');
-    if (name == null || !name.trim()) return null;
-    return name;
+  // Modal do nome de uma pasta (criar ou mudar o nome): chama onSave(nome) ao guardar um nome não vazio
+  var folderNameScrim = qs('folderNameScrim');
+  var onSaveFolderName = null;
+  registerModal(folderNameScrim, () => closeModal(folderNameScrim));
+  qs('closeFolderNameModal').onclick = () => closeModal(folderNameScrim);
+  qs('cancelFolderNameModal').onclick = () => closeModal(folderNameScrim);
+  function askFolderName(title, initialName, onSave){
+    onSaveFolderName = onSave;
+    qs('folderNameTitle').textContent = title;
+    qs('folderNameInput').value = initialName || '';
+    qs('saveFolderNameBtn').disabled = !qs('folderNameInput').value.trim();
+    openModal(folderNameScrim);
+    qs('folderNameInput').focus();
   }
+  qs('folderNameInput').oninput = (e) => { qs('saveFolderNameBtn').disabled = !e.target.value.trim(); };
+  qs('folderNameForm').onsubmit = (e) => {
+    e.preventDefault();
+    const name = qs('folderNameInput').value.trim();
+    if (!name) return;
+    closeModal(folderNameScrim);
+    if (onSaveFolderName) onSaveFolderName(name);
+  };
 
   // Menu de um anime: mover para uma pasta, criar pasta, tirar da pasta (se estiver numa)
   function showAnimeMenu(a){
@@ -2188,7 +2245,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         onClick: () => moveToFolder(a, item.folder.id)
       }))) });
     }
-    entries.push({ label: 'Create folder', onClick: () => { const name = askFolderName(''); if (name) createFolder(name, a); } });
+    entries.push({ label: 'Create folder', onClick: () => askFolderName('Create folder', '', name => createFolder(name, a)) });
     if (a.folder_id) entries.push({ label: 'Remove from folder', onClick: () => removeFromFolder(a) });
     showMenu(a.title, entries);
   }
@@ -2201,7 +2258,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         html: `${coverHTML(a.cover_url)}<span>${item.cover && item.cover.mal_id === a.mal_id ? '● ' : ''}${esc(a.title)}</span>`,
         onClick: () => setFolderCover(folder, a.mal_id)
       }))) },
-      { label: 'Rename folder', onClick: () => { const name = askFolderName(folder.name); if (name) renameFolder(folder, name); } },
+      { label: 'Rename folder', onClick: () => askFolderName('Rename folder', folder.name, name => renameFolder(folder, name)) },
       { label: 'Order: ' + FOLDER_SORT_LABEL[folder.sort_order], onClick: () => toggleFolderSort(folder) },
       { label: 'Delete folder', danger: true, onClick: () => {
         if (confirm(`Delete the folder ${folder.name}? The animes in it stay in your list.`)) deleteFolder(folder);
