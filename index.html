@@ -580,6 +580,23 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-result .t{ font-weight:700; font-size:14px; }
 .anime-result .m{ color:var(--text-muted); font-size:12px; margin-top:2px; }
 .anime-result .in{ color:var(--accent); font-size:12px; margin-top:2px; font-weight:700; }
+.anime-toolbar{ flex-wrap:wrap; }
+.anime-disconnect{ margin-left:auto; }
+.anime-folder-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+.anime-folder-head h2{ font-size:19px; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.anime-hint{ color:var(--text-faint); font-size:12.5px; margin:-8px 0 14px; }
+.anime-grid .manga-card{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+.anime-grid .manga-card img{ pointer-events:none; }
+.anime-grid .manga-card.pressed .manga-cover{ border-color:var(--accent); transform:scale(1.03); }
+.anime-grid .manga-card.dragging{ opacity:.6; }
+.anime-badges{ position:absolute; top:8px; left:8px; right:8px; display:flex; gap:4px; flex-wrap:wrap; }
+.anime-badge{ font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--bg-elevated-2); color:var(--text); }
+.anime-badge.accent{ background:var(--accent); color:#fff; }
+.anime-menu{ display:flex; flex-direction:column; gap:6px; max-height:60vh; overflow:auto; }
+.anime-menu-item{ display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text); text-align:left; font-weight:600; font-size:14px; width:100%; }
+.anime-menu-item:hover{ border-color:var(--accent); }
+.anime-menu-item.danger{ color:#D6455D; }
+.anime-menu-item .manga-cover{ width:40px; flex-shrink:0; }
 
 .report-list{ display:flex; flex-direction:column; gap:10px; }
 .report-row{ display:flex; align-items:center; gap:16px; padding:15px 18px; border:1px solid var(--border); background:var(--bg-elevated); border-radius:var(--radius-m); width:100%; text-align:left; }
@@ -882,31 +899,52 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     </div>
   </section>
 
-  <!-- ANIME -->
+  <!-- ANIME: lista do MyAnimeList (o MAL manda; o Supabase guarda uma cópia). Pastas e ordem só do Aoi -->
   <section id="app-view-anime" class="container">
     <div class="app-view-head">
       <h1>Anime</h1>
-      <div class="anime-head-actions">
+      <div class="anime-head-actions" id="animeHeadActions">
         <button class="icon-btn" id="animeSearchToggle" type="button" aria-label="Search anime">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
+        <button class="btn btn-ghost btn-sm" id="animeRefresh" type="button">Refresh</button>
         <button class="btn btn-primary btn-sm" id="openAnimeAdd" type="button">Add anime</button>
       </div>
     </div>
-    <div class="lib-toolbar">
-      <div class="status-tabs" id="animeTabs">
-        <button type="button" data-status="WATCHING" class="active">Watching</button>
-        <button type="button" data-status="PLAN_TO_WATCH">Plan to Watch</button>
-        <button type="button" data-status="COMPLETED">Completed</button>
-      </div>
-      <div class="search-field" id="animeSearchField">
-        <input type="search" id="animeSearch" placeholder="Search this list…">
-      </div>
+
+    <div class="empty-state" id="animeConnect" style="display:none;">
+      <h3>Connect MyAnimeList</h3>
+      <p>Your anime list lives on MyAnimeList. Connect your account to see and change it here.</p>
+      <button class="btn btn-primary" id="animeConnectBtn" type="button" style="margin-top:16px;">Connect MyAnimeList</button>
     </div>
-    <div class="manga-grid" id="animeGrid"></div>
-    <div class="empty-state" id="animeEmpty" style="display:none;">
-      <h3>Nothing here yet</h3>
-      <p>Add an anime with the button above, or from the Anime tab in the app.</p>
+
+    <div id="animeMain" style="display:none;">
+      <div class="lib-toolbar anime-toolbar">
+        <div class="status-tabs" id="animeTabs">
+          <button type="button" data-status="WATCHING" class="active">Watching</button>
+          <button type="button" data-status="PLAN_TO_WATCH">Plan to Watch</button>
+          <button type="button" data-status="COMPLETED">Completed</button>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="animeModeBtn" title="Recent: last changed first. Manual: your own order">Recent</button>
+        <div class="search-field" id="animeSearchField">
+          <input type="search" id="animeSearch" placeholder="Search this list…">
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm anime-disconnect" id="animeDisconnect">Disconnect MyAnimeList</button>
+      </div>
+
+      <div class="anime-folder-head" id="animeFolderHead" style="display:none;">
+        <button type="button" class="btn btn-ghost btn-sm" id="animeFolderBack">← Back</button>
+        <h2 id="animeFolderTitle">Folder</h2>
+        <button type="button" class="btn btn-ghost btn-sm" id="animeFolderSort">Order: Oldest first</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="animeFolderMore">More…</button>
+      </div>
+
+      <p class="anime-hint">Press and hold a cover: let go to open its menu, or move it to drag. Right-click also opens the menu.</p>
+      <div class="manga-grid anime-grid" id="animeGrid"></div>
+      <div class="empty-state" id="animeEmpty" style="display:none;">
+        <h3>Nothing here yet</h3>
+        <p id="animeEmptyText">Add an anime with the button above, or from the Anime tab in the app.</p>
+      </div>
     </div>
   </section>
 
@@ -986,21 +1024,21 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </span>
     </div>
     <div class="anime-modal-actions">
-      <a id="animeAniListLink" href="#" target="_blank" rel="noopener">Open on AniList</a>
+      <a id="animeMalLink" href="#" target="_blank" rel="noopener">Open on MyAnimeList</a>
       <button type="button" class="btn btn-danger btn-sm" id="animeRemoveBtn">Remove from list</button>
     </div>
   </div>
 </div>
 
 <!-- ============================================================
-     MODAL — ADD ANIME (pesquisa no AniList)
+     MODAL — ADD ANIME (pesquisa no MyAnimeList, pela edge function mal)
 ============================================================ -->
 <div class="modal-scrim" id="animeAddScrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="animeAddTitle">
     <div class="modal-head">
       <div>
         <h3 id="animeAddTitle">Add anime</h3>
-        <p id="animeAddSub">Search AniList</p>
+        <p id="animeAddSub">Search MyAnimeList</p>
       </div>
       <button type="button" class="modal-close" id="closeAnimeAdd" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -1008,6 +1046,23 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     </div>
     <input type="search" class="anime-query" id="animeQuery" placeholder="Frieren, One Piece…" autocomplete="off">
     <div class="anime-results" id="animeResults"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — MENU DE UM ANIME OU DE UMA PASTA (e listas para escolher pasta ou capa)
+============================================================ -->
+<div class="modal-scrim" id="animeMenuScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="animeMenuTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="animeMenuTitle">Menu</h3>
+      </div>
+      <button type="button" class="modal-close" id="closeAnimeMenu" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="anime-menu" id="animeMenuItems"></div>
   </div>
 </div>
 
@@ -1290,7 +1345,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'block';
     showAppView('library');
     fetchLibrary();
-    fetchAnime();
+    requestAnimeSync(true);
+    handleMalLoginResult();
   }
 
   async function logOut(){
@@ -1302,6 +1358,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     mobileUserButtons.style.display = 'none';
     appSite.style.display = 'none';
     publicSite.style.display = '';
+    resetAnimeState();
     qs('userMenu').classList.remove('open');
     window.scrollTo({ top:0 });
   }
@@ -1478,6 +1535,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('app-view-' + view).classList.add('active');
     document.querySelectorAll('#appTabs [data-app-view]').forEach(b => b.classList.toggle('active', b.dataset.appView === view));
     window.scrollTo({ top:0 });
+    // Entrar na aba Anime vai buscar a lista ao MAL (no máximo 1 vez a cada 10 s)
+    if (view === 'anime' && currentUser) requestAnimeSync(false);
   }
   qs('appTabs').onclick = (e) => { const btn = e.target.closest('button[data-app-view]'); if (btn) showAppView(btn.dataset.appView); };
   qs('menuProfileBtn').onclick = () => showAppView('profile');
@@ -1559,66 +1618,392 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   };
 
   // --- ANIME ---
-  // Lista de animes do utilizador (tabela user_anime). Remover só marca deleted, para a app também saber.
+  // Lista de animes do MyAnimeList, igual à app (v0.23.0). O MAL manda: mudar estado, episódios, acrescentar e
+  // remover vai pela edge function `mal`, que grava na cópia (user_mal_anime) e no MAL (se o MAL estiver em
+  // baixo, fica pendente no servidor). O browser não fala com o MAL diretamente (CORS e client_secret).
+  // Pastas, ordem à mão e modo das abas são só do Aoi e vão direto ao Supabase
+  // (user_anime_folders, user_mal_anime, user_anime_tabs). Só animes: os mangas do MAL nunca entram aqui.
+  // As regras das pastas e da ordem são as mesmas da app (AnimeShelf.kt); se mudar uma, mudar a outra.
   const ANIME_STATUSES = ['WATCHING', 'PLAN_TO_WATCH', 'COMPLETED'];
   const ANIME_LABEL = { WATCHING:'Watching', PLAN_TO_WATCH:'Plan to Watch', COMPLETED:'Completed' };
   const ANIME_DOT = { WATCHING:'var(--accent)', PLAN_TO_WATCH:'#8D8B93', COMPLETED:'#1E9E6B' };
-  const ANILIST_QUERY = `query ($search: String) {
-    Page(perPage: 20) {
-      media(search: $search, type: ANIME, isAdult: false, sort: SEARCH_MATCH) {
-        id title { romaji english } coverImage { large } format episodes seasonYear
-      }
-    }
-  }`;
+  const FOLDER_SORT_LABEL = { DATE_ASC:'Oldest first', DATE_DESC:'Newest first', MANUAL:'Custom order' };
+  // Aba de uma pasta sem animes (as pastas vazias ficam; igual a AnimeShelf.EMPTY_FOLDER_TAB na app)
+  const EMPTY_FOLDER_TAB = 'WATCHING';
+  // Abaixo disto, a meia distância entre duas posições já não é segura: renumera-se a aba
+  const MIN_POSITION_GAP = 1e-6;
   const ANIME_PAGE = 1000;
+  const MIN_QUERY_LENGTH = 2;
+  const SEARCH_DEBOUNCE_MS = 400;
+  // Carregar sem largar: tempo até contar como "carregar sem largar" e distância que já conta como mexer
+  const LONG_PRESS_MS = 450;
+  const MOVE_TOLERANCE_PX = 8;
+  // Entrar e sair da aba Anime várias vezes seguidas não volta a ir ao MAL
+  const ANIME_SYNC_MIN_INTERVAL_MS = 10000;
 
-  var animeState = { list: [], filter: 'WATCHING', searchOpen: false, searchQuery: '', activeId: null };
+  var animeState = {
+    connected: null,          // null = ainda não se sabe; true/false depois de perguntar ao servidor
+    malUsername: '',
+    list: [],                 // linhas de user_mal_anime que não estão removidas
+    folders: [],              // linhas de user_anime_folders
+    tabModes: {},             // aba -> 'RECENT' ou 'MANUAL' (sem entrada = RECENT)
+    filter: 'WATCHING',
+    openFolderId: null,       // pasta aberta (null = a aba)
+    searchOpen: false,
+    searchQuery: '',
+    activeId: null,           // anime aberto no modal
+    lastSyncAt: 0
+  };
 
   function esc(s){
     return String(s ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   }
-  function animeInfo(a){
-    return [a.format ? a.format.replace('_', ' ') : null, a.season_year, a.episodes ? a.episodes + ' eps' : null]
-      .filter(Boolean).join(' · ');
+
+  // "tv" -> "TV", "movie" -> "Movie", "tv_special" -> "Tv special"
+  function mediaTypeLabel(mediaType){
+    if (!mediaType) return null;
+    if (['tv', 'ova', 'ona', 'cm', 'pv'].includes(mediaType)) return mediaType.toUpperCase();
+    const spaced = mediaType.replace(/_/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
   }
 
-  async function fetchAnime(){
-    if (!currentUser) return;
-    var all = [];
+  // "TV · 2023 · 28 eps", só com o que o MAL souber (a data de estreia pode ser parcial)
+  function animeInfo(a){
+    const year = a.start_date ? a.start_date.slice(0, 4) : null;
+    const episodes = a.num_episodes ? a.num_episodes + ' eps' : null;
+    return [mediaTypeLabel(a.media_type), year, episodes].filter(Boolean).join(' · ');
+  }
+
+  // ---------- Edge function `mal` ----------
+
+  // Chama a ação `action` da edge function com a sessão do Aoi. Em erro lança um Error com `code`
+  // (o { error } que a função devolveu, ex.: mal_unavailable) e `status` (HTTP; 0 = sem rede).
+  async function callMal(action, fields){
+    const body = Object.assign({ action: action }, fields || {});
+    const { data, error } = await supabase.functions.invoke('mal', { body: body });
+    if (!error) return data;
+
+    const failure = new Error('mal ' + action);
+    failure.code = 'network_error';
+    failure.status = 0;
+    const response = error.context;
+    if (response && typeof response.json === 'function') {
+      failure.status = response.status;
+      try {
+        const errorBody = await response.json();
+        if (errorBody && errorBody.error) failure.code = errorBody.error;
+      } catch (_) { /* corpo sem JSON */ }
+    }
+    throw failure;
+  }
+
+  // ---------- Regras das pastas e das abas (iguais a AnimeShelf.kt) ----------
+
+  function touchedTime(a){ return Date.parse(a.touched_at) || 0; }
+
+  // Por data de estreia, sem data no fim (texto ISO, por isso compara como texto mesmo parcial)
+  function compareByStartDate(first, second){
+    if (!first.start_date && !second.start_date) return 0;
+    if (!first.start_date) return 1;
+    if (!second.start_date) return -1;
+    if (first.start_date < second.start_date) return -1;
+    if (first.start_date > second.start_date) return 1;
+    return 0;
+  }
+
+  // Animes da pasta pela ordem escolhida (MANUAL: pela posição; sem posição no fim, pela data)
+  function sortMembers(members, sortOrder){
+    const byDate = members.slice().sort(compareByStartDate);
+    if (sortOrder === 'DATE_DESC') return byDate.reverse();
+    if (sortOrder !== 'MANUAL') return byDate;
+    return byDate.sort((first, second) => {
+      const firstPosition = first.folder_position;
+      const secondPosition = second.folder_position;
+      if (firstPosition == null && secondPosition == null) return 0;
+      if (firstPosition == null) return 1;
+      if (secondPosition == null) return -1;
+      return firstPosition - secondPosition;
+    });
+  }
+
+  // Todas Completed -> Completed; todas Plan to Watch -> Plan to Watch; mistura -> Watching
+  function folderTab(members){
+    if (members.length === 0) return EMPTY_FOLDER_TAB;
+    const allCompleted = members.every(a => a.status === 'COMPLETED');
+    if (allCompleted) return 'COMPLETED';
+    const allPlanned = members.every(a => a.status === 'PLAN_TO_WATCH');
+    if (allPlanned) return 'PLAN_TO_WATCH';
+    return 'WATCHING';
+  }
+
+  // Capa escolhida se ainda estiver na pasta; senão a primeira temporada (estreia mais antiga)
+  function folderCover(folder, members){
+    const chosen = members.find(a => a.mal_id === folder.cover_mal_id);
+    if (chosen) return chosen;
+    return sortMembers(members, 'DATE_ASC')[0] || null;
+  }
+
+  // Pastas com os seus animes (na ordem da pasta), capa e data (a do anime mexido há menos tempo)
+  function buildFolderItems(){
+    return animeState.folders.map(folder => {
+      const members = animeState.list.filter(a => a.folder_id === folder.id);
+      const touchedTimes = members.map(touchedTime);
+      return {
+        kind: 'folder',
+        key: 'folder:' + folder.id,
+        folder: folder,
+        members: sortMembers(members, folder.sort_order),
+        cover: folderCover(folder, members),
+        touchedAt: touchedTimes.length ? Math.max.apply(null, touchedTimes) : 0,
+        manualPosition: folder.manual_position,
+        manualTab: folder.manual_tab
+      };
+    });
+  }
+
+  function animeItem(a){
+    return {
+      kind: 'anime',
+      key: 'anime:' + a.mal_id,
+      anime: a,
+      touchedAt: touchedTime(a),
+      manualPosition: a.manual_position,
+      manualTab: a.manual_tab
+    };
+  }
+
+  function modeFor(tab){ return animeState.tabModes[tab] || 'RECENT'; }
+
+  function hasManualPosition(item, tab){ return item.manualTab === tab && item.manualPosition != null; }
+
+  // Entradas da aba: animes soltos com esse estado e pastas cuja aba é essa (anime numa pasta que não
+  // existe aparece solto). Recentes: o último mexido em cima. Manual: primeiro o que ainda não foi
+  // arrumado nesta aba (por Recentes), depois o arrumado, pela posição.
+  function itemsInTab(tab){
+    const folderIds = new Set(animeState.folders.map(f => f.id));
+    const loose = animeState.list
+      .filter(a => !a.folder_id || !folderIds.has(a.folder_id))
+      .filter(a => a.status === tab)
+      .map(animeItem);
+    const folders = buildFolderItems().filter(item => folderTab(item.members) === tab);
+    const byRecent = loose.concat(folders).sort((first, second) => second.touchedAt - first.touchedAt);
+    if (modeFor(tab) === 'RECENT') return byRecent;
+    const notArranged = byRecent.filter(item => !hasManualPosition(item, tab));
+    const arranged = byRecent.filter(item => hasManualPosition(item, tab))
+      .sort((first, second) => first.manualPosition - second.manualPosition);
+    return notArranged.concat(arranged);
+  }
+
+  // Posição entre dois vizinhos (null = sem vizinho desse lado); null se não houver espaço seguro
+  function positionBetween(before, after){
+    if (before == null && after == null) return 0;
+    if (before == null) return after - 1;
+    if (after == null) return before + 1;
+    const gap = after - before;
+    if (gap < MIN_POSITION_GAP) return null;
+    return before + gap / 2;
+  }
+
+  // Posições a gravar depois de arrastar: se os outros já estão arrumados nesta aba e pela ordem que se vê,
+  // só o arrastado muda; senão renumera a aba (0, 1, 2…). Devolve { chave: posição } só do que muda.
+  function positionsAfterDrag(orderedItems, movedKey, tab){
+    const movedIndex = orderedItems.findIndex(item => item.key === movedKey);
+    if (movedIndex < 0) return {};
+
+    const others = orderedItems.filter(item => item.key !== movedKey);
+    const othersArranged = others.every(item => hasManualPosition(item, tab));
+    let othersInOrder = othersArranged;
+    for (let index = 1; othersInOrder && index < others.length; index++) {
+      if (others[index - 1].manualPosition >= others[index].manualPosition) othersInOrder = false;
+    }
+    if (othersInOrder) {
+      const previous = orderedItems[movedIndex - 1];
+      const next = orderedItems[movedIndex + 1];
+      const newPosition = positionBetween(previous ? previous.manualPosition : null, next ? next.manualPosition : null);
+      if (newPosition != null) return { [movedKey]: newPosition };
+    }
+
+    const changed = {};
+    orderedItems.forEach((item, index) => {
+      const alreadyThere = item.manualTab === tab && item.manualPosition === index;
+      if (!alreadyThere) changed[item.key] = index;
+    });
+    return changed;
+  }
+
+  // ---------- Carregar ----------
+
+  // Lê todas as linhas da conta de uma tabela, de 1000 em 1000 (limite do PostgREST)
+  async function readAllRows(table, extraFilter){
+    var rows = [];
     for (var from = 0; ; from += ANIME_PAGE) {
-      const { data, error } = await supabase
-        .from('user_anime')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('deleted', false)
-        .order('title')
-        .range(from, from + ANIME_PAGE - 1);
-      if (error) { console.error(error); return; }
-      all = all.concat(data);
+      let query = supabase.from(table).select('*').eq('user_id', currentUser.id);
+      if (extraFilter) query = extraFilter(query);
+      const { data, error } = await query.range(from, from + ANIME_PAGE - 1);
+      if (error) throw error;
+      rows = rows.concat(data);
       if (data.length < ANIME_PAGE) break;
     }
-    animeState.list = all;
+    return rows;
+  }
+
+  // Lê a cópia da lista, as pastas e os modos das abas
+  async function readAnimeCopy(){
+    animeState.list = await readAllRows('user_mal_anime', q => q.eq('deleted', false).order('mal_id'));
+    animeState.folders = await readAllRows('user_anime_folders', q => q.order('name'));
+    const tabRows = await readAllRows('user_anime_tabs');
+    animeState.tabModes = {};
+    tabRows.forEach(row => { animeState.tabModes[row.tab] = row.mode; });
+  }
+
+  // Confirma a ligação ao MAL, pede ao servidor para ler a lista do MAL (passa também On Hold e Dropped
+  // a Plan to Watch no MAL) e lê a cópia. Se o MAL estiver em baixo, mostra a cópia.
+  async function loadAnime(){
+    if (!currentUser) return;
+    try {
+      const status = await callMal('status');
+      animeState.connected = status.connected;
+      animeState.malUsername = status.mal_username || '';
+    } catch (err) {
+      console.error('mal status', err);
+    }
+    if (!animeState.connected) { renderAnime(); return; }
+
+    try {
+      await callMal('sync');
+    } catch (err) {
+      if (err.code === 'mal_not_connected') { animeState.connected = false; renderAnime(); return; }
+      console.error('mal sync', err);
+    }
+
+    try {
+      await readAnimeCopy();
+    } catch (err) {
+      console.error('anime copy', err);
+    }
     renderAnime();
   }
 
-  function animeCardHTML(a){
-    const cover = a.cover_url ?
-      `<img src="${esc(a.cover_url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy">` :
-      `<div class="manga-cover">${BOOK_ICON}</div>`;
-    const badge = a.status === 'WATCHING' ? `<span class="ep-badge">${a.episodes_watched}/${a.episodes ?? '?'}</span>` : '';
-    return `<button type="button" class="manga-card" data-id="${a.anilist_id}"><div class="cover-wrap">${cover}${badge}</div><div class="title">${esc(a.title)}</div></button>`;
+  // Ao abrir o site, ao entrar na aba Anime, quando volta a rede e no botão Refresh
+  function requestAnimeSync(force){
+    const now = Date.now();
+    const syncedRecently = now - animeState.lastSyncAt < ANIME_SYNC_MIN_INTERVAL_MS;
+    if (syncedRecently && !force) return;
+    animeState.lastSyncAt = now;
+    loadAnime();
   }
+  window.addEventListener('online', () => { if (currentUser) requestAnimeSync(true); });
+  qs('animeRefresh').onclick = () => requestAnimeSync(true);
+
+  // Regresso do login no MAL (a edge function volta para aqui com ?mal=connected|denied|expired|error)
+  var malLoginResult = new URLSearchParams(window.location.search).get('mal');
+  function handleMalLoginResult(){
+    if (!malLoginResult) return;
+    const connected = malLoginResult === 'connected';
+    malLoginResult = null;
+    history.replaceState(null, '', window.location.pathname);
+    showAppView('anime');
+    alert(connected ? 'Connected to MyAnimeList' : "Couldn't connect to MyAnimeList");
+  }
+
+  qs('animeConnectBtn').onclick = async () => {
+    try {
+      const response = await callMal('login', { return_to: 'site' });
+      window.location.href = response.url;
+    } catch (err) {
+      console.error('mal login', err);
+      alert("Couldn't connect to MyAnimeList");
+    }
+  };
+  qs('animeDisconnect').onclick = async () => {
+    if (!confirm(`Disconnect the MyAnimeList account ${animeState.malUsername}? Your list stays on MyAnimeList.`)) return;
+    try {
+      await callMal('disconnect');
+      animeState.connected = false;
+      animeState.openFolderId = null;
+      renderAnime();
+    } catch (err) {
+      console.error('mal disconnect', err);
+      alert("Couldn't disconnect MyAnimeList. Try again.");
+    }
+  };
+
+  // ---------- Mostrar ----------
+
+  function coverHTML(url){
+    if (!url) return `<div class="manga-cover">${BOOK_ICON}</div>`;
+    return `<img src="${esc(url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy" draggable="false">`;
+  }
+
+  // Em Watching mostra os episódios vistos; dentro de uma pasta mostra também o estado de cada temporada
+  function animeCardHTML(a, showStatus){
+    const badges = [];
+    if (showStatus) badges.push(`<span class="anime-badge">${ANIME_LABEL[a.status]}</span>`);
+    if (a.status === 'WATCHING') badges.push(`<span class="anime-badge accent">${a.episodes_watched}/${a.num_episodes ?? '?'}</span>`);
+    return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div></div><div class="title">${esc(a.title)}</div></button>`;
+  }
+
+  // A pasta aparece como um anime (com a capa escolhida), com o ícone de pasta e o número de animes
+  function folderCardHTML(item){
+    const badge = `<span class="anime-badge accent">▣ ${item.members.length}</span>`;
+    return `<button type="button" class="manga-card" data-key="${item.key}"><div class="cover-wrap">${coverHTML(item.cover ? item.cover.cover_url : null)}<div class="anime-badges">${badge}</div></div><div class="title">${esc(item.folder.name)}</div></button>`;
+  }
+
+  function animeMatchesQuery(a, query){
+    return a.title.toLowerCase().includes(query) || (a.title_english || '').toLowerCase().includes(query);
+  }
+  // Uma pasta aparece na pesquisa pelo nome ou por algum anime lá dentro
+  function itemMatchesQuery(item, query){
+    if (!query) return true;
+    if (item.kind === 'anime') return animeMatchesQuery(item.anime, query);
+    return item.folder.name.toLowerCase().includes(query) || item.members.some(a => animeMatchesQuery(a, query));
+  }
+
+  function openFolderItem(){
+    if (!animeState.openFolderId) return null;
+    return buildFolderItems().find(item => item.folder.id === animeState.openFolderId) || null;
+  }
+
   function renderAnime(){
-    const q = animeState.searchQuery.toLowerCase();
-    const filtered = animeState.list.filter(a => a.status === animeState.filter &&
-      (a.title.toLowerCase().includes(q) || (a.title_english || '').toLowerCase().includes(q)));
-    qs('animeGrid').innerHTML = filtered.map(animeCardHTML).join('');
-    qs('animeEmpty').style.display = filtered.length ? 'none' : 'block';
+    const connected = animeState.connected === true;
+    const showConnect = animeState.connected === false;
+    qs('animeConnect').style.display = showConnect ? 'block' : 'none';
+    qs('animeMain').style.display = connected ? 'block' : 'none';
+    ['openAnimeAdd', 'animeSearchToggle', 'animeRefresh'].forEach(id => { qs(id).style.display = connected ? '' : 'none'; });
+    if (!connected) return;
+
     qs('animeTabs').querySelectorAll('button').forEach(b => {
-      const count = animeState.list.filter(a => a.status === b.dataset.status).length;
-      b.textContent = `${ANIME_LABEL[b.dataset.status]} · ${count}`;
+      b.textContent = `${ANIME_LABEL[b.dataset.status]} · ${itemsInTab(b.dataset.status).length}`;
     });
+    qs('animeModeBtn').textContent = modeFor(animeState.filter) === 'RECENT' ? 'Recent' : 'Manual';
+
+    const folderItem = openFolderItem();
+    if (animeState.openFolderId && !folderItem) animeState.openFolderId = null;
+    if (folderItem) renderFolderView(folderItem);
+    else renderTabView();
+    if (animeState.activeId != null && animeScrim.classList.contains('open')) renderAnimeModal();
   }
+
+  function renderTabView(){
+    qs('animeFolderHead').style.display = 'none';
+    document.querySelector('#animeMain .anime-toolbar').style.display = '';
+    const query = animeState.searchQuery.trim().toLowerCase();
+    const items = itemsInTab(animeState.filter).filter(item => itemMatchesQuery(item, query));
+    qs('animeGrid').innerHTML = items.map(item => item.kind === 'anime' ? animeCardHTML(item.anime, false) : folderCardHTML(item)).join('');
+    qs('animeEmpty').style.display = items.length ? 'none' : 'block';
+    qs('animeEmptyText').textContent = 'Add an anime with the button above, or from the Anime tab in the app.';
+  }
+
+  function renderFolderView(folderItem){
+    qs('animeFolderHead').style.display = 'flex';
+    document.querySelector('#animeMain .anime-toolbar').style.display = 'none';
+    qs('animeFolderTitle').textContent = folderItem.folder.name;
+    qs('animeFolderSort').textContent = 'Order: ' + FOLDER_SORT_LABEL[folderItem.folder.sort_order];
+    qs('animeGrid').innerHTML = folderItem.members.map(a => animeCardHTML(a, true)).join('');
+    qs('animeEmpty').style.display = folderItem.members.length ? 'none' : 'block';
+    qs('animeEmptyText').textContent = 'This folder is empty.';
+  }
+
   qs('animeTabs').onclick = (e) => {
     const btn = e.target.closest('button[data-status]');
     if (!btn) return;
@@ -1633,61 +2018,398 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (animeState.searchOpen) qs('animeSearch').focus();
   };
   qs('animeSearch').oninput = (e) => { animeState.searchQuery = e.target.value; renderAnime(); };
+  qs('animeModeBtn').onclick = () => {
+    const nextMode = modeFor(animeState.filter) === 'RECENT' ? 'MANUAL' : 'RECENT';
+    setTabMode(animeState.filter, nextMode).then(renderAnime);
+  };
+  qs('animeFolderBack').onclick = () => { animeState.openFolderId = null; renderAnime(); };
 
-  async function updateAnime(id, patch){
-    const { error } = await supabase.from('user_anime').update(patch).eq('user_id', currentUser.id).eq('anilist_id', id);
-    if (error) { alert(error.message); return false; }
-    const a = animeState.list.find(x => x.anilist_id === id);
-    if (a) Object.assign(a, patch);
-    if (patch.deleted) animeState.list = animeState.list.filter(x => x.anilist_id !== id);
+  // ---------- Pastas, ordem e modo (direto ao Supabase) ----------
+
+  async function updateRows(table, match, values){
+    let query = supabase.from(table).update(values).eq('user_id', currentUser.id);
+    Object.keys(match).forEach(column => { query = query.eq(column, match[column]); });
+    const { error } = await query;
+    if (error) throw error;
+  }
+
+  // Corre `change` e volta a ler a cópia; em erro avisa e mostra o que está no Supabase
+  async function changeShelf(change){
+    try {
+      await change();
+    } catch (err) {
+      console.error('anime shelf', err);
+      alert("Couldn't save the change. Try again.");
+    }
+    try { await readAnimeCopy(); } catch (err) { console.error('anime copy', err); }
+    renderAnime();
+  }
+
+  async function setTabMode(tab, mode){
+    const { error } = await supabase.from('user_anime_tabs')
+      .upsert({ user_id: currentUser.id, tab: tab, mode: mode }, { onConflict: 'user_id,tab' });
+    if (error) { console.error('anime tab mode', error); alert("Couldn't save the change. Try again."); return; }
+    animeState.tabModes[tab] = mode;
+  }
+
+  // Entrar ou sair de uma pasta apaga a posição à mão do anime na aba (ao sair vai para o topo em Manual)
+  function setAnimeFolder(a, folderId, folderPosition){
+    return updateRows('user_mal_anime', { mal_id: a.mal_id }, {
+      folder_id: folderId, folder_position: folderPosition, manual_position: null, manual_tab: null
+    });
+  }
+
+  // Cria a pasta com o anime lá dentro, no lugar dele na ordem à mão (se estava arrumado à mão)
+  function createFolder(name, a){
+    const folderId = crypto.randomUUID();
+    const wasArranged = a.manual_tab === a.status && a.manual_position != null;
+    return changeShelf(async () => {
+      const { error } = await supabase.from('user_anime_folders').insert({
+        id: folderId,
+        user_id: currentUser.id,
+        name: name.trim(),
+        cover_mal_id: null,
+        sort_order: 'DATE_ASC',
+        manual_position: wasArranged ? a.manual_position : null,
+        manual_tab: wasArranged ? a.manual_tab : null
+      });
+      if (error) throw error;
+      await setAnimeFolder(a, folderId, 0);
+    });
+  }
+
+  // Põe o anime no fim da ordem à mão da pasta (um anime só está numa pasta)
+  function moveToFolder(a, folderId){
+    const members = animeState.list.filter(x => x.folder_id === folderId);
+    const positions = members.map(x => x.folder_position).filter(p => p != null);
+    const newPosition = positions.length ? Math.max.apply(null, positions) + 1 : 0;
+    return changeShelf(() => setAnimeFolder(a, folderId, newPosition));
+  }
+
+  function removeFromFolder(a){ return changeShelf(() => setAnimeFolder(a, null, null)); }
+
+  function renameFolder(folder, name){
+    return changeShelf(() => updateRows('user_anime_folders', { id: folder.id }, { name: name.trim() }));
+  }
+
+  function setFolderCover(folder, malId){
+    return changeShelf(() => updateRows('user_anime_folders', { id: folder.id }, { cover_mal_id: malId }));
+  }
+
+  // Data crescente <-> decrescente; se estava à mão, volta à data (crescente, a ordem por defeito)
+  function toggleFolderSort(folder){
+    const nextOrder = folder.sort_order === 'DATE_ASC' ? 'DATE_DESC' : 'DATE_ASC';
+    return changeShelf(() => updateRows('user_anime_folders', { id: folder.id }, { sort_order: nextOrder }));
+  }
+
+  // Apagar a pasta só deixa os animes soltos (a chave estrangeira do Supabase faz isso)
+  function deleteFolder(folder){
+    return changeShelf(async () => {
+      const { error } = await supabase.from('user_anime_folders').delete().eq('user_id', currentUser.id).eq('id', folder.id);
+      if (error) throw error;
+      if (animeState.openFolderId === folder.id) animeState.openFolderId = null;
+    });
+  }
+
+  // Arrastou-se na aba: grava as posições que mudam e, se a aba estava em Recentes, passa-a a Manual
+  function reorderTab(orderedKeys, movedKey){
+    const tab = animeState.filter;
+    const itemsByKey = {};
+    itemsInTab(tab).forEach(item => { itemsByKey[item.key] = item; });
+    const orderedItems = orderedKeys.map(key => itemsByKey[key]).filter(Boolean);
+    const newPositions = positionsAfterDrag(orderedItems, movedKey, tab);
+    const wasRecent = modeFor(tab) === 'RECENT';
+    return changeShelf(async () => {
+      for (const key of Object.keys(newPositions)) {
+        const item = itemsByKey[key];
+        const values = { manual_position: newPositions[key], manual_tab: tab };
+        if (item.kind === 'anime') await updateRows('user_mal_anime', { mal_id: item.anime.mal_id }, values);
+        else await updateRows('user_anime_folders', { id: item.folder.id }, values);
+      }
+      if (wasRecent) await setTabMode(tab, 'MANUAL');
+    });
+  }
+
+  // Arrastou-se dentro da pasta: a ordem passa a ser à mão (0, 1, 2… de cima para baixo)
+  function reorderFolder(folderItem, orderedKeys){
+    const membersByKey = {};
+    folderItem.members.forEach(a => { membersByKey['anime:' + a.mal_id] = a; });
+    const orderedMembers = orderedKeys.map(key => membersByKey[key]).filter(Boolean);
+    return changeShelf(async () => {
+      for (let index = 0; index < orderedMembers.length; index++) {
+        const a = orderedMembers[index];
+        if (a.folder_position !== index) await updateRows('user_mal_anime', { mal_id: a.mal_id }, { folder_position: index });
+      }
+      await updateRows('user_anime_folders', { id: folderItem.folder.id }, { sort_order: 'MANUAL' });
+    });
+  }
+
+  qs('animeFolderSort').onclick = () => { const item = openFolderItem(); if (item) toggleFolderSort(item.folder); };
+  qs('animeFolderMore').onclick = () => { const item = openFolderItem(); if (item) showFolderMenu(item); };
+
+  // ---------- Menus ----------
+
+  var animeMenuScrim = qs('animeMenuScrim');
+  var animeMenuEntries = [];
+  registerModal(animeMenuScrim, () => closeModal(animeMenuScrim));
+  qs('closeAnimeMenu').onclick = () => closeModal(animeMenuScrim);
+
+  // entries: [{ label, html (opcional, em vez de label), danger, onClick }]
+  function showMenu(title, entries){
+    animeMenuEntries = entries;
+    qs('animeMenuTitle').textContent = title;
+    qs('animeMenuItems').innerHTML = entries.map((entry, index) => {
+      const content = entry.html || esc(entry.label);
+      return `<button type="button" class="anime-menu-item ${entry.danger ? 'danger' : ''}" data-index="${index}">${content}</button>`;
+    }).join('');
+    openModal(animeMenuScrim);
+  }
+  qs('animeMenuItems').onclick = (e) => {
+    const row = e.target.closest('.anime-menu-item');
+    if (!row) return;
+    const entry = animeMenuEntries[Number(row.dataset.index)];
+    closeModal(animeMenuScrim);
+    if (entry) entry.onClick();
+  };
+
+  function askFolderName(initialName){
+    const name = prompt('Folder name', initialName || '');
+    if (name == null || !name.trim()) return null;
+    return name;
+  }
+
+  // Menu de um anime: mover para uma pasta, criar pasta, tirar da pasta (se estiver numa)
+  function showAnimeMenu(a){
+    const otherFolders = buildFolderItems().filter(item => item.folder.id !== a.folder_id);
+    const entries = [];
+    if (otherFolders.length) {
+      entries.push({ label: 'Move to folder', onClick: () => showMenu('Move to folder', otherFolders.map(item => ({
+        html: `${coverHTML(item.cover ? item.cover.cover_url : null)}<span>${esc(item.folder.name)} · ${item.members.length}</span>`,
+        onClick: () => moveToFolder(a, item.folder.id)
+      }))) });
+    }
+    entries.push({ label: 'Create folder', onClick: () => { const name = askFolderName(''); if (name) createFolder(name, a); } });
+    if (a.folder_id) entries.push({ label: 'Remove from folder', onClick: () => removeFromFolder(a) });
+    showMenu(a.title, entries);
+  }
+
+  // Menu de uma pasta: capa, nome, ordem e apagar
+  function showFolderMenu(item){
+    const folder = item.folder;
+    showMenu(folder.name, [
+      { label: 'Choose cover', onClick: () => showMenu('Choose cover', item.members.map(a => ({
+        html: `${coverHTML(a.cover_url)}<span>${item.cover && item.cover.mal_id === a.mal_id ? '● ' : ''}${esc(a.title)}</span>`,
+        onClick: () => setFolderCover(folder, a.mal_id)
+      }))) },
+      { label: 'Rename folder', onClick: () => { const name = askFolderName(folder.name); if (name) renameFolder(folder, name); } },
+      { label: 'Order: ' + FOLDER_SORT_LABEL[folder.sort_order], onClick: () => toggleFolderSort(folder) },
+      { label: 'Delete folder', danger: true, onClick: () => {
+        if (confirm(`Delete the folder ${folder.name}? The animes in it stay in your list.`)) deleteFolder(folder);
+      } }
+    ]);
+  }
+
+  // ---------- Grelha: tocar, carregar sem largar (menu) e arrastar ----------
+
+  var animeGrid = qs('animeGrid');
+  var press = null;             // carregar em curso: { key, card, pointerId, startX, startY, timer, longPressed, moved, keysBefore }
+  var suppressNextClick = false;
+
+  function gridKeys(){ return Array.from(animeGrid.querySelectorAll('.manga-card')).map(card => card.dataset.key); }
+
+  function itemByKey(key){
+    if (key.startsWith('folder:')) return buildFolderItems().find(item => item.key === key) || null;
+    const malId = Number(key.slice('anime:'.length));
+    const a = animeState.list.find(x => x.mal_id === malId);
+    return a ? animeItem(a) : null;
+  }
+
+  function openGridItem(key){
+    const item = itemByKey(key);
+    if (!item) return;
+    if (item.kind === 'anime') { openAnimeModal(item.anime.mal_id); return; }
+    animeState.openFolderId = item.folder.id;
+    renderAnime();
+    window.scrollTo({ top: 0 });
+  }
+
+  function openGridItemMenu(key){
+    const item = itemByKey(key);
+    if (!item) return;
+    if (item.kind === 'anime') showAnimeMenu(item.anime);
+    else showFolderMenu(item);
+  }
+
+  function endPress(){
+    if (!press) return;
+    clearTimeout(press.timer);
+    press.card.classList.remove('pressed', 'dragging');
+    press = null;
+  }
+
+  // Com uma pesquisa a lista está filtrada: arrastar baralhava a ordem real
+  function dragAllowed(){ return !animeState.searchQuery.trim(); }
+
+  animeGrid.addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.manga-card');
+    if (!card || e.button !== 0) return;
+    endPress();
+    press = { key: card.dataset.key, card: card, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, longPressed: false, moved: false };
+    press.timer = setTimeout(() => {
+      if (!press) return;
+      press.longPressed = true;
+      press.keysBefore = gridKeys();
+      press.card.classList.add('pressed');
+      animeGrid.setPointerCapture(press.pointerId);
+    }, LONG_PRESS_MS);
+  });
+
+  animeGrid.addEventListener('pointermove', (e) => {
+    if (!press || e.pointerId !== press.pointerId) return;
+    if (!press.longPressed) {
+      // Mexeu antes do tempo: é um scroll ou um toque normal
+      const distance = Math.hypot(e.clientX - press.startX, e.clientY - press.startY);
+      if (distance > MOVE_TOLERANCE_PX) endPress();
+      return;
+    }
+    if (!dragAllowed()) return;
+    press.moved = true;
+    press.card.classList.add('dragging');
+    const hovered = document.elementFromPoint(e.clientX, e.clientY);
+    const target = hovered ? hovered.closest('#animeGrid .manga-card') : null;
+    if (!target || target === press.card) return;
+    const cards = Array.from(animeGrid.children);
+    const draggedIndex = cards.indexOf(press.card);
+    const targetIndex = cards.indexOf(target);
+    if (draggedIndex < targetIndex) animeGrid.insertBefore(press.card, target.nextSibling);
+    else animeGrid.insertBefore(press.card, target);
+  });
+
+  animeGrid.addEventListener('pointerup', (e) => {
+    if (!press || e.pointerId !== press.pointerId) return;
+    const finished = press;
+    endPress();
+    if (!finished.longPressed) return;   // toque normal: trata o click
+
+    // Depois de carregar sem largar, este "largar" não é um toque
+    suppressNextClick = true;
+    const keysAfter = gridKeys();
+    const orderChanged = finished.moved && keysAfter.join('|') !== finished.keysBefore.join('|');
+    if (!orderChanged) { openGridItemMenu(finished.key); return; }
+
+    const folderItem = openFolderItem();
+    if (folderItem) reorderFolder(folderItem, keysAfter);
+    else reorderTab(keysAfter, finished.key);
+  });
+
+  animeGrid.addEventListener('pointercancel', () => {
+    const wasDragging = press && press.moved;
+    endPress();
+    if (wasDragging) renderAnime();   // repõe a ordem que estava
+  });
+
+  animeGrid.addEventListener('click', (e) => {
+    if (suppressNextClick) { suppressNextClick = false; e.preventDefault(); return; }
+    const card = e.target.closest('.manga-card');
+    if (card) openGridItem(card.dataset.key);
+  });
+
+  // Botão direito abre o menu. No telemóvel o browser também manda isto ao carregar sem largar:
+  // aí não faz nada, quem trata é o "largar" (menu) ou o arrastar
+  animeGrid.addEventListener('contextmenu', (e) => {
+    const card = e.target.closest('.manga-card');
+    if (!card) return;
+    e.preventDefault();
+    if (press && press.longPressed) return;
+    openGridItemMenu(card.dataset.key);
+  });
+
+  // Sem isto o browser do telemóvel fazia scroll enquanto se arrasta
+  animeGrid.addEventListener('touchmove', (e) => { if (press && press.longPressed) e.preventDefault(); }, { passive: false });
+
+  // ---------- Modal do anime: estado, episódios, remover (vão para o MAL) ----------
+
+  // Manda a alteração pela edge function (grava na cópia e no MAL; MAL em baixo fica pendente no servidor)
+  async function sendAnimeUpdate(a, status, episodesWatched){
+    try {
+      await callMal('update', {
+        mal_id: a.mal_id,
+        status: status,
+        episodes_watched: episodesWatched,
+        title: a.title,
+        title_english: a.title_english,
+        cover_url: a.cover_url,
+        media_type: a.media_type,
+        num_episodes: a.num_episodes,
+        start_date: a.start_date
+      });
+    } catch (err) {
+      console.error('mal update', err);
+      alert("Couldn't save the change. Try again.");
+      return false;
+    }
+    a.status = status;
+    a.episodes_watched = episodesWatched;
+    a.touched_at = new Date().toISOString();
     renderAnime();
     return true;
   }
 
   var animeScrim = qs('animeScrim');
   function renderAnimeModal(){
-    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (!a) { closeModal(animeScrim); return; }
     qs('animeModalTitle').textContent = a.title;
     qs('animeModalInfo').textContent = [a.title_english !== a.title ? a.title_english : null, animeInfo(a)].filter(Boolean).join(' — ');
     qs('animeStatusOptions').innerHTML = ANIME_STATUSES.map(s => `<button type="button" class="status-option ${s === a.status ? 'current' : ''}" data-status="${s}"><span class="dot" style="background:${ANIME_DOT[s]}"></span>${ANIME_LABEL[s]}</button>`).join('');
-    qs('animeEpisodes').textContent = `Episode ${a.episodes_watched} of ${a.episodes ?? '?'}`;
+    qs('animeEpisodes').textContent = `Episode ${a.episodes_watched} of ${a.num_episodes ?? '?'}`;
     qs('animeEpMinus').disabled = a.episodes_watched <= 0;
-    qs('animeEpPlus').disabled = a.episodes != null && a.episodes_watched >= a.episodes;
-    qs('animeAniListLink').href = `https://anilist.co/anime/${a.anilist_id}`;
+    qs('animeEpPlus').disabled = a.num_episodes != null && a.episodes_watched >= a.num_episodes;
+    qs('animeMalLink').href = `https://myanimelist.net/anime/${a.mal_id}`;
   }
-  function openAnimeModal(id){
-    animeState.activeId = id;
+  function openAnimeModal(malId){
+    animeState.activeId = malId;
     renderAnimeModal();
     openModal(animeScrim);
   }
   registerModal(animeScrim, () => closeModal(animeScrim));
   qs('closeAnimeModal').onclick = () => closeModal(animeScrim);
-  qs('animeGrid').onclick = (e) => { const card = e.target.closest('.manga-card'); if (card) openAnimeModal(Number(card.dataset.id)); };
   qs('animeStatusOptions').onclick = async (e) => {
     const opt = e.target.closest('.status-option');
-    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (!opt || !a) return;
-    const patch = { status: opt.dataset.status };
+    const status = opt.dataset.status;
     // Acabar um anime põe os episódios no total, como na app
-    if (patch.status === 'COMPLETED' && a.episodes != null) patch.episodes_watched = a.episodes;
-    if (await updateAnime(a.anilist_id, patch)) renderAnimeModal();
+    const finishedWithKnownTotal = status === 'COMPLETED' && a.num_episodes != null;
+    const episodesWatched = finishedWithKnownTotal ? a.num_episodes : a.episodes_watched;
+    await sendAnimeUpdate(a, status, episodesWatched);
   };
   function changeEpisodes(delta){
-    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (!a) return;
-    const next = Math.max(0, Math.min(a.episodes ?? Infinity, a.episodes_watched + delta));
-    updateAnime(a.anilist_id, { episodes_watched: next }).then(ok => { if (ok) renderAnimeModal(); });
+    const next = Math.max(0, Math.min(a.num_episodes ?? Infinity, a.episodes_watched + delta));
+    sendAnimeUpdate(a, a.status, next);
   }
   qs('animeEpMinus').onclick = () => changeEpisodes(-1);
   qs('animeEpPlus').onclick = () => changeEpisodes(1);
   qs('animeRemoveBtn').onclick = async () => {
-    const a = animeState.list.find(x => x.anilist_id === animeState.activeId);
+    const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (!a || !confirm(`Remove "${a.title}" from your list?`)) return;
-    if (await updateAnime(a.anilist_id, { deleted: true })) closeModal(animeScrim);
+    try {
+      await callMal('remove', { mal_id: a.mal_id });
+    } catch (err) {
+      console.error('mal remove', err);
+      alert("Couldn't remove it. Try again.");
+      return;
+    }
+    // Remover tira-o também da pasta (no Supabase faz o mesmo o trigger)
+    animeState.list = animeState.list.filter(x => x.mal_id !== a.mal_id);
+    closeModal(animeScrim);
+    renderAnime();
   };
 
-  // Acrescentar: pesquisa na API pública do AniList (sem login) e entra no estado do separador aberto
+  // ---------- Acrescentar: pesquisa no MAL (sem +18), entra no estado da aba aberta ----------
+
   var animeAddScrim = qs('animeAddScrim');
   var animeResults = [];
   var animeSearchTimer = null;
@@ -1695,85 +2417,81 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   registerModal(animeAddScrim, () => closeModal(animeAddScrim));
   qs('closeAnimeAdd').onclick = () => closeModal(animeAddScrim);
   qs('openAnimeAdd').onclick = () => {
-    qs('animeAddSub').textContent = `Search AniList · adds to ${ANIME_LABEL[animeState.filter]}`;
+    qs('animeAddSub').textContent = `Search MyAnimeList · adds to ${ANIME_LABEL[animeState.filter]}`;
     qs('animeQuery').value = '';
     animeResults = [];
-    renderAnimeResults('Type at least 2 letters.');
+    renderAnimeResults(`Type at least ${MIN_QUERY_LENGTH} letters.`);
     openModal(animeAddScrim);
     qs('animeQuery').focus();
   };
   qs('animeQuery').oninput = (e) => {
     clearTimeout(animeSearchTimer);
     const query = e.target.value.trim();
-    if (query.length < 2) { animeResults = []; renderAnimeResults('Type at least 2 letters.'); return; }
-    animeSearchTimer = setTimeout(() => searchAniList(query), 400);
+    if (query.length < MIN_QUERY_LENGTH) {
+      animeResults = [];
+      renderAnimeResults(`Type at least ${MIN_QUERY_LENGTH} letters.`);
+      return;
+    }
+    animeSearchTimer = setTimeout(() => searchMal(query), SEARCH_DEBOUNCE_MS);
   };
-  async function searchAniList(query){
+  async function searchMal(query){
     const seq = ++animeSearchSeq;
     renderAnimeResults('Searching…');
     try {
-      const res = await fetch('https://graphql.anilist.co', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ query: ANILIST_QUERY, variables: { search: query } })
-      });
-      if (!res.ok) throw new Error('AniList ' + res.status);
-      const json = await res.json();
+      const response = await callMal('search', { q: query });
       if (seq !== animeSearchSeq) return;
-      animeResults = json.data.Page.media.map(m => ({
-        anilist_id: m.id,
-        title: m.title.romaji || m.title.english || ('#' + m.id),
-        title_english: m.title.english,
-        cover_url: m.coverImage ? m.coverImage.large : null,
-        format: m.format,
-        episodes: m.episodes,
-        season_year: m.seasonYear
-      }));
+      animeResults = response.results || [];
       renderAnimeResults(animeResults.length ? null : 'No results.');
     } catch (err) {
       if (seq !== animeSearchSeq) return;
-      console.error('anilist', err);
+      console.error('mal search', err);
       animeResults = [];
-      renderAnimeResults("Couldn't reach AniList. Try again.");
+      const rejected = err.status === 400;
+      renderAnimeResults(rejected ? 'MyAnimeList didn\'t accept this search. Try more letters.' : "Couldn't reach MyAnimeList. Try again.");
     }
   }
   function renderAnimeResults(hint){
     if (hint) { qs('animeResults').innerHTML = `<div class="hint">${esc(hint)}</div>`; return; }
     qs('animeResults').innerHTML = animeResults.map(r => {
-      const inList = animeState.list.find(a => a.anilist_id === r.anilist_id);
+      const inList = animeState.list.find(a => a.mal_id === r.mal_id);
       const img = r.cover_url ? `<img src="${esc(r.cover_url)}" alt="" loading="lazy">` : '<span class="noimg"></span>';
       const tag = inList ? `<div class="in">In your list: ${ANIME_LABEL[inList.status]}</div>` : '';
-      return `<button type="button" class="anime-result" data-id="${r.anilist_id}">${img}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(animeInfo(r))}</div>${tag}</div></button>`;
+      return `<button type="button" class="anime-result" data-id="${r.mal_id}">${img}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(animeInfo(r))}</div>${tag}</div></button>`;
     }).join('');
   }
   qs('animeResults').onclick = async (e) => {
     const row = e.target.closest('.anime-result');
     if (!row || !currentUser) return;
-    const r = animeResults.find(x => x.anilist_id === Number(row.dataset.id));
+    const r = animeResults.find(x => x.mal_id === Number(row.dataset.id));
     if (!r) return;
-    if (animeState.list.some(a => a.anilist_id === r.anilist_id)) {
+    if (animeState.list.some(a => a.mal_id === r.mal_id)) {
       closeModal(animeAddScrim);
-      openAnimeModal(r.anilist_id);
+      openAnimeModal(r.mal_id);
       return;
     }
-    const { error } = await supabase.from('user_anime').upsert({
-      user_id: currentUser.id,
-      anilist_id: r.anilist_id,
-      title: r.title,
-      title_english: r.title_english,
-      cover_url: r.cover_url,
-      format: r.format,
-      episodes: r.episodes,
-      season_year: r.season_year,
-      status: animeState.filter,
-      episodes_watched: 0,
-      deleted: false,
-      added_at: new Date().toISOString()
-    }, { onConflict: 'user_id,anilist_id' });
-    if (error) { alert(error.message); return; }
-    await fetchAnime();
+    try {
+      await callMal('update', Object.assign({}, r, { status: animeState.filter, episodes_watched: 0 }));
+    } catch (err) {
+      console.error('mal add', err);
+      alert("Couldn't add it. Try again.");
+      return;
+    }
+    try { await readAnimeCopy(); } catch (err) { console.error('anime copy', err); }
+    renderAnime();
     renderAnimeResults(null);
   };
+
+  // Sai da conta: esquece a lista desta conta
+  function resetAnimeState(){
+    animeState.connected = null;
+    animeState.malUsername = '';
+    animeState.list = [];
+    animeState.folders = [];
+    animeState.tabModes = {};
+    animeState.openFolderId = null;
+    animeState.lastSyncAt = 0;
+    renderAnime();
+  }
 
   // --- PROFILE ---
   function renderProfile(){
