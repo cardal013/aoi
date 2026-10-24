@@ -580,6 +580,13 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-result .t{ font-weight:700; font-size:14px; }
 .anime-result .m{ color:var(--text-muted); font-size:12px; margin-top:2px; }
 .anime-result .in{ color:var(--accent); font-size:12px; margin-top:2px; font-weight:700; }
+.anime-result{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+.anime-result.selected{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+.anime-result .check{ margin-left:auto; color:var(--accent); font-weight:700; }
+.anime-add-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13.5px; font-weight:700; }
+.anime-add-status{ display:flex; gap:6px; margin-left:auto; }
+.anime-add-status button{ padding:6px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; }
+.anime-add-status button.active{ border-color:var(--accent); background:var(--accent); color:#fff; }
 .anime-toolbar{ flex-wrap:wrap; }
 .anime-disconnect{ margin-left:auto; }
 .anime-folder-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
@@ -907,6 +914,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button class="icon-btn" id="animeSearchToggle" type="button" aria-label="Search anime">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="animeModeBtn" title="Recent: last changed first. Manual: your own order">Recent</button>
         <button class="btn btn-ghost btn-sm" id="animeRefresh" type="button">Refresh</button>
         <button class="btn btn-primary btn-sm" id="openAnimeAdd" type="button">Add anime</button>
       </div>
@@ -921,11 +929,9 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div id="animeMain" style="display:none;">
       <div class="lib-toolbar anime-toolbar">
         <div class="status-tabs" id="animeTabs">
-          <button type="button" data-status="WATCHING" class="active">Watching</button>
-          <button type="button" data-status="PLAN_TO_WATCH">Plan to Watch</button>
+          <button type="button" data-status="PLAN_TO_WATCH" class="active">Plan to Watch</button>
           <button type="button" data-status="COMPLETED">Completed</button>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="animeModeBtn" title="Recent: last changed first. Manual: your own order">Recent</button>
         <div class="search-field" id="animeSearchField">
           <input type="search" id="animeSearch" placeholder="Search this list…">
         </div>
@@ -1046,6 +1052,14 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     </div>
     <input type="search" class="anime-query" id="animeQuery" placeholder="Frieren, One Piece…" autocomplete="off">
     <div class="anime-results" id="animeResults"></div>
+    <div class="anime-add-bar" id="animeAddBar" style="display:none;">
+      <span id="animeAddCount">1 selected</span>
+      <div class="anime-add-status" id="animeAddStatus">
+        <button type="button" data-status="PLAN_TO_WATCH">Plan to Watch</button>
+        <button type="button" data-status="COMPLETED">Completed</button>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="animeAddConfirm">Add</button>
+    </div>
   </div>
 </div>
 
@@ -1648,9 +1662,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // Pastas, ordem à mão e modo das abas são só do Aoi e vão direto ao Supabase
   // (user_anime_folders, user_mal_anime, user_anime_tabs). Só animes: os mangas do MAL nunca entram aqui.
   // As regras das pastas e da ordem são as mesmas da app (AnimeShelf.kt); se mudar uma, mudar a outra.
-  const ANIME_STATUSES = ['WATCHING', 'PLAN_TO_WATCH', 'COMPLETED'];
-  const ANIME_LABEL = { WATCHING:'Watching', PLAN_TO_WATCH:'Plan to Watch', COMPLETED:'Completed' };
-  const ANIME_DOT = { WATCHING:'var(--accent)', PLAN_TO_WATCH:'#8D8B93', COMPLETED:'#1E9E6B' };
+  // Só 2 estados (decisão do Afonso): Watching, On Hold e Dropped passam a Plan to Watch no próprio MAL
+  const ANIME_STATUSES = ['PLAN_TO_WATCH', 'COMPLETED'];
+  const ANIME_LABEL = { PLAN_TO_WATCH:'Plan to Watch', COMPLETED:'Completed' };
+  const ANIME_DOT = { PLAN_TO_WATCH:'var(--accent)', COMPLETED:'#1E9E6B' };
   const FOLDER_SORT_LABEL = { DATE_ASC:'Oldest first', DATE_DESC:'Newest first', MANUAL:'Custom order' };
   // Abaixo disto, a meia distância entre duas posições já não é segura: renumera-se a aba
   const MIN_POSITION_GAP = 1e-6;
@@ -1669,7 +1684,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     list: [],                 // linhas de user_mal_anime que não estão removidas
     folders: [],              // linhas de user_anime_folders
     tabModes: {},             // aba -> 'RECENT' ou 'MANUAL' (sem entrada = RECENT)
-    filter: 'WATCHING',
+    filter: 'PLAN_TO_WATCH',
     openFolderId: null,       // pasta aberta (null = a aba)
     searchOpen: false,
     searchQuery: '',
@@ -1748,15 +1763,18 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     });
   }
 
-  // Todas Completed -> Completed; todas Plan to Watch -> Plan to Watch; mistura -> Watching.
+  // Todas Completed -> Completed; qualquer outra coisa (falta ver alguma) -> Plan to Watch.
   // Pasta vazia -> null: não aparece em nenhuma aba (decisão do Afonso: pasta vazia apaga-se sozinha)
   function folderTab(members){
     if (members.length === 0) return null;
     const allCompleted = members.every(a => a.status === 'COMPLETED');
-    if (allCompleted) return 'COMPLETED';
-    const allPlanned = members.every(a => a.status === 'PLAN_TO_WATCH');
-    if (allPlanned) return 'PLAN_TO_WATCH';
-    return 'WATCHING';
+    return allCompleted ? 'COMPLETED' : 'PLAN_TO_WATCH';
+  }
+
+  // Chegar ao último episódio (se o MAL souber o total) marca como vista; descer volta a Plan to Watch
+  function statusForEpisodes(a, episodesWatched){
+    if (a.num_episodes == null) return a.status;
+    return episodesWatched >= a.num_episodes ? 'COMPLETED' : 'PLAN_TO_WATCH';
   }
 
   // Capa escolhida se ainda estiver na pasta; senão a primeira temporada (estreia mais antiga)
@@ -1958,11 +1976,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     return `<img src="${esc(url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy" draggable="false">`;
   }
 
-  // Em Watching mostra os episódios vistos; dentro de uma pasta mostra também o estado de cada temporada
+  // Em Plan to Watch já começado mostra os episódios vistos; dentro de uma pasta mostra também o estado de cada temporada
   function animeCardHTML(a, showStatus){
     const badges = [];
     if (showStatus) badges.push(`<span class="anime-badge">${ANIME_LABEL[a.status]}</span>`);
-    if (a.status === 'WATCHING') badges.push(`<span class="anime-badge accent">${a.episodes_watched}/${a.num_episodes ?? '?'}</span>`);
+    if (a.status === 'PLAN_TO_WATCH' && a.episodes_watched > 0) badges.push(`<span class="anime-badge accent">${a.episodes_watched}/${a.num_episodes ?? '?'}</span>`);
     return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div></div><div class="title">${esc(a.title)}</div></button>`;
   }
 
@@ -1992,7 +2010,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const showConnect = animeState.connected === false;
     qs('animeConnect').style.display = showConnect ? 'block' : 'none';
     qs('animeMain').style.display = connected ? 'block' : 'none';
-    ['openAnimeAdd', 'animeSearchToggle', 'animeRefresh'].forEach(id => { qs(id).style.display = connected ? '' : 'none'; });
+    ['openAnimeAdd', 'animeSearchToggle', 'animeModeBtn', 'animeRefresh'].forEach(id => { qs(id).style.display = connected ? '' : 'none'; });
     if (!connected) return;
 
     qs('animeTabs').querySelectorAll('button').forEach(b => {
@@ -2002,6 +2020,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
     const folderItem = openFolderItem();
     if (animeState.openFolderId && !folderItem) animeState.openFolderId = null;
+    // O modo é da aba: dentro de uma pasta não conta
+    if (folderItem) qs('animeModeBtn').style.display = 'none';
     if (folderItem) renderFolderView(folderItem);
     else renderTabView();
     if (animeState.activeId != null && animeScrim.classList.contains('open')) renderAnimeModal();
@@ -2445,7 +2465,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (!a) return;
     const next = Math.max(0, Math.min(a.num_episodes ?? Infinity, a.episodes_watched + delta));
-    sendAnimeUpdate(a, a.status, next);
+    sendAnimeUpdate(a, statusForEpisodes(a, next), next);
   }
   qs('animeEpMinus').onclick = () => changeEpisodes(-1);
   qs('animeEpPlus').onclick = () => changeEpisodes(1);
@@ -2465,21 +2485,98 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     renderAnime();
   };
 
-  // ---------- Acrescentar: pesquisa no MAL (sem +18), entra no estado da aba aberta ----------
+  // ---------- Acrescentar: pesquisa no MAL (sem +18) ----------
+  // Tocar (ou carregar sem largar) seleciona; dá para escolher vários, também de pesquisas diferentes.
+  // Em baixo escolhe-se o estado (um para todos) e acrescentam-se. Os que já estão na lista mudam para esse
+  // estado. Com uma pasta aberta, ficam nessa pasta (um que estava noutra ou solto passa para esta).
 
   var animeAddScrim = qs('animeAddScrim');
   var animeResults = [];
   var animeSearchTimer = null;
   var animeSearchSeq = 0;
+  var animeAdd = { selected: new Map(), status: 'PLAN_TO_WATCH', folderId: null };
   registerModal(animeAddScrim, () => closeModal(animeAddScrim));
   qs('closeAnimeAdd').onclick = () => closeModal(animeAddScrim);
   qs('openAnimeAdd').onclick = () => {
-    qs('animeAddSub').textContent = `Search MyAnimeList · adds to ${ANIME_LABEL[animeState.filter]}`;
+    const folderItem = openFolderItem();
+    animeAdd.selected = new Map();
+    animeAdd.folderId = folderItem ? folderItem.folder.id : null;
+    animeAdd.status = folderItem ? 'PLAN_TO_WATCH' : animeState.filter;
+    qs('animeAddSub').textContent = folderItem
+      ? `Search MyAnimeList · adds to the folder ${folderItem.folder.name}`
+      : 'Search MyAnimeList · tap or hold to pick one or more';
     qs('animeQuery').value = '';
     animeResults = [];
     renderAnimeResults(`Type at least ${MIN_QUERY_LENGTH} letters.`);
+    renderAnimeAddBar();
     openModal(animeAddScrim);
     qs('animeQuery').focus();
+  };
+
+  function renderAnimeAddBar(){
+    const count = animeAdd.selected.size;
+    qs('animeAddBar').style.display = count ? 'flex' : 'none';
+    qs('animeAddCount').textContent = `${count} selected`;
+    qs('animeAddConfirm').textContent = `Add ${count}`;
+    qs('animeAddStatus').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.status === animeAdd.status));
+  }
+  qs('animeAddStatus').onclick = (e) => {
+    const btn = e.target.closest('button[data-status]');
+    if (!btn) return;
+    animeAdd.status = btn.dataset.status;
+    renderAnimeAddBar();
+  };
+
+  function toggleAnimeResult(malId){
+    const r = animeResults.find(x => x.mal_id === malId);
+    if (!r) return;
+    if (animeAdd.selected.has(malId)) animeAdd.selected.delete(malId);
+    else animeAdd.selected.set(malId, r);
+    renderAnimeResults(null);
+    renderAnimeAddBar();
+  }
+
+  // Acrescenta os selecionados (pela edge function, um a um) e, com uma pasta, põe-nos no fim da ordem dela
+  qs('animeAddConfirm').onclick = async () => {
+    const picked = Array.from(animeAdd.selected.values());
+    if (!picked.length || !currentUser) return;
+    qs('animeAddConfirm').disabled = true;
+    const added = [];
+    for (const r of picked) {
+      const inList = animeState.list.find(a => a.mal_id === r.mal_id);
+      try {
+        await callMal('update', Object.assign({}, r, {
+          status: animeAdd.status,
+          episodes_watched: inList ? inList.episodes_watched : 0
+        }));
+        added.push(r);
+      } catch (err) {
+        console.error('mal add', err);
+      }
+    }
+    qs('animeAddConfirm').disabled = false;
+    if (added.length < picked.length) alert("Couldn't add some of them. Try again.");
+
+    const folderId = animeAdd.folderId;
+    animeAdd.selected = new Map();
+    renderAnimeAddBar();
+    if (folderId) {
+      await changeShelf(async () => {
+        await readAnimeCopy();
+        const members = animeState.list.filter(a => a.folder_id === folderId);
+        const positions = members.map(a => a.folder_position).filter(p => p != null);
+        let lastPosition = positions.length ? Math.max.apply(null, positions) : null;
+        for (const r of added) {
+          if (members.some(a => a.mal_id === r.mal_id)) continue;
+          lastPosition = lastPosition == null ? 0 : lastPosition + 1;
+          await setAnimeFolder(r, folderId, lastPosition);
+        }
+      });
+    } else {
+      try { await readAnimeCopy(); } catch (err) { console.error('anime copy', err); }
+      renderAnime();
+    }
+    renderAnimeResults(null);
   };
   qs('animeQuery').oninput = (e) => {
     clearTimeout(animeSearchTimer);
@@ -2513,29 +2610,43 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       const inList = animeState.list.find(a => a.mal_id === r.mal_id);
       const img = r.cover_url ? `<img src="${esc(r.cover_url)}" alt="" loading="lazy">` : '<span class="noimg"></span>';
       const tag = inList ? `<div class="in">In your list: ${ANIME_LABEL[inList.status]}</div>` : '';
-      return `<button type="button" class="anime-result" data-id="${r.mal_id}">${img}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(animeInfo(r))}</div>${tag}</div></button>`;
+      const selected = animeAdd.selected.has(r.mal_id);
+      const check = selected ? '<span class="check">✓</span>' : '';
+      return `<button type="button" class="anime-result ${selected ? 'selected' : ''}" data-id="${r.mal_id}">${img}<div><div class="t">${esc(r.title)}</div><div class="m">${esc(animeInfo(r))}</div>${tag}</div>${check}</button>`;
     }).join('');
   }
-  qs('animeResults').onclick = async (e) => {
+
+  // Carregar sem largar também seleciona (no telemóvel, como na app); o toque que vem a seguir não conta
+  var resultPress = null;
+  var suppressResultClick = false;
+  qs('animeResults').addEventListener('pointerdown', (e) => {
+    const row = e.target.closest('.anime-result');
+    if (!row) return;
+    const malId = Number(row.dataset.id);
+    resultPress = {
+      x: e.clientX,
+      y: e.clientY,
+      timer: setTimeout(() => {
+        resultPress = null;
+        suppressResultClick = true;
+        toggleAnimeResult(malId);
+      }, LONG_PRESS_MS)
+    };
+  });
+  qs('animeResults').addEventListener('pointermove', (e) => {
+    if (!resultPress) return;
+    const moved = Math.hypot(e.clientX - resultPress.x, e.clientY - resultPress.y) > MOVE_TOLERANCE_PX;
+    if (moved) { clearTimeout(resultPress.timer); resultPress = null; }
+  });
+  ['pointerup', 'pointercancel'].forEach(type => qs('animeResults').addEventListener(type, () => {
+    if (resultPress) { clearTimeout(resultPress.timer); resultPress = null; }
+  }));
+  qs('animeResults').addEventListener('contextmenu', (e) => { if (e.target.closest('.anime-result')) e.preventDefault(); });
+  qs('animeResults').onclick = (e) => {
+    if (suppressResultClick) { suppressResultClick = false; return; }
     const row = e.target.closest('.anime-result');
     if (!row || !currentUser) return;
-    const r = animeResults.find(x => x.mal_id === Number(row.dataset.id));
-    if (!r) return;
-    if (animeState.list.some(a => a.mal_id === r.mal_id)) {
-      closeModal(animeAddScrim);
-      openAnimeModal(r.mal_id);
-      return;
-    }
-    try {
-      await callMal('update', Object.assign({}, r, { status: animeState.filter, episodes_watched: 0 }));
-    } catch (err) {
-      console.error('mal add', err);
-      alert("Couldn't add it. Try again.");
-      return;
-    }
-    try { await readAnimeCopy(); } catch (err) { console.error('anime copy', err); }
-    renderAnime();
-    renderAnimeResults(null);
+    toggleAnimeResult(Number(row.dataset.id));
   };
 
   // Sai da conta: esquece a lista desta conta
