@@ -165,7 +165,7 @@ class AnimeRepositoryImpl(
         folderId = folderId,
         folderPosition = folderPosition,
         manualPosition = manualPosition,
-        manualTab = manualTab?.let(AnimeStatus::fromRemote),
+        manualTab = manualTab?.let(AnimeStatus::tabFromRemote),
         dirtyAt = dirtyAt,
         layoutDirtyAt = layoutDirtyAt,
     )

@@ -112,7 +112,9 @@ class AnimeFolderRepositoryImpl(
 
     override fun getTabModesAsFlow(userId: String): Flow<Map<AnimeStatus, AnimeTabMode>> {
         return database.anime_tabsQueries.getAll(userId).subscribeToList().map { rows ->
-            rows.associate { row -> AnimeStatus.fromRemote(row.tab) to AnimeTabMode.fromRemote(row.mode) }
+            rows.mapNotNull { row ->
+                AnimeStatus.tabFromRemote(row.tab)?.let { tab -> tab to AnimeTabMode.fromRemote(row.mode) }
+            }.toMap()
         }
     }
 
@@ -125,7 +127,8 @@ class AnimeFolderRepositoryImpl(
         val dirtyModes = mutableMapOf<AnimeStatus, Pair<AnimeTabMode, Long>>()
         for (row in dirtyRows) {
             val dirtyAt = row.dirty_at ?: continue
-            dirtyModes[AnimeStatus.fromRemote(row.tab)] = AnimeTabMode.fromRemote(row.mode) to dirtyAt
+            val tab = AnimeStatus.tabFromRemote(row.tab) ?: continue
+            dirtyModes[tab] = AnimeTabMode.fromRemote(row.mode) to dirtyAt
         }
         return dirtyModes
     }
@@ -161,7 +164,7 @@ class AnimeFolderRepositoryImpl(
         coverMalId = coverMalId,
         sortOrder = FolderSortOrder.fromRemote(sortOrder),
         manualPosition = manualPosition,
-        manualTab = manualTab?.let(AnimeStatus::fromRemote),
+        manualTab = manualTab?.let(AnimeStatus::tabFromRemote),
         deleted = deleted,
         dirtyAt = dirtyAt,
     )

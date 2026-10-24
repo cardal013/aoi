@@ -49,8 +49,8 @@ object AnimeShelf {
     fun folderKey(folderId: String): String = "folder:$folderId"
 
     /**
-     * Aba onde aparece uma pasta: todas Completed -> Completed; todas Plan to Watch -> Plan to Watch;
-     * qualquer mistura (ou só Watching) -> Watching. Pasta vazia -> null: não aparece em nenhuma aba
+     * Aba onde aparece uma pasta: todas Completed -> Completed; qualquer outra coisa (falta ver alguma)
+     * -> Plan to Watch. Pasta vazia -> null: não aparece em nenhuma aba
      * (decisão do Afonso: pasta que fica vazia apaga-se sozinha; a app, o site e a edge function apagam-na).
      */
     fun folderTab(members: List<Anime>): AnimeStatus? {
@@ -61,11 +61,16 @@ object AnimeShelf {
         if (allCompleted) {
             return AnimeStatus.COMPLETED
         }
-        val allPlanToWatch = members.all { it.status == AnimeStatus.PLAN_TO_WATCH }
-        if (allPlanToWatch) {
-            return AnimeStatus.PLAN_TO_WATCH
-        }
-        return AnimeStatus.WATCHING
+        return AnimeStatus.PLAN_TO_WATCH
+    }
+
+    /**
+     * Estado depois de mudar os episódios vistos: chegar ao total (se o MAL o souber) marca a temporada
+     * como vista; descer de um Completed volta a Plan to Watch.
+     */
+    fun statusForEpisodes(anime: Anime, episodesWatched: Long): AnimeStatus {
+        val total = anime.numEpisodes ?: return anime.status
+        return if (episodesWatched >= total) AnimeStatus.COMPLETED else AnimeStatus.PLAN_TO_WATCH
     }
 
     /**

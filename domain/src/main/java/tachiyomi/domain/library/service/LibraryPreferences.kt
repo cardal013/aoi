@@ -233,7 +233,7 @@ class LibraryPreferences(
     )
 
     /** Último estado escolhido na aba Anime (nome de AnimeStatus). */
-    val animeLastStatus: Preference<String> = preferenceStore.getString("aoi_anime_last_status", "WATCHING")
+    val animeLastStatus: Preference<String> = preferenceStore.getString("aoi_anime_last_status", "PLAN_TO_WATCH")
 
     /** Nome da conta do MyAnimeList ligada à conta do Aoi (vazio = não ligada), por utilizador. */
     fun malUsername(userId: String): Preference<String> = preferenceStore.getString(

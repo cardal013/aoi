@@ -1,0 +1,7 @@
+-- Aoi 0.24.0: sai o estado Watching (fica so Plan to Watch e Completed).
+-- Os Watching passam a Plan to Watch (o servidor faz o mesmo no MAL e mantem os episodios vistos).
+-- Posicoes a mao e o modo da antiga aba Watching deixam de contar.
+UPDATE mal_anime SET status = 'PLAN_TO_WATCH' WHERE status = 'WATCHING';
+UPDATE mal_anime SET manual_position = NULL, manual_tab = NULL WHERE manual_tab = 'WATCHING';
+UPDATE anime_folders SET manual_position = NULL, manual_tab = NULL WHERE manual_tab = 'WATCHING';
+DELETE FROM anime_tabs WHERE tab = 'WATCHING';

@@ -206,10 +206,37 @@ class CloudSyncTriggersTest {
     }
 
     @Test
+    fun `migration 20 passa os Watching a Plan to Watch e esquece a aba Watching`() = runBlocking<Unit> {
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, episodes_watched, touched_at, " +
+                "manual_position, manual_tab) VALUES ('u1', 1, 'A', 'WATCHING', 5, 1, 2.0, 'WATCHING')",
+        )
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, manual_position, manual_tab) " +
+                "VALUES ('u1', 2, 'B', 'COMPLETED', 1, 1.0, 'COMPLETED')",
+        )
+        exec(
+            "INSERT INTO anime_folders(user_id, id, name, sort_order, manual_position, manual_tab) " +
+                "VALUES ('u1', 'p', 'P', 'DATE_ASC', 3.0, 'WATCHING')",
+        )
+        exec("INSERT INTO anime_tabs(user_id, tab, mode) VALUES ('u1', 'WATCHING', 'MANUAL')")
+        exec("INSERT INTO anime_tabs(user_id, tab, mode) VALUES ('u1', 'COMPLETED', 'MANUAL')")
+
+        Database.Schema.migrate(driver, 20, 21).await()
+
+        val converted = "SELECT count(*) FROM mal_anime WHERE mal_id = 1 AND status = 'PLAN_TO_WATCH' " +
+            "AND episodes_watched = 5 AND manual_position IS NULL AND manual_tab IS NULL"
+        longs(converted) shouldBe listOf(1L)
+        longs("SELECT count(*) FROM mal_anime WHERE mal_id = 2 AND manual_tab = 'COMPLETED'") shouldBe listOf(1L)
+        longs("SELECT count(*) FROM anime_folders WHERE manual_tab IS NULL") shouldBe listOf(1L)
+        longs("SELECT count(*) FROM anime_tabs") shouldBe listOf(1L)
+    }
+
+    @Test
     fun `animes do MAL não acordam o upload dos mangas`() {
         exec(
             "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, dirty_at) " +
-                "VALUES ('u1', 52991, 'Frieren', 'WATCHING', 5, 5)",
+                "VALUES ('u1', 52991, 'Frieren', 'PLAN_TO_WATCH', 5, 5)",
         )
         runBlocking { db.cloud_syncQueries.lastLocalChange().awaitAsOne().last } shouldBe 0L
     }
@@ -218,10 +245,11 @@ class CloudSyncTriggersTest {
     fun `remover um anime do MAL tira-o da pasta e cada conta tem a sua lista`() = runBlocking<Unit> {
         exec(
             "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, folder_id, manual_position) " +
-                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 'pasta', 2.0)",
+                "VALUES ('u1', 1, 'A', 'PLAN_TO_WATCH', 1, 'pasta', 2.0)",
         )
         exec(
-            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at) VALUES ('u2', 1, 'A', 'WATCHING', 1)",
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at) " +
+                "VALUES ('u2', 1, 'A', 'PLAN_TO_WATCH', 1)",
         )
 
         db.mal_animeQueries.markDeleted(now = 9, userId = "u1", malId = 1)
@@ -237,7 +265,7 @@ class CloudSyncTriggersTest {
     fun `entrar numa pasta apaga a posição à mão e apagar a pasta deixa os animes soltos`() = runBlocking<Unit> {
         exec(
             "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, manual_position, manual_tab) " +
-                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 3.0, 'WATCHING')",
+                "VALUES ('u1', 1, 'A', 'PLAN_TO_WATCH', 1, 3.0, 'PLAN_TO_WATCH')",
         )
 
         db.mal_animeQueries.setFolder(folderId = "p", folderPosition = 0.0, now = 5, userId = "u1", malId = 1)
@@ -255,7 +283,7 @@ class CloudSyncTriggersTest {
         exec("INSERT INTO anime_folders(user_id, id, name, sort_order) VALUES ('u1', 'vazia', 'B', 'DATE_ASC')")
         exec(
             "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, folder_id) " +
-                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 'cheia')",
+                "VALUES ('u1', 1, 'A', 'PLAN_TO_WATCH', 1, 'cheia')",
         )
 
         db.anime_foldersQueries.markEmptyDeleted(now = 7, userId = "u1")

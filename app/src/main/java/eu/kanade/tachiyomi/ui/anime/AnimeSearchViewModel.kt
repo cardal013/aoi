@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -75,11 +76,35 @@ class AnimeSearchViewModel(
         viewModelScope.launchIO { search(state.value.query.trim()) }
     }
 
-    fun add(anime: Anime, status: AnimeStatus) {
+    /**
+     * Acrescenta [animes] no estado [status] (os que já estão na lista mudam para esse estado).
+     * Com [folderId] (pesquisa aberta dentro de uma pasta) ficam nessa pasta, no fim da ordem à mão dela;
+     * um que estava noutra pasta ou solto passa para esta.
+     */
+    fun add(animes: List<Anime>, status: AnimeStatus, folderId: String?) {
         val currentUserId = userId ?: return
         viewModelScope.launchIO {
-            animeRepository.add(currentUserId, anime.copy(status = status))
+            for (anime in animes) {
+                animeRepository.add(currentUserId, anime.copy(status = status))
+            }
+            if (folderId != null) {
+                putInFolder(currentUserId, animes, folderId)
+            }
             malAnimeSync.pushChanges()
+        }
+    }
+
+    private suspend fun putInFolder(currentUserId: String, animes: List<Anime>, folderId: String) {
+        val listAnimes = animeRepository.getAllAsFlow(currentUserId).first()
+        val alreadyInFolder = listAnimes.filter { it.folderId == folderId }.map { it.malId }.toSet()
+        var lastPosition = listAnimes.filter { it.folderId == folderId }.mapNotNull { it.folderPosition }.maxOrNull()
+        for (anime in animes) {
+            if (anime.malId in alreadyInFolder) {
+                continue
+            }
+            val newPosition = if (lastPosition == null) FIRST_FOLDER_POSITION else lastPosition + 1
+            animeRepository.setFolder(currentUserId, anime.malId, folderId, newPosition)
+            lastPosition = newPosition
         }
     }
 
@@ -113,5 +138,7 @@ class AnimeSearchViewModel(
 
         // Mínimo de letras para pesquisar (o mesmo da versão do AniList; o do MAL está por confirmar)
         const val MIN_QUERY_LENGTH = 2
+
+        private const val FIRST_FOLDER_POSITION = 0.0
     }
 }

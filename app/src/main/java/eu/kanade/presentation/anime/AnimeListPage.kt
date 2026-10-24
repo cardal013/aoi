@@ -55,7 +55,8 @@ import tachiyomi.presentation.core.util.plus
 
 /**
  * Página Anime da biblioteca. Sem MAL ligado só mostra "Connect MyAnimeList".
- * Com o MAL ligado: estados em cima (com o botão Recentes/Manual e o menu para desligar o MAL), grelha
+ * Com o MAL ligado: estados em cima (com o menu para desligar o MAL; o botão Recentes/Manual está na barra
+ * de cima, ao lado da lupa: [AnimeTabModeButton]), grelha
  * com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL e botão para acrescentar.
  * Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (a aba passa a Manual).
  */
@@ -65,7 +66,6 @@ fun AnimeListPage(
     searchQuery: String?,
     contentPadding: PaddingValues,
     onSelectStatus: (AnimeStatus) -> Unit,
-    onSetTabMode: (AnimeStatus, AnimeTabMode) -> Unit,
     onClickAdd: () -> Unit,
     onOpenFolder: (folderId: String) -> Unit,
     onChangeStatus: (Anime, AnimeStatus) -> Unit,
@@ -96,7 +96,6 @@ fun AnimeListPage(
         Column(modifier = Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusChips(state = state, onSelectStatus = onSelectStatus, modifier = Modifier.weight(1f))
-                TabModeButton(mode = state.modeFor(tab), onChangeMode = { onSetTabMode(tab, it) })
                 MalMenu(malUsername = state.malUsername, onDisconnect = onDisconnect)
             }
 
@@ -257,9 +256,9 @@ private fun StatusChips(
     }
 }
 
-/** Botão do modo da aba: mostra o modo atual e tocar troca entre Recentes e Manual. */
+/** Botão do modo da aba (na barra de cima da biblioteca): mostra o modo atual e tocar troca entre Recentes e Manual. */
 @Composable
-private fun TabModeButton(
+fun AnimeTabModeButton(
     mode: AnimeTabMode,
     onChangeMode: (AnimeTabMode) -> Unit,
 ) {
@@ -319,7 +318,7 @@ private fun MalMenu(
 }
 
 /**
- * Capa e título de um anime na grelha. Em Watching mostra os episódios vistos.
+ * Capa e título de um anime na grelha. Em Plan to Watch já começado mostra os episódios vistos.
  * Com [showStatus] (dentro de uma pasta, onde cada temporada tem o seu estado) mostra também o estado.
  */
 @Composable
@@ -338,7 +337,7 @@ fun AnimeGridItem(
                 if (showStatus) {
                     Badge(text = anime.status.label())
                 }
-                if (anime.status == AnimeStatus.WATCHING) {
+                if (anime.status == AnimeStatus.PLAN_TO_WATCH && anime.episodesWatched > 0) {
                     Badge(text = episodesShort(anime))
                 }
             }
@@ -381,7 +380,6 @@ private fun FolderGridItem(folder: AnimeShelf.Folder) {
 @Composable
 fun AnimeStatus.label(): String = stringResource(
     when (this) {
-        AnimeStatus.WATCHING -> MR.strings.anime_status_watching
         AnimeStatus.PLAN_TO_WATCH -> MR.strings.anime_status_plan_to_watch
         AnimeStatus.COMPLETED -> MR.strings.anime_status_completed
     },

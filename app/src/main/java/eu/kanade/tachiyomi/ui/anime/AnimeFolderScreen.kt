@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.ui.anime
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -28,6 +30,8 @@ import eu.kanade.presentation.components.AppBarActions
 import eu.kanade.presentation.util.Screen
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Sort
+import mihon.icons.materialsymbols.rounded.Add
+import tachiyomi.domain.anime.model.AnimeStatus
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -38,6 +42,7 @@ import tachiyomi.presentation.core.util.plus
  * Ecrã de uma pasta de animes: todas as temporadas lá dentro, cada uma com o seu estado.
  * Botão de ordem (data crescente <-> decrescente; à mão volta à data), arrastar passa a ordem à mão,
  * menu com capa, nome e apagar. Carregar sem largar num anime e largar sem mexer abre o menu do anime.
+ * O botão + abre a pesquisa e o que se acrescenta lá fica nesta pasta.
  * Se a pasta deixar de existir (apagada aqui ou noutro aparelho), o ecrã fecha.
  */
 class AnimeFolderScreen(private val folderId: String) : Screen() {
@@ -95,6 +100,16 @@ class AnimeFolderScreen(private val folderId: String) : Screen() {
                     },
                 )
             },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { navigator.push(AnimeSearchScreen(AnimeStatus.PLAN_TO_WATCH, folderId)) },
+                ) {
+                    Icon(
+                        imageVector = MaterialSymbols.Rounded.Add,
+                        contentDescription = stringResource(MR.strings.anime_add),
+                    )
+                }
+            },
         ) { contentPadding ->
             if (folder.members.isEmpty()) {
                 EmptyScreen(stringRes = MR.strings.anime_folder_empty, modifier = Modifier.padding(contentPadding))
@@ -103,7 +118,8 @@ class AnimeFolderScreen(private val folderId: String) : Screen() {
                     items = folder.members,
                     key = { it.malId.toString() },
                     dragEnabled = true,
-                    contentPadding = contentPadding + PaddingValues(8.dp),
+                    contentPadding = contentPadding +
+                        PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = 88.dp),
                     onClick = { anime -> openedId = anime.malId },
                     onMenu = { anime -> dialog = ShelfDialog.AnimeMenu(anime) },
                     onReordered = { orderedKeys, _ ->

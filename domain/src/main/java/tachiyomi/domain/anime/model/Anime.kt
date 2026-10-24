@@ -27,14 +27,19 @@ data class Anime(
     val layoutDirtyAt: Long? = null,
 )
 
-/** Os 3 estados do Aoi. On Hold e Dropped do MAL passam a Plan to Watch no próprio MAL. */
+/** Os 2 estados do Aoi. Watching, On Hold e Dropped do MAL passam a Plan to Watch no próprio MAL. */
 enum class AnimeStatus {
-    WATCHING,
     PLAN_TO_WATCH,
     COMPLETED,
     ;
 
     companion object {
-        fun fromRemote(value: String): AnimeStatus = entries.find { it.name == value.uppercase() } ?: PLAN_TO_WATCH
+        fun fromRemote(value: String): AnimeStatus = tabFromRemote(value) ?: PLAN_TO_WATCH
+
+        /**
+         * Aba guardada (manual_tab, modo da aba). Uma aba que já não existe (a antiga Watching) dá null:
+         * a posição à mão lá deixa de contar e o modo dela não passa para outra aba.
+         */
+        fun tabFromRemote(value: String): AnimeStatus? = entries.find { it.name == value.uppercase() }
     }
 }

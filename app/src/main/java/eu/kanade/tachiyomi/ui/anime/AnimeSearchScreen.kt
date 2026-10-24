@@ -1,9 +1,13 @@
 package eu.kanade.tachiyomi.ui.anime
 
-import androidx.compose.foundation.clickable
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -21,11 +27,14 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,6 +47,8 @@ import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.presentation.util.Screen
 import mihon.icons.materialsymbols.MaterialSymbols
+import mihon.icons.materialsymbols.rounded.Add
+import mihon.icons.materialsymbols.rounded.Check
 import mihon.icons.materialsymbols.rounded.Refresh
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.model.AnimeStatus
@@ -46,9 +57,18 @@ import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
+import tachiyomi.presentation.core.util.plus
 
-/** Pesquisa no MyAnimeList para acrescentar animes. Os novos entram no estado [defaultStatus], que se pode mudar. */
-class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
+/**
+ * Pesquisa no MyAnimeList para acrescentar animes. Os novos entram no estado [defaultStatus], que se pode mudar.
+ * Tocar acrescenta um; carregar sem largar começa a selecionar vários (a seleção fica ao mudar a pesquisa)
+ * e o botão em baixo acrescenta-os todos com um só diálogo. Com [folderId] (aberta dentro de uma pasta)
+ * os animes ficam nessa pasta.
+ */
+class AnimeSearchScreen(
+    private val defaultStatus: AnimeStatus,
+    private val folderId: String? = null,
+) : Screen() {
 
     @Composable
     override fun Content() {
@@ -56,7 +76,11 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
         val viewModel = metroViewModel<AnimeSearchViewModel>()
         val state by viewModel.state.collectAsState()
         val inList by viewModel.inList.collectAsState()
-        var picked by remember { mutableStateOf<Anime?>(null) }
+        val selected = remember { mutableStateMapOf<Long, Anime>() }
+        var picked by remember { mutableStateOf<List<Anime>>(emptyList()) }
+        val isSelecting = selected.isNotEmpty()
+
+        BackHandler(enabled = isSelecting) { selected.clear() }
 
         Scaffold(
             topBar = {
@@ -67,6 +91,15 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
                     navigateUp = navigator::pop,
                     onClickCloseSearch = navigator::pop,
                 )
+            },
+            floatingActionButton = {
+                if (isSelecting) {
+                    ExtendedFloatingActionButton(
+                        text = { Text(stringResource(MR.strings.anime_add_selected, selected.size)) },
+                        icon = { Icon(imageVector = MaterialSymbols.Rounded.Add, contentDescription = null) },
+                        onClick = { picked = selected.values.toList() },
+                    )
+                }
             },
         ) { contentPadding ->
             when {
@@ -97,41 +130,64 @@ class AnimeSearchScreen(private val defaultStatus: AnimeStatus) : Screen() {
                     },
                     modifier = Modifier.padding(contentPadding),
                 )
-                else -> LazyColumn(contentPadding = contentPadding) {
+                else -> LazyColumn(contentPadding = contentPadding + PaddingValues(bottom = 88.dp)) {
                     items(state.results, key = { it.malId }) { anime ->
+                        val toggleSelection = {
+                            if (selected.remove(anime.malId) == null) {
+                                selected[anime.malId] = anime
+                            }
+                        }
                         SearchResultRow(
                             anime = anime,
                             status = inList[anime.malId],
-                            onClick = { picked = anime },
+                            isSelected = anime.malId in selected,
+                            onClick = {
+                                if (isSelecting) toggleSelection() else picked = listOf(anime)
+                            },
+                            onLongClick = toggleSelection,
                         )
                     }
                 }
             }
         }
 
-        picked?.let { anime ->
+        if (picked.isNotEmpty()) {
+            val onlyOne = picked.singleOrNull()
             AddAnimeDialog(
-                initialStatus = inList[anime.malId] ?: defaultStatus,
-                onDismissRequest = { picked = null },
+                initialStatus = onlyOne?.let { inList[it.malId] } ?: defaultStatus,
+                onDismissRequest = { picked = emptyList() },
                 onConfirm = { status ->
-                    viewModel.add(anime, status)
-                    picked = null
+                    viewModel.add(picked, status, folderId)
+                    picked = emptyList()
+                    selected.clear()
                 },
             )
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SearchResultRow(
     anime: Anime,
     status: AnimeStatus?,
+    isSelected: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
 ) {
+    val haptic = LocalHapticFeedback.current
+    val background = if (isSelected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .background(background)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                },
+            )
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -160,6 +216,14 @@ private fun SearchResultRow(
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
+        }
+        if (isSelected) {
+            Icon(
+                imageVector = MaterialSymbols.Rounded.Check,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 8.dp),
+            )
         }
     }
 }

@@ -158,11 +158,13 @@ class AnimeListViewModel(
         }
     }
 
+    /** Chegar ao último episódio marca a temporada como vista (a pasta só passa a Completed com todas vistas). */
     fun setEpisodesWatched(anime: Anime, episodes: Long) {
         val maximumEpisodes = anime.numEpisodes ?: Long.MAX_VALUE
         val episodesWatched = episodes.coerceIn(0, maximumEpisodes)
+        val status = AnimeShelf.statusForEpisodes(anime, episodesWatched)
         changeAndPush { currentUserId ->
-            animeRepository.setProgress(currentUserId, anime.malId, anime.status, episodesWatched)
+            animeRepository.setProgress(currentUserId, anime.malId, status, episodesWatched)
         }
     }
 
@@ -284,7 +286,7 @@ class AnimeListViewModel(
         val animes: List<Anime> = emptyList(),
         val folders: List<AnimeFolder> = emptyList(),
         val tabModes: Map<AnimeStatus, AnimeTabMode> = emptyMap(),
-        val status: AnimeStatus = AnimeStatus.WATCHING,
+        val status: AnimeStatus = AnimeStatus.PLAN_TO_WATCH,
         val connection: MalAnimeSync.Connection = MalAnimeSync.Connection.UNKNOWN,
         val malUsername: String = "",
         val isSyncing: Boolean = false,

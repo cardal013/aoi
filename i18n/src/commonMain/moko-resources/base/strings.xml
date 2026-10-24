@@ -161,11 +161,11 @@
 
     <!-- Aoi: animes -->
     <string name="anime_tab">Anime</string>
-    <string name="anime_status_watching">Watching</string>
     <string name="anime_status_plan_to_watch">Plan to Watch</string>
     <string name="anime_status_completed">Completed</string>
     <string name="anime_add">Add anime</string>
     <string name="anime_add_to">Add to</string>
+    <string name="anime_add_selected">Add %1$d</string>
     <string name="anime_search_hint">Search MyAnimeList</string>
     <string name="anime_search_prompt">Search for an anime to add it to your list</string>
     <string name="anime_search_error">Couldn\'t reach MyAnimeList. Try again.</string>

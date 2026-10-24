@@ -2,7 +2,7 @@ import kotlin.Boolean;
 
 -- Aoi: lista de animes do MyAnimeList, copia local da user_mal_anime do Supabase.
 -- Uma linha por conta do Aoi (user_id) e anime do MAL (mal_id), para contas diferentes nao se misturarem.
--- status: WATCHING, PLAN_TO_WATCH, COMPLETED (iguais aos da cloud).
+-- status: PLAN_TO_WATCH, COMPLETED (iguais aos da cloud).
 -- touched_at (ms): quando o anime foi mexido pela ultima vez (modo Recentes).
 -- dirty_at (ms): alteracao local ainda por enviar a edge function `mal` (fila offline); NULL = ja enviada.
 -- Remover so marca deleted = 1, para a remocao tambem ir na fila.

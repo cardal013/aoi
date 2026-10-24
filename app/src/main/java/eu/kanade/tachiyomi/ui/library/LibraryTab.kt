@@ -30,6 +30,7 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.anime.AnimeListPage
+import eu.kanade.presentation.anime.AnimeTabModeButton
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
@@ -42,6 +43,7 @@ import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
+import eu.kanade.tachiyomi.data.anime.MalAnimeSync
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
 import eu.kanade.tachiyomi.ui.anime.AnimeFolderScreen
 import eu.kanade.tachiyomi.ui.anime.AnimeListViewModel
@@ -166,6 +168,15 @@ data object LibraryTab : Tab {
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
                     showMangaActions = !onAnimePage,
+                    animeActions = {
+                        if (animeState.connection == MalAnimeSync.Connection.CONNECTED) {
+                            val tab = animeState.status
+                            AnimeTabModeButton(
+                                mode = animeState.modeFor(tab),
+                                onChangeMode = { animeViewModel.setTabMode(tab, it) },
+                            )
+                        }
+                    },
                 )
             },
             bottomBar = {
@@ -234,7 +245,6 @@ data object LibraryTab : Tab {
                             searchQuery = state.searchQuery,
                             contentPadding = pagePadding,
                             onSelectStatus = animeViewModel::selectStatus,
-                            onSetTabMode = animeViewModel::setTabMode,
                             onClickAdd = { navigator.push(AnimeSearchScreen(animeState.status)) },
                             onOpenFolder = { folderId -> navigator.push(AnimeFolderScreen(folderId)) },
                             onChangeStatus = animeViewModel::setStatus,

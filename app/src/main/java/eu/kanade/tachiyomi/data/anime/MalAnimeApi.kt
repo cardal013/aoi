@@ -328,7 +328,9 @@ class MalAnimeApi(
         val rows = supabase.postgrest["user_anime_tabs"]
             .select { filter { eq("user_id", userId) } }
             .decodeList<UserAnimeTabRemote>()
-        rows.associate { row -> AnimeStatus.fromRemote(row.tab) to AnimeTabMode.fromRemote(row.mode) }
+        rows.mapNotNull { row ->
+            AnimeStatus.tabFromRemote(row.tab)?.let { tab -> tab to AnimeTabMode.fromRemote(row.mode) }
+        }.toMap()
     }
 
     suspend fun upsertTabMode(userId: String, tab: AnimeStatus, mode: AnimeTabMode) {
@@ -454,7 +456,7 @@ class MalAnimeApi(
             folderId = folderId,
             folderPosition = folderPosition,
             manualPosition = manualPosition,
-            manualTab = manualTab?.let(AnimeStatus::fromRemote),
+            manualTab = manualTab?.let(AnimeStatus::tabFromRemote),
         )
     }
 
@@ -475,7 +477,7 @@ class MalAnimeApi(
             coverMalId = coverMalId,
             sortOrder = FolderSortOrder.fromRemote(sortOrder),
             manualPosition = manualPosition,
-            manualTab = manualTab?.let(AnimeStatus::fromRemote),
+            manualTab = manualTab?.let(AnimeStatus::tabFromRemote),
         )
     }
 

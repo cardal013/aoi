@@ -13,7 +13,7 @@ class AnimeShelfTest {
 
     private fun anime(
         malId: Long,
-        status: AnimeStatus = AnimeStatus.WATCHING,
+        status: AnimeStatus = AnimeStatus.PLAN_TO_WATCH,
         startDate: String? = null,
         touchedAt: Long = 0,
         folderId: String? = null,
@@ -55,13 +55,30 @@ class AnimeShelfTest {
     fun `aba da pasta conforme o estado das temporadas`() {
         val completed = anime(1, AnimeStatus.COMPLETED)
         val planned = anime(2, AnimeStatus.PLAN_TO_WATCH)
-        val watching = anime(3, AnimeStatus.WATCHING)
 
         AnimeShelf.folderTab(listOf(completed, completed.copy(malId = 4))) shouldBe AnimeStatus.COMPLETED
         AnimeShelf.folderTab(listOf(planned)) shouldBe AnimeStatus.PLAN_TO_WATCH
-        AnimeShelf.folderTab(listOf(completed, planned)) shouldBe AnimeStatus.WATCHING
-        AnimeShelf.folderTab(listOf(watching)) shouldBe AnimeStatus.WATCHING
+        AnimeShelf.folderTab(listOf(completed, planned)) shouldBe AnimeStatus.PLAN_TO_WATCH
         AnimeShelf.folderTab(emptyList()) shouldBe null
+    }
+
+    @Test
+    fun `chegar ao último episódio marca como vista e descer volta a Plan to Watch`() {
+        val planned = anime(1, AnimeStatus.PLAN_TO_WATCH)
+        val completed = anime(2, AnimeStatus.COMPLETED)
+        val unknownTotal = anime(3, AnimeStatus.PLAN_TO_WATCH).copy(numEpisodes = null)
+
+        AnimeShelf.statusForEpisodes(planned, 11) shouldBe AnimeStatus.PLAN_TO_WATCH
+        AnimeShelf.statusForEpisodes(planned, 12) shouldBe AnimeStatus.COMPLETED
+        AnimeShelf.statusForEpisodes(completed, 11) shouldBe AnimeStatus.PLAN_TO_WATCH
+        AnimeShelf.statusForEpisodes(unknownTotal, 500) shouldBe AnimeStatus.PLAN_TO_WATCH
+    }
+
+    @Test
+    fun `a antiga aba Watching deixa de existir`() {
+        AnimeStatus.fromRemote("WATCHING") shouldBe AnimeStatus.PLAN_TO_WATCH
+        AnimeStatus.tabFromRemote("WATCHING") shouldBe null
+        AnimeStatus.tabFromRemote("COMPLETED") shouldBe AnimeStatus.COMPLETED
     }
 
     @Test
@@ -99,18 +116,18 @@ class AnimeShelfTest {
     }
 
     @Test
-    fun `pasta com uma temporada vista e outra por ver aparece em Watching e não solta`() {
+    fun `pasta com uma temporada vista e outra por ver aparece em Plan to Watch e não solta`() {
         val season1 = anime(1, AnimeStatus.COMPLETED, folderId = "p")
         val season2 = anime(2, AnimeStatus.PLAN_TO_WATCH, folderId = "p")
         val loose = anime(3, AnimeStatus.COMPLETED)
         val animes = listOf(season1, season2, loose)
         val folders = listOf(folder("p"))
 
-        val watching = AnimeShelf.itemsInTab(animes, folders, AnimeStatus.WATCHING, AnimeTabMode.RECENT)
+        val planned = AnimeShelf.itemsInTab(animes, folders, AnimeStatus.PLAN_TO_WATCH, AnimeTabMode.RECENT)
         val completed = AnimeShelf.itemsInTab(animes, folders, AnimeStatus.COMPLETED, AnimeTabMode.RECENT)
 
-        watching.map { it.key } shouldBe listOf("folder:p")
-        (watching.single() as AnimeShelf.Folder).members.size shouldBe 2
+        planned.map { it.key } shouldBe listOf("folder:p")
+        (planned.single() as AnimeShelf.Folder).members.size shouldBe 2
         completed.map { it.key } shouldBe listOf("anime:3")
     }
 
@@ -127,7 +144,7 @@ class AnimeShelfTest {
     fun `anime numa pasta que não existe aparece solto`() {
         val orphan = anime(1, folderId = "apagada")
 
-        AnimeShelf.itemsInTab(listOf(orphan), emptyList(), AnimeStatus.WATCHING, AnimeTabMode.RECENT)
+        AnimeShelf.itemsInTab(listOf(orphan), emptyList(), AnimeStatus.PLAN_TO_WATCH, AnimeTabMode.RECENT)
             .map { it.key } shouldBe listOf("anime:1")
     }
 
@@ -140,7 +157,7 @@ class AnimeShelfTest {
         AnimeShelf.itemsInTab(
             listOf(old, inFolder, middle),
             listOf(folder("p")),
-            AnimeStatus.WATCHING,
+            AnimeStatus.PLAN_TO_WATCH,
             AnimeTabMode.RECENT,
         )
             .map { it.key } shouldBe listOf("folder:p", "anime:3", "anime:1")
@@ -148,15 +165,15 @@ class AnimeShelfTest {
 
     @Test
     fun `Manual segue a posição e o que vem de outra aba vai para o topo`() {
-        val first = anime(1, touchedAt = 1, manualPosition = 0.0, manualTab = AnimeStatus.WATCHING)
-        val second = anime(2, touchedAt = 99, manualPosition = 1.0, manualTab = AnimeStatus.WATCHING)
+        val first = anime(1, touchedAt = 1, manualPosition = 0.0, manualTab = AnimeStatus.PLAN_TO_WATCH)
+        val second = anime(2, touchedAt = 99, manualPosition = 1.0, manualTab = AnimeStatus.PLAN_TO_WATCH)
         // arrumado à mão noutra aba: aqui conta como novo
-        val fromOtherTab = anime(3, touchedAt = 5, manualPosition = 0.5, manualTab = AnimeStatus.PLAN_TO_WATCH)
+        val fromOtherTab = anime(3, touchedAt = 5, manualPosition = 0.5, manualTab = AnimeStatus.COMPLETED)
 
         AnimeShelf.itemsInTab(
             listOf(first, second, fromOtherTab),
             emptyList(),
-            AnimeStatus.WATCHING,
+            AnimeStatus.PLAN_TO_WATCH,
             AnimeTabMode.MANUAL,
         )
             .map { it.key } shouldBe listOf("anime:3", "anime:1", "anime:2")
@@ -166,19 +183,19 @@ class AnimeShelfTest {
     fun `primeiro arrastar renumera a aba toda`() {
         val items = listOf(anime(2), anime(1), anime(3)).map { AnimeShelf.LooseAnime(it) }
 
-        AnimeShelf.positionsAfterDrag(items, "anime:2", AnimeStatus.WATCHING) shouldBe
+        AnimeShelf.positionsAfterDrag(items, "anime:2", AnimeStatus.PLAN_TO_WATCH) shouldBe
             mapOf("anime:2" to 0.0, "anime:1" to 1.0, "anime:3" to 2.0)
     }
 
     @Test
     fun `arrastar numa aba já arrumada só muda o arrastado`() {
         val arranged = { malId: Long, position: Double ->
-            AnimeShelf.LooseAnime(anime(malId, manualPosition = position, manualTab = AnimeStatus.WATCHING))
+            AnimeShelf.LooseAnime(anime(malId, manualPosition = position, manualTab = AnimeStatus.PLAN_TO_WATCH))
         }
         // o 3 (posição 2) foi arrastado para entre o 1 e o 2
         val newOrder = listOf(arranged(1, 0.0), arranged(3, 2.0), arranged(2, 1.0))
 
-        AnimeShelf.positionsAfterDrag(newOrder, "anime:3", AnimeStatus.WATCHING) shouldBe mapOf("anime:3" to 0.5)
+        AnimeShelf.positionsAfterDrag(newOrder, "anime:3", AnimeStatus.PLAN_TO_WATCH) shouldBe mapOf("anime:3" to 0.5)
     }
 
     @Test
