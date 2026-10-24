@@ -14,7 +14,7 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
-## [Unreleased]
+## [Aoi v0.24.0] - 2026-10-24
 ### Changed
 - Anime have only two statuses, *Plan to Watch* and *Completed*. *Watching* anime become *Plan to Watch*, also on MyAnimeList (the episodes you watched stay)
 - Reaching the last episode marks the anime as *Completed*; going back below it returns it to *Plan to Watch*. A folder shows in *Completed* only when everything in it is completed

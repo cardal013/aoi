@@ -97,6 +97,12 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.24.0
+- Anime have only *Plan to Watch* and *Completed* (*Watching* becomes *Plan to Watch*, also on MyAnimeList); the last episode marks an anime *Completed*
+- Add several anime at once from the search, and add straight into a folder with *+*
+- *Recent*/*Manual* button next to the search icon
+- Website: the same changes
+
 ### 0.23.0
 - *Anime* tab with your MyAnimeList anime list instead of AniList (connect once; the manga list is never touched), with folders for seasons and *Recent*/*Manual* order
 - *Users* in *Account* for admins
