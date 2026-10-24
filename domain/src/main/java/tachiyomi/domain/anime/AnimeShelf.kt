@@ -14,9 +14,6 @@ import tachiyomi.domain.anime.model.FolderSortOrder
  */
 object AnimeShelf {
 
-    // Aba de uma pasta sem animes (as pastas vazias ficam; a confirmar com o Afonso)
-    val EMPTY_FOLDER_TAB = AnimeStatus.WATCHING
-
     // Abaixo disto, a meia distância entre duas posições já não é segura: renumera-se a aba
     private const val MIN_POSITION_GAP = 1e-6
 
@@ -53,11 +50,12 @@ object AnimeShelf {
 
     /**
      * Aba onde aparece uma pasta: todas Completed -> Completed; todas Plan to Watch -> Plan to Watch;
-     * qualquer mistura (ou só Watching) -> Watching. Pasta vazia -> [EMPTY_FOLDER_TAB].
+     * qualquer mistura (ou só Watching) -> Watching. Pasta vazia -> null: não aparece em nenhuma aba
+     * (decisão do Afonso: pasta que fica vazia apaga-se sozinha; a app, o site e a edge function apagam-na).
      */
-    fun folderTab(members: List<Anime>): AnimeStatus {
+    fun folderTab(members: List<Anime>): AnimeStatus? {
         if (members.isEmpty()) {
-            return EMPTY_FOLDER_TAB
+            return null
         }
         val allCompleted = members.all { it.status == AnimeStatus.COMPLETED }
         if (allCompleted) {

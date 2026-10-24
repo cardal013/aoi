@@ -165,7 +165,7 @@ class MalAnimeSync(
         val userId = currentUserIdOrNull() ?: return false
         return try {
             api.disconnect()
-            saveConnection(userId, MalAnimeApi.Connection(connected = false, malUsername = null))
+            saveConnection(userId, MalAnimeApi.Connection(connected = false, malUsername = null, malUserId = null))
             true
         } catch (e: CancellationException) {
             throw e
@@ -193,23 +193,25 @@ class MalAnimeSync(
     // ---------- Sync completo ----------
 
     /**
-     * 1. manda a fila (se não der, o Supabase está inacessível e não vale a pena continuar)
-     * 2. confirma no servidor se o MAL está ligado (sem MAL ligado não há lista)
+     * 1. confirma no servidor se o MAL está ligado (sem MAL ligado não há lista) e se é a mesma conta do MAL
+     *    (se não for, esquece tudo o que está no aparelho dessa conta do Aoi, como o servidor fez)
+     * 2. manda a fila (se não der, o Supabase está inacessível e não vale a pena continuar)
      * 3. pede ao servidor o sync com o MAL (se o MAL estiver em baixo, continua com a cópia)
-     * 4. lê a cópia
+     * 4. lê a cópia, as pastas e os modos das abas
      */
     private suspend fun runFullSync(userId: String) {
-        val queueSent = sendQueue(userId)
-        if (!queueSent) {
-            return
-        }
-        sendLayout(userId)
-
         val connection = api.getConnection()
         saveConnection(userId, connection)
         if (!connection.connected) {
             return
         }
+        forgetOtherMalAccount(userId, connection.malUserId)
+
+        val queueSent = sendQueue(userId)
+        if (!queueSent) {
+            return
+        }
+        sendLayout(userId)
 
         val stillConnected = syncWithMal(userId)
         if (!stillConnected) {
@@ -217,6 +219,26 @@ class MalAnimeSync(
         }
         importCopy(userId)
         importFoldersAndTabs(userId)
+    }
+
+    /**
+     * Se a conta do MAL ligada ([malUserId]) não é a que este aparelho conhecia para esta conta do Aoi, apaga
+     * daqui os animes (incluindo a fila), as pastas e os modos das abas e volta a ler tudo. O servidor já apagou
+     * a cópia ao ligar a outra conta (decisão do Afonso). Na mesma conta do MAL não mexe em nada.
+     */
+    private suspend fun forgetOtherMalAccount(userId: String, malUserId: Long?) {
+        if (malUserId == null) {
+            return
+        }
+        val knownMalUserId = libraryPreferences.malUserId(userId)
+        val isOtherMalAccount = knownMalUserId.get() != NO_MAL_USER_ID && knownMalUserId.get() != malUserId
+        if (isOtherMalAccount) {
+            logcat(LogPriority.INFO) { "MAL: outra conta do MAL, apaga os animes e as pastas deste aparelho" }
+            animeRepository.deleteAll(userId)
+            folderRepository.deleteAll(userId)
+            libraryPreferences.malAnimeDownloadSync(userId).set(0L)
+        }
+        knownMalUserId.set(malUserId)
     }
 
     /** Guarda o estado da ligação (o que a aba Anime mostra, mesmo sem rede). */
@@ -235,7 +257,7 @@ class MalAnimeSync(
             api.syncList()
         } catch (e: MalAnimeApi.FunctionException) {
             if (e.errorCode == ERROR_MAL_NOT_CONNECTED) {
-                saveConnection(userId, MalAnimeApi.Connection(connected = false, malUsername = null))
+                saveConnection(userId, MalAnimeApi.Connection(connected = false, malUsername = null, malUserId = null))
                 return false
             }
             if (e.errorCode == ERROR_MAL_UNAVAILABLE) {
@@ -321,6 +343,8 @@ class MalAnimeSync(
      */
     private suspend fun sendLayout(userId: String) {
         try {
+            // Pasta que ficou vazia apaga-se sozinha (decisão do Afonso); a remoção vai já a seguir
+            folderRepository.markEmptyFoldersDeleted(userId)
             val dirtyFolders = folderRepository.getDirty(userId)
             val (deletedFolders, changedFolders) = dirtyFolders.partition { it.deleted }
 
@@ -377,6 +401,7 @@ class MalAnimeSync(
 
     private companion object {
         const val MIN_SYNC_INTERVAL_MS = 10_000L
+        const val NO_MAL_USER_ID = 0L
         const val DOWNLOAD_OVERLAP_MS = 10 * 60 * 1000L
         const val ERROR_MAL_NOT_CONNECTED = "mal_not_connected"
         const val ERROR_MAL_UNAVAILABLE = "mal_unavailable"

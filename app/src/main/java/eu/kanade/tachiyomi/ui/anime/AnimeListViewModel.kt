@@ -216,8 +216,10 @@ class AnimeListViewModel(
         val manualPosition = if (wasArrangedInItsTab) anime.manualPosition else null
         val manualTab = if (wasArrangedInItsTab) anime.manualTab else null
         changeAndPush { currentUserId ->
-            folderRepository.create(currentUserId, folderId, name.trim(), manualPosition, manualTab)
+            // Primeiro o anime e só depois a pasta: assim a pasta nunca existe vazia (e uma pasta vazia
+            // apaga-se sozinha no envio). Até a pasta existir, o anime aparece solto
             animeRepository.setFolder(currentUserId, anime.malId, folderId, FIRST_FOLDER_POSITION)
+            folderRepository.create(currentUserId, folderId, name.trim(), manualPosition, manualTab)
         }
     }
 
@@ -231,7 +233,7 @@ class AnimeListViewModel(
         }
     }
 
-    /** Tira [anime] da pasta: fica solto e vai para o topo da aba no modo Manual. */
+    /** Tira [anime] da pasta: fica solto e vai para o topo da aba no modo Manual. Se a pasta ficar vazia, apaga-se. */
     fun removeFromFolder(anime: Anime) {
         changeAndPush { currentUserId -> animeRepository.setFolder(currentUserId, anime.malId, null, null) }
     }

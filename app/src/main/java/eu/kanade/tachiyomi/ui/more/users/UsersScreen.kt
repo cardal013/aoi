@@ -59,7 +59,7 @@ import java.time.format.FormatStyle
 /**
  * Ecrã Users, aberto em Account (só para admins, só na app; não vai para o site).
  * Lista com pesquisa por username; cada linha tem o username, a data de criação, o interruptor de Admin
- * (desligado na própria conta) e o botão de mudar a palavra-passe (desligado nos outros admins).
+ * (desligado na própria conta) e o botão de mudar a palavra-passe (desligado na própria conta e nos admins).
  */
 class UsersScreen : Screen() {
 
@@ -77,6 +77,7 @@ class UsersScreen : Screen() {
                     UsersViewModel.Event.PasswordChanged -> MR.strings.users_password_changed
                     UsersViewModel.Event.PasswordChangeFailed -> MR.strings.users_password_failed
                     UsersViewModel.Event.PasswordOfAdmin -> MR.strings.users_password_admin
+                    UsersViewModel.Event.OwnPassword -> MR.strings.users_password_own
                     UsersViewModel.Event.AdminChangeFailed -> MR.strings.users_admin_failed
                 }
                 context.toast(message)
@@ -146,7 +147,7 @@ class UsersScreen : Screen() {
 
 /**
  * Uma conta: username e data de criação; interruptor de Admin (não dá para tirar o próprio) e
- * botão de mudar a palavra-passe (não dá para a de outro admin).
+ * botão de mudar a palavra-passe (não dá para a própria nem para a de outro admin).
  */
 @Composable
 private fun UserRow(
@@ -156,8 +157,8 @@ private fun UserRow(
     onChangePassword: () -> Unit,
 ) {
     val canToggleAdmin = !isCurrentUser
-    val isOtherAdmin = user.isAdmin && !isCurrentUser
-    val canChangePassword = !isOtherAdmin
+    // Nem a própria (decisão do Afonso) nem a de outro admin
+    val canChangePassword = !isCurrentUser && !user.isAdmin
 
     Row(
         modifier = Modifier

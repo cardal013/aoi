@@ -41,4 +41,7 @@ interface AnimeRepository {
     suspend fun getLayoutDirty(userId: String): List<Anime>
 
     suspend fun clearLayoutDirty(userId: String, malId: Long, layoutDirtyAt: Long)
+
+    /** Apaga todos os animes da conta neste aparelho (outra conta do MAL foi ligada). */
+    suspend fun deleteAll(userId: String)
 }

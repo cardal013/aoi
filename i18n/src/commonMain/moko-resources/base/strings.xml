@@ -139,6 +139,7 @@
     <string name="users_password_changed">Password changed</string>
     <string name="users_password_failed">Couldn\'t change the password. Try again.</string>
     <string name="users_password_admin">You can\'t change another admin\'s password</string>
+    <string name="users_password_own">Change your own password on the website, in Profile</string>
     <string name="account_logout">Log out</string>
     <string name="account_error_credentials">Wrong username or password</string>
     <string name="account_error_username_taken">This username is already taken</string>

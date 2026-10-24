@@ -61,7 +61,7 @@ class AnimeShelfTest {
         AnimeShelf.folderTab(listOf(planned)) shouldBe AnimeStatus.PLAN_TO_WATCH
         AnimeShelf.folderTab(listOf(completed, planned)) shouldBe AnimeStatus.WATCHING
         AnimeShelf.folderTab(listOf(watching)) shouldBe AnimeStatus.WATCHING
-        AnimeShelf.folderTab(emptyList()) shouldBe AnimeShelf.EMPTY_FOLDER_TAB
+        AnimeShelf.folderTab(emptyList()) shouldBe null
     }
 
     @Test
@@ -112,6 +112,15 @@ class AnimeShelfTest {
         watching.map { it.key } shouldBe listOf("folder:p")
         (watching.single() as AnimeShelf.Folder).members.size shouldBe 2
         completed.map { it.key } shouldBe listOf("anime:3")
+    }
+
+    @Test
+    fun `pasta vazia não aparece em nenhuma aba`() {
+        val folders = listOf(folder("vazia"))
+
+        for (tab in AnimeStatus.entries) {
+            AnimeShelf.itemsInTab(emptyList(), folders, tab, AnimeTabMode.RECENT) shouldBe emptyList()
+        }
     }
 
     @Test

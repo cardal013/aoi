@@ -249,6 +249,22 @@ class CloudSyncTriggersTest {
         longs("SELECT count(*) FROM mal_anime WHERE folder_id IS NULL") shouldBe listOf(1L)
     }
 
+    @Test
+    fun `pasta sem animes fica marcada para apagar e a com animes fica`() = runBlocking<Unit> {
+        exec("INSERT INTO anime_folders(user_id, id, name, sort_order) VALUES ('u1', 'cheia', 'A', 'DATE_ASC')")
+        exec("INSERT INTO anime_folders(user_id, id, name, sort_order) VALUES ('u1', 'vazia', 'B', 'DATE_ASC')")
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, folder_id) " +
+                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 'cheia')",
+        )
+
+        db.anime_foldersQueries.markEmptyDeleted(now = 7, userId = "u1")
+
+        val deletedFolders = "SELECT count(*) FROM anime_folders WHERE deleted = 1 AND dirty_at = 7 AND id = 'vazia'"
+        longs(deletedFolders) shouldBe listOf(1L)
+        longs("SELECT count(*) FROM anime_folders WHERE deleted = 0") shouldBe listOf(1L)
+    }
+
     private fun insertManga(id: Long, url: String, favorite: Boolean) = exec(
         "INSERT INTO mangas(_id, source, url, title, status, favorite, initialized, viewer, chapter_flags, " +
             "cover_last_modified, date_added) " +

@@ -247,6 +247,12 @@ class LibraryPreferences(
         false,
     )
 
+    /** Conta do MAL (id) que este aparelho conhece para a conta do Aoi; 0 = nenhuma. Se mudar, esquece os animes. */
+    fun malUserId(userId: String): Preference<Long> = preferenceStore.getLong(
+        "aoi_mal_user_id_$userId",
+        0L,
+    )
+
     /** Instante (ms) do início do último import da cópia da lista do MAL com sucesso, por utilizador. */
     fun malAnimeDownloadSync(userId: String): Preference<Long> = preferenceStore.getLong(
         "aoi_mal_anime_download_sync_$userId",

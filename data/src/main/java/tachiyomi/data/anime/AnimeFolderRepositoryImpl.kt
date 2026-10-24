@@ -101,6 +101,15 @@ class AnimeFolderRepositoryImpl(
         }
     }
 
+    override suspend fun markEmptyFoldersDeleted(userId: String) {
+        database.anime_foldersQueries.markEmptyDeleted(System.currentTimeMillis(), userId)
+    }
+
+    override suspend fun deleteAll(userId: String) {
+        database.anime_foldersQueries.deleteAll(userId)
+        database.anime_tabsQueries.deleteAll(userId)
+    }
+
     override fun getTabModesAsFlow(userId: String): Flow<Map<AnimeStatus, AnimeTabMode>> {
         return database.anime_tabsQueries.getAll(userId).subscribeToList().map { rows ->
             rows.associate { row -> AnimeStatus.fromRemote(row.tab) to AnimeTabMode.fromRemote(row.mode) }

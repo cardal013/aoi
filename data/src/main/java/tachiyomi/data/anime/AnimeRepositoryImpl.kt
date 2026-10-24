@@ -126,6 +126,10 @@ class AnimeRepositoryImpl(
         database.mal_animeQueries.clearLayoutDirty(userId, malId, layoutDirtyAt)
     }
 
+    override suspend fun deleteAll(userId: String) {
+        database.mal_animeQueries.deleteAll(userId)
+    }
+
     @Suppress("UNUSED_PARAMETER")
     private fun mapAnime(
         userId: String,

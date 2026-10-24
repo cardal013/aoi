@@ -42,6 +42,12 @@ interface AnimeFolderRepository {
 
     suspend fun upsertFromCloud(userId: String, folders: List<AnimeFolder>)
 
+    /** Marca como apagadas as pastas que ficaram sem animes (a remoção vai no envio seguinte). */
+    suspend fun markEmptyFoldersDeleted(userId: String)
+
+    /** Apaga as pastas e os modos das abas da conta neste aparelho (outra conta do MAL foi ligada). */
+    suspend fun deleteAll(userId: String)
+
     /** Modo de cada aba (as que não têm linha são RECENT). */
     fun getTabModesAsFlow(userId: String): Flow<Map<AnimeStatus, AnimeTabMode>>
 

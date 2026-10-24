@@ -132,3 +132,7 @@ UPDATE mal_anime SET folder_id = NULL, folder_position = NULL WHERE user_id = :u
 clearLayoutDirty:
 UPDATE mal_anime SET layout_dirty_at = NULL
 WHERE user_id = :userId AND mal_id = :malId AND layout_dirty_at = :layoutDirtyAt;
+
+-- Outra conta do MAL ligada a esta conta do Aoi: esquece os animes daqui (o servidor ja apagou a copia)
+deleteAll:
+DELETE FROM mal_anime WHERE user_id = :userId;

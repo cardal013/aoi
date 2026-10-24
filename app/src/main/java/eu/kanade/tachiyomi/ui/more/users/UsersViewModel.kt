@@ -29,8 +29,8 @@ import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Ecrã Users (só admins): pesquisa por username, dar/tirar admin e mudar a palavra-passe.
- * As regras (só admins; ninguém se tira admin a si próprio; não se muda a palavra-passe de outro admin)
- * são garantidas no servidor; aqui o ecrã só esconde o que não dá.
+ * As regras (só admins; ninguém se tira admin a si próprio; não se muda a palavra-passe de outro admin
+ * nem a própria) são garantidas no servidor; aqui o ecrã só esconde o que não dá.
  */
 @Inject
 @ViewModelKey
@@ -104,10 +104,10 @@ class UsersViewModel(
                 throw e
             } catch (e: UsersRepository.UsersException) {
                 logcat(LogPriority.WARN, e) { "Users: o servidor recusou a palavra-passe" }
-                val event = if (e.errorCode == ERROR_TARGET_IS_ADMIN) {
-                    Event.PasswordOfAdmin
-                } else {
-                    Event.PasswordChangeFailed
+                val event = when (e.errorCode) {
+                    ERROR_TARGET_IS_ADMIN -> Event.PasswordOfAdmin
+                    ERROR_OWN_PASSWORD -> Event.OwnPassword
+                    else -> Event.PasswordChangeFailed
                 }
                 mutableEvents.tryEmit(event)
             } catch (e: Exception) {
@@ -128,6 +128,7 @@ class UsersViewModel(
         PasswordChanged,
         PasswordChangeFailed,
         PasswordOfAdmin,
+        OwnPassword,
         AdminChangeFailed,
     }
 
@@ -143,6 +144,7 @@ class UsersViewModel(
     companion object {
         const val MIN_PASSWORD_LENGTH = 6
         private const val ERROR_TARGET_IS_ADMIN = "target_is_admin"
+        private const val ERROR_OWN_PASSWORD = "cannot_change_own_password"
         private val SEARCH_DEBOUNCE = 300.milliseconds
     }
 }

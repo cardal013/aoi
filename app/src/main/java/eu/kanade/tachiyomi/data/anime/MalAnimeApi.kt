@@ -55,8 +55,8 @@ class MalAnimeApi(
     class FunctionException(val httpCode: Int, val errorCode: String) :
         Exception("Edge function mal: $httpCode $errorCode")
 
-    /** Estado da ligação ao MAL da conta com sessão. */
-    data class Connection(val connected: Boolean, val malUsername: String?)
+    /** Estado da ligação ao MAL da conta com sessão; [malUserId] diz qual é a conta do MAL (null se desligado). */
+    data class Connection(val connected: Boolean, val malUsername: String?, val malUserId: Long?)
 
     /** Resposta de update/remove: se o servidor guardou e se já chegou ao MAL. */
     data class SendResult(val saved: Boolean, val malSynced: Boolean, val malError: String?)
@@ -112,7 +112,7 @@ class MalAnimeApi(
     /** Pergunta ao servidor se a conta tem o MAL ligado e com que nome. */
     suspend fun getConnection(): Connection = withIOContext {
         val response = json.decodeFromJsonElement(StatusResponse.serializer(), callFunction("status"))
-        Connection(connected = response.connected, malUsername = response.malUsername)
+        Connection(connected = response.connected, malUsername = response.malUsername, malUserId = response.malUserId)
     }
 
     /** URL de autorização do MAL para abrir no browser; no fim o MAL volta a aoi://mal-anime-auth. */
@@ -344,6 +344,8 @@ class MalAnimeApi(
     private data class StatusResponse(
         val connected: Boolean,
         @SerialName("mal_username") val malUsername: String?,
+        // Só se lê; com valor por defeito porque a versão anterior da edge function não o mandava
+        @SerialName("mal_user_id") val malUserId: Long? = null,
     )
 
     @Serializable

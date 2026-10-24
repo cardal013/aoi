@@ -60,3 +60,13 @@ DELETE FROM anime_folders WHERE user_id = :userId AND id = :id;
 
 clearDirty:
 UPDATE anime_folders SET dirty_at = NULL WHERE user_id = :userId AND id = :id AND dirty_at = :dirtyAt;
+
+-- Pasta sem animes apaga-se sozinha (fica marcada ate a remocao chegar ao Supabase)
+markEmptyDeleted:
+UPDATE anime_folders SET deleted = 1, dirty_at = :now
+WHERE user_id = :userId AND deleted = 0 AND id NOT IN (
+    SELECT folder_id FROM mal_anime WHERE user_id = :userId AND deleted = 0 AND folder_id IS NOT NULL
+);
+
+deleteAll:
+DELETE FROM anime_folders WHERE user_id = :userId;

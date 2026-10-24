@@ -23,3 +23,6 @@ INSERT OR REPLACE INTO anime_tabs(user_id, tab, mode, dirty_at) VALUES (:userId,
 
 clearDirty:
 UPDATE anime_tabs SET dirty_at = NULL WHERE user_id = :userId AND tab = :tab AND dirty_at = :dirtyAt;
+
+deleteAll:
+DELETE FROM anime_tabs WHERE user_id = :userId;
