@@ -8,13 +8,14 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { HttpError } from "../_shared/http.ts"
 import { callMalApi, callMalPublicApi, getMalSession, type MalSession, MalUnavailableError } from "./mal_api.ts"
 
-// Os 3 estados do Aoi. On Hold e Dropped do MAL passam a PLAN_TO_WATCH (no próprio MAL).
+// Os 2 estados do Aoi. Watching, On Hold e Dropped do MAL passam a PLAN_TO_WATCH (no próprio MAL).
 const AOI_TO_MAL_STATUS: Record<string, string> = {
-  WATCHING: "watching",
   PLAN_TO_WATCH: "plan_to_watch",
   COMPLETED: "completed",
 }
-const MAL_STATUSES_TO_CONVERT = ["on_hold", "dropped"]
+const MAL_STATUSES_TO_CONVERT = ["watching", "on_hold", "dropped"]
+// A app 0.23 ainda manda WATCHING
+const LEGACY_WATCHING_STATUS = "WATCHING"
 
 const LIST_FIELDS = "list_status,num_episodes,media_type,start_date,alternative_titles,main_picture"
 // O MAL devolve no máximo 1000 por página na lista do utilizador
@@ -90,11 +91,8 @@ function detailsFromNode(node: MalAnimeNode): AnimeDetails {
   }
 }
 
-/** Estado do MAL para o do Aoi (On Hold, Dropped e qualquer outro passam a PLAN_TO_WATCH). */
+/** Estado do MAL para o do Aoi (Watching, On Hold, Dropped e qualquer outro passam a PLAN_TO_WATCH). */
 function aoiStatusFromMal(malStatus: string): string {
-  if (malStatus === "watching") {
-    return "WATCHING"
-  }
   if (malStatus === "completed") {
     return "COMPLETED"
   }
@@ -227,7 +225,8 @@ async function sendRowToMal(service: SupabaseClient, session: MalSession, row: C
     response = await deleteFromMalList(service, session, row.mal_id)
   } else {
     response = await patchMalListStatus(service, session, row.mal_id, {
-      status: AOI_TO_MAL_STATUS[row.status],
+      // Uma linha que ainda está WATCHING (de antes da migration) vai como Plan to Watch
+      status: AOI_TO_MAL_STATUS[row.status] ?? "plan_to_watch",
       num_watched_episodes: String(row.episodes_watched),
     })
   }
@@ -296,11 +295,11 @@ async function sendPendingRows(service: SupabaseClient, session: MalSession, cop
 }
 
 /**
- * Passa a Plan to Watch, no próprio MAL, os animes que lá estão On Hold ou Dropped
- * (o Aoi só tem 3 estados). Não tem volta. Faz 5 pedidos de cada vez.
+ * Passa a Plan to Watch, no próprio MAL, os animes que lá estão Watching, On Hold ou Dropped
+ * (o Aoi só tem 2 estados). Não tem volta. Os episódios vistos ficam. Faz 5 pedidos de cada vez.
  * Devolve quantos converteu. MAL em baixo lança MalUnavailableError (o próximo sync continua).
  */
-async function convertOnHoldAndDropped(
+async function convertToPlanToWatch(
   service: SupabaseClient,
   session: MalSession,
   malEntries: MalListEntry[],
@@ -314,7 +313,7 @@ async function convertOnHoldAndDropped(
   return entriesToConvert.length
 }
 
-/** Converte um anime On Hold / Dropped em Plan to Watch no MAL. */
+/** Converte um anime Watching / On Hold / Dropped em Plan to Watch no MAL (só o estado: os episódios ficam). */
 async function convertOneEntry(service: SupabaseClient, session: MalSession, entry: MalListEntry): Promise<void> {
   const response = await patchMalListStatus(service, session, entry.node.id, { status: "plan_to_watch" })
   if (!response.ok) {
@@ -430,7 +429,7 @@ async function markRemovedOnMal(
  * e ao puxar para baixo; também serve de import numa instalação nova):
  * 1. reenvia ao MAL o que ficou pendente na cópia
  * 2. lê a lista inteira do MAL
- * 3. passa On Hold / Dropped a Plan to Watch no MAL
+ * 3. passa Watching / On Hold / Dropped a Plan to Watch no MAL
  * 4. grava na cópia só o que mudou
  * 5. marca como removido o que saiu do MAL
  * Depois a app lê a cópia (user_mal_anime) pelo PostgREST, como faz com o resto.
@@ -442,7 +441,7 @@ export async function syncList(service: SupabaseClient, userId: string) {
 
   const { stillPendingIds, sentCount } = await sendPendingRows(service, session, copyRows)
   const malEntries = await fetchWholeMalList(service, session)
-  const convertedCount = await convertOnHoldAndDropped(service, session, malEntries)
+  const convertedCount = await convertToPlanToWatch(service, session, malEntries)
 
   const copyByMalId = new Map<number, CopyRow>()
   for (const row of copyRows) {
@@ -519,7 +518,7 @@ async function trySendToMal(service: SupabaseClient, userId: string, row: CopyRo
  */
 export async function updateEntry(service: SupabaseClient, userId: string, body: Record<string, unknown>) {
   const malId = readInteger(body.mal_id, 1, "invalid_mal_id")
-  const status = body.status
+  const status = body.status === LEGACY_WATCHING_STATUS ? "PLAN_TO_WATCH" : body.status
   const isValidStatus = typeof status === "string" && status in AOI_TO_MAL_STATUS
   if (!isValidStatus) {
     throw new HttpError(400, "invalid_status")
