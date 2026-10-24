@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.24.2
+- *Recent*/*Manual* button to the left of the search icon in the *Anime* tab
+
 ### 0.24.1
 - The app tells you when a new Aoi release is out and can download and install it (install this version by hand once)
 

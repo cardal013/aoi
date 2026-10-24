@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.24.2] - 2026-10-24
+### Changed
+- *Anime* tab: the *Recent* / *Manual* button is now to the left of the search icon (app and website)
+
 ## [Aoi v0.24.1] - 2026-10-24
 ### Added
 - Update notice: when a new Aoi release comes out, the app shows it when you open it and can download and install it (also in *More → About → Check for updates*). This version still has to be installed by hand once
