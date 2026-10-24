@@ -13,6 +13,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.more.account.AccountScreenContent
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.ui.more.users.UsersScreen
 
 class AccountScreen : Screen() {
 
@@ -23,6 +24,7 @@ class AccountScreen : Screen() {
         val viewModel = metroViewModel<AccountViewModel>()
         val state by viewModel.state.collectAsState()
         val syncState by viewModel.syncState.collectAsState()
+        val isAdmin by viewModel.isAdmin.collectAsState()
 
         val lifecycleOwner = LocalLifecycleOwner.current
         LaunchedEffect(lifecycleOwner) {
@@ -34,7 +36,9 @@ class AccountScreen : Screen() {
         AccountScreenContent(
             state = state,
             syncState = syncState,
+            isAdmin = isAdmin,
             onNavigateBack = navigator::pop,
+            onNavigateToUsers = { navigator.push(UsersScreen()) },
             onNavigateToCloudLibrary = { uriHandler.openUri(CLOUD_LIBRARY_URL) },
             onRemoveLocalOnly = viewModel::removeLocalOnly,
             onKeepLocalOnly = viewModel::keepLocalOnly,

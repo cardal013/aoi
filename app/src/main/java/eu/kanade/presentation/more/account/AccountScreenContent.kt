@@ -57,6 +57,7 @@ import kotlinx.coroutines.delay
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Close
 import mihon.icons.materialsymbols.rounded.LocalLibrary
+import mihon.icons.materialsymbols.rounded.PeopleAlt
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Visibility
@@ -73,7 +74,9 @@ import tachiyomi.presentation.core.i18n.stringResource
 fun AccountScreenContent(
     state: AccountViewModel.State,
     syncState: CloudSync.State,
+    isAdmin: Boolean,
     onNavigateBack: () -> Unit,
+    onNavigateToUsers: () -> Unit,
     onNavigateToCloudLibrary: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
@@ -111,6 +114,8 @@ fun AccountScreenContent(
                     ProfileView(
                         username = state.username,
                         syncState = syncState,
+                        isAdmin = isAdmin,
+                        onUsers = onNavigateToUsers,
                         onLogout = onLogout,
                         onContinue = onNavigateBack,
                         onCloudLibrary = onNavigateToCloudLibrary,
@@ -251,6 +256,8 @@ private fun AuthView(onLogin: (String, String) -> Unit, onSignUp: (String, Strin
 private fun ProfileView(
     username: String,
     syncState: CloudSync.State,
+    isAdmin: Boolean,
+    onUsers: () -> Unit,
     onLogout: () -> Unit,
     onContinue: () -> Unit,
     onCloudLibrary: () -> Unit,
@@ -289,6 +296,16 @@ private fun ProfileView(
         icon = MaterialSymbols.Rounded.LocalLibrary,
         onClick = onCloudLibrary,
     )
+
+    // Só para admins, por cima de "Continue to app" (o ecrã Users não existe no site)
+    if (isAdmin) {
+        Spacer(modifier = Modifier.height(8.dp))
+        ProfileActionButton(
+            text = stringResource(MR.strings.account_users),
+            icon = MaterialSymbols.Rounded.PeopleAlt,
+            onClick = onUsers,
+        )
+    }
 
     Spacer(modifier = Modifier.height(8.dp))
 

@@ -10,6 +10,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.binding
 import dev.zacsweers.metrox.viewmodel.ViewModelKey
 import eu.kanade.tachiyomi.data.account.AccountRepository
+import eu.kanade.tachiyomi.data.account.AdminRepository
 import eu.kanade.tachiyomi.data.account.CloudSync
 import eu.kanade.tachiyomi.util.system.toast
 import io.github.jan.supabase.auth.exception.AuthErrorCode
@@ -32,6 +33,7 @@ class AccountViewModel(
     private val context: Context,
     private val accountRepository: AccountRepository,
     private val cloudSync: CloudSync,
+    adminRepository: AdminRepository,
 ) : ViewModel() {
 
     val state: StateFlow<State> = accountRepository.sessionFlow
@@ -39,6 +41,10 @@ class AccountViewModel(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), State(isLoading = true))
 
     val syncState: StateFlow<CloudSync.State> = cloudSync.state
+
+    // O botão Users só aparece a contas admin
+    val isAdmin: StateFlow<Boolean> = adminRepository.isAdmin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), false)
 
     fun refreshAccount() {
         viewModelScope.launchIO { accountRepository.fetchUsername() }
