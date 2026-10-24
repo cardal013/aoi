@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.24.1
+- The app tells you when a new Aoi release is out and can download and install it (install this version by hand once)
+
 ### 0.24.0
 - Anime have only *Plan to Watch* and *Completed* (*Watching* becomes *Plan to Watch*, also on MyAnimeList); the last episode marks an anime *Completed*
 - Add several anime at once from the search, and add straight into a folder with *+*

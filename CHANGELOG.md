@@ -14,6 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.24.1] - 2026-10-24
+### Added
+- Update notice: when a new Aoi release comes out, the app shows it when you open it and can download and install it (also in *More → About → Check for updates*). This version still has to be installed by hand once
+
+### Fixed
+- The version check no longer thinks an older version is newer (e.g. 0.24.0 vs 1.0.0)
+
 ## [Aoi v0.24.0] - 2026-10-24
 ### Changed
 - Anime have only two statuses, *Plan to Watch* and *Completed*. *Watching* anime become *Plan to Watch*, also on MyAnimeList (the episodes you watched stay)
