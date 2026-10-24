@@ -35,13 +35,8 @@ class AppUpdateChecker(
     }
 }
 
-val GITHUB_REPO: String by lazy {
-    if (isNightlyBuildType) {
-        "mihonapp/mihon-preview"
-    } else {
-        "mihonapp/mihon"
-    }
-}
+// Aoi: as atualizações vêm das releases do Aoi (o nightly não tem releases próprias)
+val GITHUB_REPO: String = "cardal013/aoi"
 
 val RELEASE_TAG: String by lazy {
     if (isNightlyBuildType) {

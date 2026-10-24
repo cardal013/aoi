@@ -106,6 +106,8 @@ android {
             proguardFiles("proguard-android-optimize.txt", "proguard-rules.pro")
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = true)}\"")
+            // Aoi: o APK de release avisa quando sai uma release nova em cardal013/aoi
+            buildConfigField("boolean", "UPDATER_ENABLED", "true")
         }
 
         val commonMatchingFallbacks = listOf(release.name)
@@ -127,12 +129,14 @@ android {
             matchingFallbacks.addAll(commonMatchingFallbacks)
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLatestCommitTime = false)}\"")
+            buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
         }
         create("benchmark") {
             initWith(release)
 
             versionNameSuffix = "-benchmark"
             applicationIdSuffix = ".benchmark"
+            buildConfigField("boolean", "UPDATER_ENABLED", "${Config.enableUpdater}")
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
         }
