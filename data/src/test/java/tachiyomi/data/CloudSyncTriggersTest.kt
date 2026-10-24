@@ -188,6 +188,8 @@ class CloudSyncTriggersTest {
         exec("DROP TRIGGER cloud_pending_progress_on_chapter_insert")
         exec("DROP TABLE cloud_pending_progress")
         exec("DROP TABLE mal_anime")
+        exec("DROP TABLE anime_folders")
+        exec("DROP TABLE anime_tabs")
         Database.Schema.migrate(driver, 18, 19).await()
         exec("INSERT INTO anime(anilist_id, title, status, added_at) VALUES (1, 'Frieren', 'WATCHING', 0)")
 
@@ -199,6 +201,8 @@ class CloudSyncTriggersTest {
                 "VALUES ('u1', 52991, 'Frieren', 'WATCHING', 5, 5)",
         )
         longs("SELECT mal_id FROM mal_anime") shouldBe listOf(52991L)
+        exec("INSERT INTO anime_folders(user_id, id, name, sort_order) VALUES ('u1', 'p', 'Frieren', 'DATE_ASC')")
+        exec("INSERT INTO anime_tabs(user_id, tab, mode) VALUES ('u1', 'WATCHING', 'MANUAL')")
     }
 
     @Test
@@ -227,6 +231,22 @@ class CloudSyncTriggersTest {
         longs(leftFolder) shouldBe listOf(1L)
         db.mal_animeQueries.getAll("u2").awaitAsList().size shouldBe 1
         db.mal_animeQueries.getAll("u1").awaitAsList().size shouldBe 0
+    }
+
+    @Test
+    fun `entrar numa pasta apaga a posição à mão e apagar a pasta deixa os animes soltos`() = runBlocking<Unit> {
+        exec(
+            "INSERT INTO mal_anime(user_id, mal_id, title, status, touched_at, manual_position, manual_tab) " +
+                "VALUES ('u1', 1, 'A', 'WATCHING', 1, 3.0, 'WATCHING')",
+        )
+
+        db.mal_animeQueries.setFolder(folderId = "p", folderPosition = 0.0, now = 5, userId = "u1", malId = 1)
+        val inFolder = "SELECT count(*) FROM mal_anime " +
+            "WHERE folder_id = 'p' AND manual_position IS NULL AND layout_dirty_at = 5"
+        longs(inFolder) shouldBe listOf(1L)
+
+        db.mal_animeQueries.releaseFolder(userId = "u1", folderId = "p")
+        longs("SELECT count(*) FROM mal_anime WHERE folder_id IS NULL") shouldBe listOf(1L)
     }
 
     private fun insertManga(id: Long, url: String, favorite: Boolean) = exec(

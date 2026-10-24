@@ -20,7 +20,31 @@ CREATE TABLE mal_anime(
     manual_position REAL,
     manual_tab TEXT,
     dirty_at INTEGER,
+    layout_dirty_at INTEGER,
     PRIMARY KEY(user_id, mal_id)
 );
 
 CREATE INDEX mal_anime_dirty_index ON mal_anime(user_id, dirty_at) WHERE dirty_at IS NOT NULL;
+CREATE INDEX mal_anime_layout_dirty_index ON mal_anime(user_id, layout_dirty_at) WHERE layout_dirty_at IS NOT NULL;
+
+-- Pastas de animes e modo de ordem de cada aba (copias locais das tabelas do Supabase)
+CREATE TABLE anime_folders(
+    user_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    cover_mal_id INTEGER,
+    sort_order TEXT NOT NULL,
+    manual_position REAL,
+    manual_tab TEXT,
+    deleted INTEGER NOT NULL DEFAULT 0,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, id)
+);
+
+CREATE TABLE anime_tabs(
+    user_id TEXT NOT NULL,
+    tab TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, tab)
+);

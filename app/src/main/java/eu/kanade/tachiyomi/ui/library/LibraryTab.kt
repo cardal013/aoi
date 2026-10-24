@@ -43,8 +43,10 @@ import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
+import eu.kanade.tachiyomi.ui.anime.AnimeFolderScreen
 import eu.kanade.tachiyomi.ui.anime.AnimeListViewModel
 import eu.kanade.tachiyomi.ui.anime.AnimeSearchScreen
+import eu.kanade.tachiyomi.ui.anime.shelfActions
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
@@ -107,6 +109,7 @@ data object LibraryTab : Tab {
 
         val animeViewModel = metroViewModel<AnimeListViewModel>()
         val animeState by animeViewModel.state.collectAsStateWithLifecycle()
+        val animeShelfActions = remember(animeViewModel) { animeViewModel.shelfActions() }
         var onAnimePage by rememberSaveable { mutableStateOf(false) }
         val animeTitle = stringResource(MR.strings.anime_tab)
 
@@ -231,10 +234,14 @@ data object LibraryTab : Tab {
                             searchQuery = state.searchQuery,
                             contentPadding = pagePadding,
                             onSelectStatus = animeViewModel::selectStatus,
+                            onSetTabMode = animeViewModel::setTabMode,
                             onClickAdd = { navigator.push(AnimeSearchScreen(animeState.status)) },
+                            onOpenFolder = { folderId -> navigator.push(AnimeFolderScreen(folderId)) },
                             onChangeStatus = animeViewModel::setStatus,
                             onChangeEpisodes = animeViewModel::setEpisodesWatched,
                             onRemove = animeViewModel::remove,
+                            onTabReordered = animeViewModel::onTabReordered,
+                            shelfActions = animeShelfActions,
                             onConnect = {
                                 animeViewModel.connect(
                                     openUrl = { url -> context.openInBrowser(url) },

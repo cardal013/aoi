@@ -28,13 +28,17 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.anime.model.Anime
+import tachiyomi.domain.anime.model.AnimeFolder
 import tachiyomi.domain.anime.model.AnimeStatus
+import tachiyomi.domain.anime.model.AnimeTabMode
+import tachiyomi.domain.anime.model.FolderSortOrder
 import java.io.IOException
 import java.time.OffsetDateTime
 
 /**
  * Fala com o MyAnimeList (só a lista de ANIMES, nunca os mangas) através da edge function `mal`
- * do Supabase, e lê a cópia da lista (tabela user_mal_anime) pelo PostgREST.
+ * do Supabase, e lê a cópia da lista (tabela user_mal_anime) pelo PostgREST. As pastas, a ordem à mão e o
+ * modo das abas (só do Aoi) vão direto ao Supabase (user_anime_folders, user_mal_anime, user_anime_tabs).
  * A pesquisa vai direta ao MAL quando há MAL_CLIENT_ID no ignorance/local.properties; senão vai pela função.
  * O token do MAL e o client_secret nunca chegam à app: ficam no servidor.
  */
@@ -243,6 +247,97 @@ class MalAnimeApi(
         rows.map { it.toAnime() }
     }
 
+    // ---------- Pastas, ordem à mão e modo das abas (só Supabase; o MAL não sabe delas) ----------
+
+    /** Lê todas as pastas da conta, de 1000 em 1000 (são poucas, por isso lê-se sempre tudo). */
+    suspend fun fetchFolders(userId: String): List<AnimeFolder> = withIOContext {
+        val rows = mutableListOf<UserAnimeFolderRemote>()
+        var firstRow = 0L
+        while (true) {
+            val page = supabase.postgrest["user_anime_folders"]
+                .select {
+                    filter { eq("user_id", userId) }
+                    order("id", Order.ASCENDING)
+                    range(firstRow, firstRow + COPY_PAGE_SIZE - 1)
+                }
+                .decodeList<UserAnimeFolderRemote>()
+            rows.addAll(page)
+
+            // página incompleta = chegou ao fim
+            if (page.size < COPY_PAGE_SIZE) {
+                break
+            }
+            firstRow += COPY_PAGE_SIZE
+        }
+        rows.map { it.toFolder() }
+    }
+
+    /** Cria ou atualiza pastas. */
+    suspend fun upsertFolders(userId: String, folders: List<AnimeFolder>) {
+        if (folders.isEmpty()) {
+            return
+        }
+        val rows = folders.map { folder ->
+            UserAnimeFolderRemote(
+                userId = userId,
+                id = folder.id,
+                name = folder.name,
+                coverMalId = folder.coverMalId,
+                sortOrder = folder.sortOrder.name,
+                manualPosition = folder.manualPosition,
+                manualTab = folder.manualTab?.name,
+            )
+        }
+        withIOContext {
+            supabase.postgrest["user_anime_folders"].upsert(rows) { onConflict = "id" }
+        }
+    }
+
+    /** Apaga uma pasta (no Supabase, a chave estrangeira deixa os animes dela soltos). */
+    suspend fun deleteFolder(userId: String, folderId: String) {
+        withIOContext {
+            supabase.postgrest["user_anime_folders"].delete {
+                filter {
+                    eq("user_id", userId)
+                    eq("id", folderId)
+                }
+            }
+        }
+    }
+
+    /** Grava a pasta e a ordem à mão de um anime na cópia (só estas colunas; o resto é do MAL). */
+    suspend fun updateAnimeLayout(userId: String, anime: Anime) {
+        val layout = AnimeLayoutRemote(
+            folderId = anime.folderId,
+            folderPosition = anime.folderPosition,
+            manualPosition = anime.manualPosition,
+            manualTab = anime.manualTab?.name,
+        )
+        withIOContext {
+            supabase.postgrest["user_mal_anime"].update(layout) {
+                filter {
+                    eq("user_id", userId)
+                    eq("mal_id", anime.malId)
+                }
+            }
+        }
+    }
+
+    /** Modo de cada aba guardado no Supabase (as que não têm linha são RECENT). */
+    suspend fun fetchTabModes(userId: String): Map<AnimeStatus, AnimeTabMode> = withIOContext {
+        val rows = supabase.postgrest["user_anime_tabs"]
+            .select { filter { eq("user_id", userId) } }
+            .decodeList<UserAnimeTabRemote>()
+        rows.associate { row -> AnimeStatus.fromRemote(row.tab) to AnimeTabMode.fromRemote(row.mode) }
+    }
+
+    suspend fun upsertTabMode(userId: String, tab: AnimeStatus, mode: AnimeTabMode) {
+        val row = UserAnimeTabRemote(userId = userId, tab = tab.name, mode = mode.name)
+        withIOContext {
+            supabase.postgrest["user_anime_tabs"].upsert(row) { onConflict = "user_id,tab" }
+        }
+    }
+
     // ---------- Modelos ----------
 
     @Serializable
@@ -357,9 +452,46 @@ class MalAnimeApi(
             folderId = folderId,
             folderPosition = folderPosition,
             manualPosition = manualPosition,
-            manualTab = manualTab,
+            manualTab = manualTab?.let(AnimeStatus::fromRemote),
         )
     }
+
+    // Linha da user_anime_folders (vai e vem tal e qual; sem valores por defeito para irem sempre todos)
+    @Serializable
+    private data class UserAnimeFolderRemote(
+        @SerialName("user_id") val userId: String,
+        val id: String,
+        val name: String,
+        @SerialName("cover_mal_id") val coverMalId: Long?,
+        @SerialName("sort_order") val sortOrder: String,
+        @SerialName("manual_position") val manualPosition: Double?,
+        @SerialName("manual_tab") val manualTab: String?,
+    ) {
+        fun toFolder() = AnimeFolder(
+            id = id,
+            name = name,
+            coverMalId = coverMalId,
+            sortOrder = FolderSortOrder.fromRemote(sortOrder),
+            manualPosition = manualPosition,
+            manualTab = manualTab?.let(AnimeStatus::fromRemote),
+        )
+    }
+
+    // Colunas da user_mal_anime que a app pode mudar (pasta e ordem à mão)
+    @Serializable
+    private data class AnimeLayoutRemote(
+        @SerialName("folder_id") val folderId: String?,
+        @SerialName("folder_position") val folderPosition: Double?,
+        @SerialName("manual_position") val manualPosition: Double?,
+        @SerialName("manual_tab") val manualTab: String?,
+    )
+
+    @Serializable
+    private data class UserAnimeTabRemote(
+        @SerialName("user_id") val userId: String,
+        val tab: String,
+        val mode: String,
+    )
 
     private companion object {
         const val MAL_SEARCH_URL = "https://api.myanimelist.net/v2/anime"

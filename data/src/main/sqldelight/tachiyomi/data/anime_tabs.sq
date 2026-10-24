@@ -1,0 +1,25 @@
+-- Aoi: modo de ordem de cada aba de anime (RECENT ou MANUAL), copia local da user_anime_tabs do Supabase.
+-- Sem linha = RECENT. dirty_at (ms): mudanca por enviar ao Supabase.
+
+CREATE TABLE anime_tabs(
+    user_id TEXT NOT NULL,
+    tab TEXT NOT NULL,
+    mode TEXT NOT NULL,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, tab)
+);
+
+getAll:
+SELECT * FROM anime_tabs WHERE user_id = :userId;
+
+getDirty:
+SELECT * FROM anime_tabs WHERE user_id = :userId AND dirty_at IS NOT NULL;
+
+setMode:
+INSERT OR REPLACE INTO anime_tabs(user_id, tab, mode, dirty_at) VALUES (:userId, :tab, :mode, :now);
+
+upsertFromCloud:
+INSERT OR REPLACE INTO anime_tabs(user_id, tab, mode, dirty_at) VALUES (:userId, :tab, :mode, NULL);
+
+clearDirty:
+UPDATE anime_tabs SET dirty_at = NULL WHERE user_id = :userId AND tab = :tab AND dirty_at = :dirtyAt;

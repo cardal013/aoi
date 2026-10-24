@@ -6,7 +6,8 @@ import kotlin.Boolean;
 -- touched_at (ms): quando o anime foi mexido pela ultima vez (modo Recentes).
 -- dirty_at (ms): alteracao local ainda por enviar a edge function `mal` (fila offline); NULL = ja enviada.
 -- Remover so marca deleted = 1, para a remocao tambem ir na fila.
--- folder_id, folder_position, manual_position e manual_tab vem da cloud (pastas e ordem a mao).
+-- folder_id, folder_position, manual_position e manual_tab: pasta e ordem a mao (so do Aoi, vao direto ao Supabase).
+-- layout_dirty_at (ms): mudanca de pasta ou de ordem ainda por enviar ao Supabase; NULL = ja enviada.
 
 CREATE TABLE mal_anime(
     user_id TEXT NOT NULL,
@@ -26,10 +27,12 @@ CREATE TABLE mal_anime(
     manual_position REAL,
     manual_tab TEXT,
     dirty_at INTEGER,
+    layout_dirty_at INTEGER,
     PRIMARY KEY(user_id, mal_id)
 );
 
 CREATE INDEX mal_anime_dirty_index ON mal_anime(user_id, dirty_at) WHERE dirty_at IS NOT NULL;
+CREATE INDEX mal_anime_layout_dirty_index ON mal_anime(user_id, layout_dirty_at) WHERE layout_dirty_at IS NOT NULL;
 
 -- Modo Recentes (por defeito): o ultimo mexido em cima
 getAll:
@@ -87,14 +90,45 @@ upsertFromCloud:
 INSERT OR REPLACE INTO mal_anime(
     user_id, mal_id, title, title_english, cover_url, media_type, num_episodes, start_date,
     status, episodes_watched, deleted, touched_at,
-    folder_id, folder_position, manual_position, manual_tab, dirty_at
+    folder_id, folder_position, manual_position, manual_tab, dirty_at, layout_dirty_at
 )
 VALUES (
     :userId, :malId, :title, :titleEnglish, :coverUrl, :mediaType, :numEpisodes, :startDate,
     :status, :episodesWatched, :deleted, :touchedAt,
-    :folderId, :folderPosition, :manualPosition, :manualTab, NULL
+    :folderId, :folderPosition, :manualPosition, :manualTab, NULL, NULL
 );
 
 -- So limpa se nao houve outra alteracao entretanto
 clearDirty:
 UPDATE mal_anime SET dirty_at = NULL WHERE user_id = :userId AND mal_id = :malId AND dirty_at = :dirtyAt;
+
+-- Pastas e ordem a mao (vao direto ao Supabase, por isso tem marca propria)
+getLayoutDirty:
+SELECT * FROM mal_anime WHERE user_id = :userId AND layout_dirty_at IS NOT NULL;
+
+-- Entrar ou sair de uma pasta apaga a posicao a mao na aba: dentro da pasta nao conta e, ao sair,
+-- o anime vai para o topo da aba (como o que vem de outra aba no modo Manual)
+setFolder:
+UPDATE mal_anime SET
+    folder_id = :folderId,
+    folder_position = :folderPosition,
+    manual_position = NULL,
+    manual_tab = NULL,
+    layout_dirty_at = :now
+WHERE user_id = :userId AND mal_id = :malId;
+
+setFolderPosition:
+UPDATE mal_anime SET folder_position = :folderPosition, layout_dirty_at = :now
+WHERE user_id = :userId AND mal_id = :malId;
+
+setManualPosition:
+UPDATE mal_anime SET manual_position = :manualPosition, manual_tab = :manualTab, layout_dirty_at = :now
+WHERE user_id = :userId AND mal_id = :malId;
+
+-- Apagar uma pasta so deixa os animes soltos (no Supabase faz o mesmo a chave estrangeira)
+releaseFolder:
+UPDATE mal_anime SET folder_id = NULL, folder_position = NULL WHERE user_id = :userId AND folder_id = :folderId;
+
+clearLayoutDirty:
+UPDATE mal_anime SET layout_dirty_at = NULL
+WHERE user_id = :userId AND mal_id = :malId AND layout_dirty_at = :layoutDirtyAt;

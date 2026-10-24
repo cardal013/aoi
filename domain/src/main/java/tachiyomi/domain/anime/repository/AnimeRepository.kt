@@ -28,4 +28,17 @@ interface AnimeRepository {
 
     /** Aplica o que veio da cloud, sem o marcar para enviar. */
     suspend fun upsertFromCloud(userId: String, animes: List<Anime>)
+
+    /** Põe o anime na pasta [folderId] (null = solto) com a posição [folderPosition] dentro dela. */
+    suspend fun setFolder(userId: String, malId: Long, folderId: String?, folderPosition: Double?)
+
+    suspend fun setFolderPosition(userId: String, malId: Long, folderPosition: Double)
+
+    /** Posição à mão do anime solto na aba [manualTab]. */
+    suspend fun setManualPosition(userId: String, malId: Long, manualPosition: Double, manualTab: AnimeStatus)
+
+    /** Animes com mudança de pasta ou de ordem ainda por enviar ao Supabase. */
+    suspend fun getLayoutDirty(userId: String): List<Anime>
+
+    suspend fun clearLayoutDirty(userId: String, malId: Long, layoutDirtyAt: Long)
 }

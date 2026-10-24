@@ -84,9 +84,46 @@ class AnimeRepositoryImpl(
                 folderId = anime.folderId,
                 folderPosition = anime.folderPosition,
                 manualPosition = anime.manualPosition,
-                manualTab = anime.manualTab,
+                manualTab = anime.manualTab?.name,
             )
         }
+    }
+
+    override suspend fun setFolder(userId: String, malId: Long, folderId: String?, folderPosition: Double?) {
+        database.mal_animeQueries.setFolder(
+            folderId = folderId,
+            folderPosition = folderPosition,
+            now = System.currentTimeMillis(),
+            userId = userId,
+            malId = malId,
+        )
+    }
+
+    override suspend fun setFolderPosition(userId: String, malId: Long, folderPosition: Double) {
+        database.mal_animeQueries.setFolderPosition(folderPosition, System.currentTimeMillis(), userId, malId)
+    }
+
+    override suspend fun setManualPosition(
+        userId: String,
+        malId: Long,
+        manualPosition: Double,
+        manualTab: AnimeStatus,
+    ) {
+        database.mal_animeQueries.setManualPosition(
+            manualPosition = manualPosition,
+            manualTab = manualTab.name,
+            now = System.currentTimeMillis(),
+            userId = userId,
+            malId = malId,
+        )
+    }
+
+    override suspend fun getLayoutDirty(userId: String): List<Anime> {
+        return database.mal_animeQueries.getLayoutDirty(userId, ::mapAnime).awaitAsList()
+    }
+
+    override suspend fun clearLayoutDirty(userId: String, malId: Long, layoutDirtyAt: Long) {
+        database.mal_animeQueries.clearLayoutDirty(userId, malId, layoutDirtyAt)
     }
 
     @Suppress("UNUSED_PARAMETER")
@@ -108,6 +145,7 @@ class AnimeRepositoryImpl(
         manualPosition: Double?,
         manualTab: String?,
         dirtyAt: Long?,
+        layoutDirtyAt: Long?,
     ): Anime = Anime(
         malId = malId,
         title = title,
@@ -123,7 +161,8 @@ class AnimeRepositoryImpl(
         folderId = folderId,
         folderPosition = folderPosition,
         manualPosition = manualPosition,
-        manualTab = manualTab,
+        manualTab = manualTab?.let(AnimeStatus::fromRemote),
         dirtyAt = dirtyAt,
+        layoutDirtyAt = layoutDirtyAt,
     )
 }

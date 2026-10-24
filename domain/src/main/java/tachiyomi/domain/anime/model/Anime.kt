@@ -21,8 +21,10 @@ data class Anime(
     val folderId: String? = null,
     val folderPosition: Double? = null,
     val manualPosition: Double? = null,
-    val manualTab: String? = null,
+    val manualTab: AnimeStatus? = null,
     val dirtyAt: Long? = null,
+    // mudança de pasta ou de ordem à mão ainda por enviar ao Supabase
+    val layoutDirtyAt: Long? = null,
 )
 
 /** Os 3 estados do Aoi. On Hold e Dropped do MAL passam a Plan to Watch no próprio MAL. */

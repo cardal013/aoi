@@ -25,6 +25,7 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.domain.anime.repository.AnimeFolderRepository
 import tachiyomi.domain.anime.repository.AnimeRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
@@ -45,6 +46,7 @@ class MalAnimeSync(
     private val context: Context,
     private val api: MalAnimeApi,
     private val animeRepository: AnimeRepository,
+    private val folderRepository: AnimeFolderRepository,
     private val libraryPreferences: LibraryPreferences,
 ) {
 
@@ -135,14 +137,17 @@ class MalAnimeSync(
         }
     }
 
-    /** Manda já a fila (chamado depois de cada alteração local a um anime). */
+    /** Manda já a fila (chamado depois de cada alteração local a um anime, pasta ou ordem). */
     fun pushChanges() {
         val scope = scope ?: return
         val userId = currentUserIdOrNull() ?: return
         scope.launchIO {
             mutex.withLock {
                 try {
-                    sendQueue(userId)
+                    val queueSent = sendQueue(userId)
+                    if (queueSent) {
+                        sendLayout(userId)
+                    }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
@@ -198,6 +203,7 @@ class MalAnimeSync(
         if (!queueSent) {
             return
         }
+        sendLayout(userId)
 
         val connection = api.getConnection()
         saveConnection(userId, connection)
@@ -210,6 +216,7 @@ class MalAnimeSync(
             return
         }
         importCopy(userId)
+        importFoldersAndTabs(userId)
     }
 
     /** Guarda o estado da ligação (o que a aba Anime mostra, mesmo sem rede). */
@@ -255,7 +262,10 @@ class MalAnimeSync(
         }
 
         val remoteAnimes = api.fetchCopy(userId, updatedSince)
-        val pendingIds = animeRepository.getDirty(userId).map { it.malId }.toSet()
+        // O que está na fila (MAL) ou com pasta/ordem por enviar fica como está aqui
+        val queuedIds = animeRepository.getDirty(userId).map { it.malId }
+        val layoutPendingIds = animeRepository.getLayoutDirty(userId).map { it.malId }
+        val pendingIds = (queuedIds + layoutPendingIds).toSet()
         val animesToApply = remoteAnimes.filter { it.malId !in pendingIds }
         animeRepository.upsertFromCloud(userId, animesToApply)
         marker.set(start)
@@ -299,6 +309,70 @@ class MalAnimeSync(
             }
         }
         return true
+    }
+
+    // ---------- Pastas, ordem à mão e modo das abas (direto ao Supabase) ----------
+
+    /**
+     * Envia ao Supabase as pastas, as mudanças de pasta/ordem dos animes e os modos das abas por enviar.
+     * Ordem: pastas novas/mudadas primeiro (os animes apontam para elas), depois os animes, depois as pastas
+     * apagadas (a chave estrangeira solta os animes) e por fim os modos.
+     * Para no primeiro erro (sem rede): o resto fica marcado para o próximo envio.
+     */
+    private suspend fun sendLayout(userId: String) {
+        try {
+            val dirtyFolders = folderRepository.getDirty(userId)
+            val (deletedFolders, changedFolders) = dirtyFolders.partition { it.deleted }
+
+            api.upsertFolders(userId, changedFolders)
+            for (folder in changedFolders) {
+                folder.dirtyAt?.let { folderRepository.clearDirty(userId, folder.id, it) }
+            }
+
+            for (anime in animeRepository.getLayoutDirty(userId)) {
+                api.updateAnimeLayout(userId, anime)
+                anime.layoutDirtyAt?.let { animeRepository.clearLayoutDirty(userId, anime.malId, it) }
+            }
+
+            for (folder in deletedFolders) {
+                api.deleteFolder(userId, folder.id)
+                folderRepository.deleteRow(userId, folder.id)
+            }
+
+            for ((tab, modeAndDirtyAt) in folderRepository.getDirtyTabModes(userId)) {
+                val (mode, dirtyAt) = modeAndDirtyAt
+                api.upsertTabMode(userId, tab, mode)
+                folderRepository.clearTabModeDirty(userId, tab, dirtyAt)
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN, e) { "MAL: pastas/ordem ficam para o próximo envio" }
+        }
+    }
+
+    /**
+     * Lê do Supabase as pastas (todas; são poucas) e os modos das abas e aplica-os, sem mexer no que
+     * está por enviar daqui. Uma pasta que já não está no Supabase (apagada noutro aparelho) sai daqui.
+     */
+    private suspend fun importFoldersAndTabs(userId: String) {
+        val remoteFolders = api.fetchFolders(userId)
+        val localFolders = folderRepository.getAllIncludingDeleted(userId)
+        val pendingFolderIds = localFolders.filter { it.dirtyAt != null }.map { it.id }.toSet()
+
+        val foldersToApply = remoteFolders.filter { it.id !in pendingFolderIds }
+        folderRepository.upsertFromCloud(userId, foldersToApply)
+
+        val remoteFolderIds = remoteFolders.map { it.id }.toSet()
+        for (folder in localFolders) {
+            val deletedElsewhere = folder.dirtyAt == null && folder.id !in remoteFolderIds
+            if (deletedElsewhere) {
+                folderRepository.deleteRow(userId, folder.id)
+            }
+        }
+
+        folderRepository.upsertTabModesFromCloud(userId, api.fetchTabModes(userId))
+        logcat(LogPriority.INFO) { "MAL: pastas lidas=${remoteFolders.size} | aplicadas=${foldersToApply.size}" }
     }
 
     private companion object {

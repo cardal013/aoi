@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -41,9 +38,12 @@ import eu.kanade.tachiyomi.ui.anime.AnimeListViewModel
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
 import mihon.icons.materialsymbols.rounded.Add
+import mihon.icons.materialsymbols.rounded.Folder
 import mihon.icons.materialsymbols.rounded.MoreVert
+import tachiyomi.domain.anime.AnimeShelf
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.model.AnimeStatus
+import tachiyomi.domain.anime.model.AnimeTabMode
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
@@ -55,8 +55,9 @@ import tachiyomi.presentation.core.util.plus
 
 /**
  * Página Anime da biblioteca. Sem MAL ligado só mostra "Connect MyAnimeList".
- * Com o MAL ligado: filtro por estado em cima (com o menu para desligar o MAL), grelha, puxar para baixo
- * para ir buscar a lista ao MAL e botão para acrescentar.
+ * Com o MAL ligado: estados em cima (com o botão Recentes/Manual e o menu para desligar o MAL), grelha
+ * com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL e botão para acrescentar.
+ * Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (a aba passa a Manual).
  */
 @Composable
 fun AnimeListPage(
@@ -64,10 +65,14 @@ fun AnimeListPage(
     searchQuery: String?,
     contentPadding: PaddingValues,
     onSelectStatus: (AnimeStatus) -> Unit,
+    onSetTabMode: (AnimeStatus, AnimeTabMode) -> Unit,
     onClickAdd: () -> Unit,
+    onOpenFolder: (folderId: String) -> Unit,
     onChangeStatus: (Anime, AnimeStatus) -> Unit,
     onChangeEpisodes: (Anime, Long) -> Unit,
     onRemove: (Anime) -> Unit,
+    onTabReordered: (tab: AnimeStatus, orderedKeys: List<String>, movedKey: String) -> Unit,
+    shelfActions: AnimeShelfActions,
     onConnect: () -> Unit,
     onDisconnect: () -> Unit,
     onRefresh: () -> Unit,
@@ -80,16 +85,18 @@ fun AnimeListPage(
 
     val uriHandler = LocalUriHandler.current
     var openedId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var dialog by remember { mutableStateOf<ShelfDialog?>(null) }
 
     val query = searchQuery?.trim().orEmpty()
-    val visible = remember(state.animes, state.status, query) {
-        state.animes.filter { anime -> anime.status == state.status && matchesQuery(anime, query) }
-    }
+    val tab = state.status
+    val tabItems = state.itemsFor(tab)
+    val visibleItems = remember(tabItems, query) { tabItems.filter { itemMatchesQuery(it, query) } }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusChips(state = state, onSelectStatus = onSelectStatus, modifier = Modifier.weight(1f))
+                TabModeButton(mode = state.modeFor(tab), onChangeMode = { onSetTabMode(tab, it) })
                 MalMenu(malUsername = state.malUsername, onDisconnect = onDisconnect)
             }
 
@@ -98,20 +105,35 @@ fun AnimeListPage(
                 enabled = true,
                 onRefresh = onRefresh,
             ) {
-                if (visible.isEmpty()) {
+                if (visibleItems.isEmpty()) {
                     EmptyScreen(
                         stringRes = if (query.isEmpty()) MR.strings.anime_empty else MR.strings.no_results_found,
                         modifier = Modifier.padding(contentPadding),
                     )
                 } else {
-                    LazyVerticalGrid(
-                        columns = GridCells.Adaptive(minSize = 104.dp),
+                    ReorderableCoverGrid(
+                        items = visibleItems,
+                        key = { it.key },
+                        // Com uma pesquisa a lista está filtrada: arrastar baralhava a ordem real
+                        dragEnabled = query.isEmpty(),
                         contentPadding = contentPadding + PaddingValues(start = 8.dp, end = 8.dp, bottom = 88.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        items(visible, key = { it.malId }) { anime ->
-                            AnimeGridItem(anime = anime, onClick = { openedId = anime.malId })
+                        onClick = { item ->
+                            when (item) {
+                                is AnimeShelf.LooseAnime -> openedId = item.anime.malId
+                                is AnimeShelf.Folder -> onOpenFolder(item.folder.id)
+                            }
+                        },
+                        onMenu = { item ->
+                            dialog = when (item) {
+                                is AnimeShelf.LooseAnime -> ShelfDialog.AnimeMenu(item.anime)
+                                is AnimeShelf.Folder -> ShelfDialog.FolderMenu(item.folder.id)
+                            }
+                        },
+                        onReordered = { orderedKeys, movedKey -> onTabReordered(tab, orderedKeys, movedKey) },
+                    ) { item ->
+                        when (item) {
+                            is AnimeShelf.LooseAnime -> AnimeGridItem(anime = item.anime, showStatus = false)
+                            is AnimeShelf.Folder -> FolderGridItem(folder = item)
                         }
                     }
                 }
@@ -129,6 +151,13 @@ fun AnimeListPage(
         }
     }
 
+    AnimeShelfDialogs(
+        dialog = dialog,
+        folders = state.folderChoices,
+        actions = shelfActions,
+        onChangeDialog = { dialog = it },
+    )
+
     val opened = state.animes.find { it.malId == openedId }
     if (opened != null) {
         AnimeDetailsSheet(
@@ -145,11 +174,24 @@ fun AnimeListPage(
     }
 }
 
-/** Se o anime aparece na pesquisa da biblioteca (título original ou inglês). Pesquisa vazia = todos. */
-private fun matchesQuery(anime: Anime, query: String): Boolean {
+/**
+ * Se a entrada aparece na pesquisa da biblioteca. Um anime pelo título (original ou inglês);
+ * uma pasta pelo nome ou por algum anime lá dentro. Pesquisa vazia = todas.
+ */
+private fun itemMatchesQuery(item: AnimeShelf.Item, query: String): Boolean {
     if (query.isEmpty()) {
         return true
     }
+    return when (item) {
+        is AnimeShelf.LooseAnime -> animeMatchesQuery(item.anime, query)
+        is AnimeShelf.Folder -> {
+            val nameMatches = item.folder.name.contains(query, ignoreCase = true)
+            nameMatches || item.members.any { animeMatchesQuery(it, query) }
+        }
+    }
+}
+
+private fun animeMatchesQuery(anime: Anime, query: String): Boolean {
     val titleMatches = anime.title.contains(query, ignoreCase = true)
     val englishTitleMatches = anime.titleEnglish?.contains(query, ignoreCase = true) == true
     return titleMatches || englishTitleMatches
@@ -215,6 +257,19 @@ private fun StatusChips(
     }
 }
 
+/** Botão do modo da aba: mostra o modo atual e tocar troca entre Recentes e Manual. */
+@Composable
+private fun TabModeButton(
+    mode: AnimeTabMode,
+    onChangeMode: (AnimeTabMode) -> Unit,
+) {
+    val nextMode = if (mode == AnimeTabMode.RECENT) AnimeTabMode.MANUAL else AnimeTabMode.RECENT
+    val label = if (mode == AnimeTabMode.RECENT) MR.strings.anime_mode_recent else MR.strings.anime_mode_manual
+    TextButton(onClick = { onChangeMode(nextMode) }) {
+        Text(stringResource(label))
+    }
+}
+
 /** Menu ao lado dos estados: "Disconnect MyAnimeList", com confirmação. */
 @Composable
 private fun MalMenu(
@@ -263,10 +318,14 @@ private fun MalMenu(
     }
 }
 
+/**
+ * Capa e título de um anime na grelha. Em Watching mostra os episódios vistos.
+ * Com [showStatus] (dentro de uma pasta, onde cada temporada tem o seu estado) mostra também o estado.
+ */
 @Composable
-private fun AnimeGridItem(
+fun AnimeGridItem(
     anime: Anime,
-    onClick: () -> Unit,
+    showStatus: Boolean,
 ) {
     Column {
         Box {
@@ -274,16 +333,43 @@ private fun AnimeGridItem(
                 data = anime.coverUrl,
                 modifier = Modifier.fillMaxWidth(),
                 contentDescription = anime.title,
-                onClick = onClick,
             )
-            if (anime.status == AnimeStatus.WATCHING) {
-                BadgeGroup(modifier = Modifier.padding(4.dp)) {
+            BadgeGroup(modifier = Modifier.padding(4.dp)) {
+                if (showStatus) {
+                    Badge(text = anime.status.label())
+                }
+                if (anime.status == AnimeStatus.WATCHING) {
                     Badge(text = episodesShort(anime))
                 }
             }
         }
         Text(
             text = anime.title,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp),
+        )
+    }
+}
+
+/** Uma pasta na grelha: aparece como um anime (com a capa escolhida), com o ícone e o número de animes. */
+@Composable
+private fun FolderGridItem(folder: AnimeShelf.Folder) {
+    Column {
+        Box {
+            MangaCover.Book(
+                data = folder.cover?.coverUrl,
+                modifier = Modifier.fillMaxWidth(),
+                contentDescription = folder.folder.name,
+            )
+            BadgeGroup(modifier = Modifier.padding(4.dp)) {
+                Badge(imageVector = MaterialSymbols.Rounded.Folder)
+                Badge(text = folder.members.size.toString())
+            }
+        }
+        Text(
+            text = folder.folder.name,
             style = MaterialTheme.typography.bodySmall,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

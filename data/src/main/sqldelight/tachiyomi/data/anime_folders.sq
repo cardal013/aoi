@@ -1,0 +1,62 @@
+import kotlin.Boolean;
+
+-- Aoi: pastas de animes (copia local da user_anime_folders do Supabase), por conta do Aoi.
+-- sort_order: DATE_ASC, DATE_DESC ou MANUAL. cover_mal_id NULL = capa da primeira temporada.
+-- manual_position so vale na aba manual_tab. dirty_at (ms): alteracao por enviar ao Supabase.
+-- deleted = 1: apagada aqui, a espera de a remocao chegar ao Supabase (depois sai da tabela).
+
+CREATE TABLE anime_folders(
+    user_id TEXT NOT NULL,
+    id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    cover_mal_id INTEGER,
+    sort_order TEXT NOT NULL,
+    manual_position REAL,
+    manual_tab TEXT,
+    deleted INTEGER AS Boolean NOT NULL DEFAULT 0,
+    dirty_at INTEGER,
+    PRIMARY KEY(user_id, id)
+);
+
+getAll:
+SELECT * FROM anime_folders WHERE user_id = :userId AND deleted = 0 ORDER BY name COLLATE NOCASE;
+
+getAllIncludingDeleted:
+SELECT * FROM anime_folders WHERE user_id = :userId;
+
+getDirty:
+SELECT * FROM anime_folders WHERE user_id = :userId AND dirty_at IS NOT NULL;
+
+insert:
+INSERT INTO anime_folders(user_id, id, name, cover_mal_id, sort_order, manual_position, manual_tab, dirty_at)
+VALUES (:userId, :id, :name, NULL, 'DATE_ASC', :manualPosition, :manualTab, :now);
+
+rename:
+UPDATE anime_folders SET name = :name, dirty_at = :now WHERE user_id = :userId AND id = :id;
+
+setCover:
+UPDATE anime_folders SET cover_mal_id = :coverMalId, dirty_at = :now WHERE user_id = :userId AND id = :id;
+
+setSortOrder:
+UPDATE anime_folders SET sort_order = :sortOrder, dirty_at = :now WHERE user_id = :userId AND id = :id;
+
+setManualPosition:
+UPDATE anime_folders SET manual_position = :manualPosition, manual_tab = :manualTab, dirty_at = :now
+WHERE user_id = :userId AND id = :id;
+
+markDeleted:
+UPDATE anime_folders SET deleted = 1, dirty_at = :now WHERE user_id = :userId AND id = :id;
+
+-- O que vem da cloud substitui a linha local e nao fica por enviar
+upsertFromCloud:
+INSERT OR REPLACE INTO anime_folders(
+    user_id, id, name, cover_mal_id, sort_order, manual_position, manual_tab, deleted, dirty_at
+)
+VALUES (:userId, :id, :name, :coverMalId, :sortOrder, :manualPosition, :manualTab, 0, NULL);
+
+-- Sai da tabela (remocao ja enviada, ou a pasta foi apagada noutro aparelho)
+deleteRow:
+DELETE FROM anime_folders WHERE user_id = :userId AND id = :id;
+
+clearDirty:
+UPDATE anime_folders SET dirty_at = NULL WHERE user_id = :userId AND id = :id AND dirty_at = :dirtyAt;
