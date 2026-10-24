@@ -270,6 +270,8 @@ fun SearchToolbar(
     placeholderText: String? = null,
     onSearch: (String) -> Unit = {},
     onClickCloseSearch: () -> Unit = { onChangeSearchQuery(null) },
+    // Aoi: ações à esquerda da lupa (as de [actions] ficam à direita)
+    leadingActions: @Composable RowScope.() -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
     visualTransformation: VisualTransformation = VisualTransformation.None,
@@ -340,6 +342,8 @@ fun SearchToolbar(
         },
         navigateUp = if (searchQuery == null) navigateUp else onClickCloseSearch,
         actions = {
+            key("leadingActions") { leadingActions() }
+
             key("search") {
                 val onClick = { onChangeSearchQuery("") }
 

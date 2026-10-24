@@ -56,7 +56,7 @@ import tachiyomi.presentation.core.util.plus
 /**
  * Página Anime da biblioteca. Sem MAL ligado só mostra "Connect MyAnimeList".
  * Com o MAL ligado: estados em cima (com o menu para desligar o MAL; o botão Recentes/Manual está na barra
- * de cima, ao lado da lupa: [AnimeTabModeButton]), grelha
+ * de cima, à esquerda da lupa: [AnimeTabModeButton]), grelha
  * com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL e botão para acrescentar.
  * Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (a aba passa a Manual).
  */

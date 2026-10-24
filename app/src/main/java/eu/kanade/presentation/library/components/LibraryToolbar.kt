@@ -41,7 +41,7 @@ fun LibraryToolbar(
     onSearchQueryChange: (String?) -> Unit,
     scrollBehavior: TopAppBarScrollBehavior?,
     showMangaActions: Boolean = true,
-    // Ações da aba Anime, ao lado da lupa (só quando não há ações dos mangas)
+    // Ações da aba Anime, à esquerda da lupa (só quando não há ações dos mangas)
     animeActions: @Composable RowScope.() -> Unit = {},
 ) = when {
     selectedCount > 0 -> LibrarySelectionToolbar(
@@ -100,11 +100,11 @@ private fun LibraryRegularToolbar(
         },
         searchQuery = searchQuery,
         onChangeSearchQuery = onSearchQueryChange,
+        leadingActions = {
+            if (!showMangaActions) animeActions()
+        },
         actions = {
-            if (!showMangaActions) {
-                animeActions()
-                return@SearchToolbar
-            }
+            if (!showMangaActions) return@SearchToolbar
             val filterTint = if (hasFilters) MaterialTheme.colorScheme.active else LocalContentColor.current
             AppBarActions(
                 listOf(
