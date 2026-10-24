@@ -19,6 +19,8 @@ const REFRESH_MARGIN_MS = 24 * 60 * 60 * 1000
 const HTTP_UNAUTHORIZED = 401
 const HTTP_TOO_MANY_REQUESTS = 429
 const HTTP_SERVER_ERROR = 500
+// Token de uma conta com o MAL desligado (a linha de mal_tokens fica para lembrar a conta do MAL)
+export const DISCONNECTED_TOKEN = ""
 
 /** MAL em baixo (sem rede, timeout, 5xx ou 429). A app guarda a alteração na fila e tenta depois. */
 export class MalUnavailableError extends HttpError {
@@ -114,7 +116,10 @@ export function expiryDate(tokens: MalTokenResponse): string {
   return new Date(Date.now() + tokens.expires_in * 1000).toISOString()
 }
 
-/** Lê a linha de mal_tokens da conta, ou null se o MAL não estiver ligado. */
+/**
+ * Lê a linha de mal_tokens da conta, ou null se nunca teve o MAL ligado.
+ * Uma linha com os tokens vazios é um MAL desligado (a linha fica para lembrar a conta do MAL, ver clearTokens).
+ */
 async function readTokenRow(service: SupabaseClient, userId: string): Promise<MalTokenRow | null> {
   const { data, error } = await service
     .from("mal_tokens")
@@ -133,7 +138,8 @@ async function readTokenRow(service: SupabaseClient, userId: string): Promise<Ma
  */
 export async function getMalSession(service: SupabaseClient, userId: string): Promise<MalSession> {
   const row = await readTokenRow(service, userId)
-  if (row === null) {
+  const isConnected = row !== null && row.refresh_token !== DISCONNECTED_TOKEN
+  if (!isConnected) {
     throw new MalNotConnectedError()
   }
 
@@ -153,7 +159,7 @@ export async function getMalSession(service: SupabaseClient, userId: string): Pr
 /**
  * Renova o token no MAL e grava-o. Atualiza `session` com os tokens novos.
  * Se o MAL recusar o refresh token, vê primeiro se outro pedido já o renovou entretanto
- * (o MAL troca o refresh token a cada renovação). Se não, o token já não serve: apaga a linha
+ * (o MAL troca o refresh token a cada renovação). Se não, o token já não serve: limpa os tokens
  * e lança MalNotConnectedError (a app volta a mostrar "Connect MyAnimeList").
  */
 async function refreshSession(service: SupabaseClient, session: MalSession): Promise<void> {
@@ -162,14 +168,16 @@ async function refreshSession(service: SupabaseClient, session: MalSession): Pro
 
   if (tokens === null) {
     const latestRow = await readTokenRow(service, session.userId)
-    const renewedByOtherRequest = latestRow !== null && latestRow.refresh_token !== usedRefreshToken
+    const renewedByOtherRequest = latestRow !== null &&
+      latestRow.refresh_token !== DISCONNECTED_TOKEN &&
+      latestRow.refresh_token !== usedRefreshToken
     if (renewedByOtherRequest) {
       session.accessToken = latestRow.access_token
       session.refreshToken = latestRow.refresh_token
       return
     }
 
-    await service.from("mal_tokens").delete().eq("user_id", session.userId)
+    await clearTokens(service, session.userId)
     throw new MalNotConnectedError()
   }
 
@@ -187,6 +195,24 @@ async function refreshSession(service: SupabaseClient, session: MalSession): Pro
 
   session.accessToken = tokens.access_token
   session.refreshToken = tokens.refresh_token
+}
+
+/**
+ * Desliga o MAL da conta sem apagar a linha de mal_tokens: os tokens ficam vazios e o mal_user_id fica,
+ * para, ao voltar a ligar, se saber se é a mesma conta do MAL (decisão do Afonso; sem tabela nova).
+ */
+export async function clearTokens(service: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await service
+    .from("mal_tokens")
+    .update({
+      access_token: DISCONNECTED_TOKEN,
+      refresh_token: DISCONNECTED_TOKEN,
+      expires_at: new Date(0).toISOString(),
+    })
+    .eq("user_id", userId)
+  if (error) {
+    throw error
+  }
 }
 
 /**

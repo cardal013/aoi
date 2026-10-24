@@ -8,6 +8,8 @@
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { HttpError, requireEnv } from "../_shared/http.ts"
 import {
+  clearTokens,
+  DISCONNECTED_TOKEN,
   exchangeAuthorizationCode,
   expiryDate,
   fetchFromMal,
@@ -143,6 +145,9 @@ export async function handleCallback(service: SupabaseClient, req: Request): Pro
 /**
  * Troca o code por tokens, pergunta ao MAL qual é a conta (id e nome) e grava tudo em mal_tokens.
  * Se a conta do Aoi já tinha o MAL ligado, substitui os tokens.
+ * Se a conta do MAL for outra que não a última ligada (o mal_user_id que ficou em mal_tokens), apaga primeiro
+ * os animes, as pastas e os modos das abas da conta do Aoi (decisão do Afonso): a lista nova vem toda do MAL
+ * no próximo sync.
  */
 async function saveTokensFromCode(service: SupabaseClient, stateRow: OAuthStateRow, code: string): Promise<void> {
   const tokens = await exchangeAuthorizationCode(code, stateRow.code_verifier)
@@ -157,6 +162,12 @@ async function saveTokensFromCode(service: SupabaseClient, stateRow: OAuthStateR
     throw new Error(`O MAL não devolveu a conta: ${response.status}`)
   }
   const malUser = await response.json()
+
+  const previousMalUserId = await readPreviousMalUserId(service, stateRow.user_id)
+  const isOtherMalAccount = previousMalUserId !== null && previousMalUserId !== malUser.id
+  if (isOtherMalAccount) {
+    await deleteAnimeData(service, stateRow.user_id)
+  }
 
   const { error } = await service.from("mal_tokens").upsert(
     {
@@ -174,34 +185,65 @@ async function saveTokensFromCode(service: SupabaseClient, stateRow: OAuthStateR
   }
 }
 
-/** Estado da ligação: `{ connected, mal_username }` (o token nunca sai do servidor). */
-export async function getConnectionStatus(service: SupabaseClient, userId: string) {
+/**
+ * Última conta do MAL ligada a esta conta do Aoi (a linha de mal_tokens fica depois de "Disconnect",
+ * só com os tokens vazios). null se nunca houve nenhuma.
+ */
+async function readPreviousMalUserId(service: SupabaseClient, userId: string): Promise<number | null> {
   const { data, error } = await service
     .from("mal_tokens")
-    .select("mal_username")
+    .select("mal_user_id")
     .eq("user_id", userId)
     .maybeSingle()
   if (error) {
     throw error
   }
   if (data === null) {
-    return { connected: false, mal_username: null }
+    return null
   }
-  return { connected: true, mal_username: data.mal_username }
+  return data.mal_user_id
+}
+
+/** Apaga a cópia da lista, as pastas e os modos das abas de uma conta do Aoi (troca de conta do MAL). */
+async function deleteAnimeData(service: SupabaseClient, userId: string): Promise<void> {
+  for (const table of ["user_mal_anime", "user_anime_folders", "user_anime_tabs"]) {
+    const { error } = await service.from(table).delete().eq("user_id", userId)
+    if (error) {
+      throw error
+    }
+  }
+  console.log("Outra conta do MAL: animes, pastas e modos da conta do Aoi apagados")
 }
 
 /**
- * Desliga o MAL da conta: apaga o token e os logins a meio.
- * A cópia da lista, as pastas e a ordem ficam no Supabase.
+ * Estado da ligação: `{ connected, mal_username, mal_user_id }` (o token nunca sai do servidor).
+ * A app usa o mal_user_id para saber que a conta do MAL mudou e limpar o que tem no telemóvel.
+ */
+export async function getConnectionStatus(service: SupabaseClient, userId: string) {
+  const { data, error } = await service
+    .from("mal_tokens")
+    .select("mal_username, mal_user_id, refresh_token")
+    .eq("user_id", userId)
+    .maybeSingle()
+  if (error) {
+    throw error
+  }
+  const isConnected = data !== null && data.refresh_token !== DISCONNECTED_TOKEN
+  if (!isConnected) {
+    return { connected: false, mal_username: null, mal_user_id: null }
+  }
+  return { connected: true, mal_username: data.mal_username, mal_user_id: data.mal_user_id }
+}
+
+/**
+ * Desliga o MAL da conta: limpa os tokens (a linha fica, com o mal_user_id, para ao voltar a ligar se saber
+ * se é a mesma conta do MAL) e apaga os logins a meio. A cópia da lista, as pastas e a ordem ficam no Supabase.
  */
 export async function disconnect(service: SupabaseClient, userId: string) {
-  const { error: tokenError } = await service.from("mal_tokens").delete().eq("user_id", userId)
-  if (tokenError) {
-    throw tokenError
-  }
+  await clearTokens(service, userId)
   const { error: stateError } = await service.from("mal_oauth_states").delete().eq("user_id", userId)
   if (stateError) {
     throw stateError
   }
-  return { connected: false, mal_username: null }
+  return { connected: false, mal_username: null, mal_user_id: null }
 }

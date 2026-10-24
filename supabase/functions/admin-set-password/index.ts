@@ -1,10 +1,10 @@
 // Edge function `admin-set-password`: um admin muda a palavra-passe de outra conta (ecrã Users da app).
 // Precisa da API de admin do Auth, por isso corre com a service role.
-// Regras (plano da v0.23.0): só admins chamam; mínimo de 6 caracteres; não dá para mudar a de
-// outro admin; a conta sai da sessão em todos os aparelhos.
+// Regras (plano da v0.23.0 e decisões do Afonso): só admins chamam; mínimo de 6 caracteres; não dá para
+// mudar a de outro admin nem a própria; a conta sai da sessão em todos os aparelhos.
 //
 // POST com JWT do Aoi e { user_id, new_password }. Responde { success, signed_out }.
-// Erros: 401 (sem sessão), 403 not_admin / target_is_admin,
+// Erros: 401 (sem sessão), 403 not_admin / target_is_admin / cannot_change_own_password,
 // 400 invalid_user_id / password_too_short / password_rejected,
 // 404 user_not_found.
 
@@ -59,8 +59,12 @@ async function changePassword(req: Request) {
     throw new HttpError(400, "password_too_short")
   }
 
-  const isOtherAccount = targetUserId !== caller.id
-  if (isOtherAccount && await isAdminAccount(service, targetUserId)) {
+  // A própria palavra-passe não se muda aqui (decisão do Afonso): muda-se no site, em Profile
+  const isOwnAccount = targetUserId === caller.id
+  if (isOwnAccount) {
+    throw new HttpError(403, "cannot_change_own_password")
+  }
+  if (await isAdminAccount(service, targetUserId)) {
     throw new HttpError(403, "target_is_admin")
   }
 

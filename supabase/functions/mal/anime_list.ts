@@ -452,6 +452,7 @@ export async function syncList(service: SupabaseClient, userId: string) {
   await upsertCopyRows(service, changedRows)
 
   const removal = await markRemovedOnMal(service, userId, malEntries, copyRows, stillPendingIds)
+  await deleteEmptyFolders(service, userId)
 
   return {
     total: malEntries.length,
@@ -581,6 +582,11 @@ export async function removeEntry(service: SupabaseClient, userId: string, body:
     throw error
   }
 
+  // Remover tirou o anime da pasta (trigger): se ela ficou vazia, apaga-se
+  if (savedRow !== null) {
+    await deleteEmptyFolders(service, userId)
+  }
+
   // Não estava na cópia: tira-o só do MAL
   if (savedRow === null) {
     const rowOnlyOnMal = { mal_id: malId, deleted: true, touched_at: touchedAt } as CopyRow
@@ -591,4 +597,56 @@ export async function removeEntry(service: SupabaseClient, userId: string, body:
 
   const malResult = await trySendToMal(service, userId, savedRow)
   return { saved: true, ...malResult }
+}
+
+// ---------- Pastas vazias ----------
+
+/**
+ * Apaga as pastas da conta que ficaram sem animes (decisão do Afonso: pasta vazia apaga-se sozinha).
+ * Corre depois do sync (animes tirados no site do MAL) e de remover um anime. A app e o site fazem o mesmo
+ * do lado deles depois de mexer nas pastas.
+ */
+async function deleteEmptyFolders(service: SupabaseClient, userId: string): Promise<void> {
+  const { data: folders, error: foldersError } = await service
+    .from("user_anime_folders")
+    .select("id")
+    .eq("user_id", userId)
+  if (foldersError) {
+    throw foldersError
+  }
+  if (folders.length === 0) {
+    return
+  }
+
+  const usedFolderIds = new Set<string>()
+  let firstRow = 0
+  while (true) {
+    const { data, error } = await service
+      .from("user_mal_anime")
+      .select("folder_id")
+      .eq("user_id", userId)
+      .not("folder_id", "is", null)
+      .order("mal_id")
+      .range(firstRow, firstRow + COPY_READ_PAGE_SIZE - 1)
+    if (error) {
+      throw error
+    }
+    for (const row of data) {
+      usedFolderIds.add(row.folder_id)
+    }
+    // página incompleta = chegou ao fim
+    if (data.length < COPY_READ_PAGE_SIZE) {
+      break
+    }
+    firstRow += COPY_READ_PAGE_SIZE
+  }
+
+  const emptyFolderIds = folders.map((folder) => folder.id).filter((id) => !usedFolderIds.has(id))
+  if (emptyFolderIds.length === 0) {
+    return
+  }
+  const { error } = await service.from("user_anime_folders").delete().eq("user_id", userId).in("id", emptyFolderIds)
+  if (error) {
+    throw error
+  }
 }
