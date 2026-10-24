@@ -59,7 +59,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 
 ### Anime
 
-Swipe past *Plan to Read* in the library to reach the *Anime* tab and tap *Connect MyAnimeList* once. At the top you pick *Watching*, *Plan to Watch* or *Completed*; tap **+** to search MyAnimeList and add one. Tapping an anime lets you change its status, count the episodes you've watched or remove it; every change goes to MyAnimeList. Long-press an anime to put it in a folder, or long-press and move to drag it. The website has the same list.
+Swipe past *Plan to Read* in the library to reach the *Anime* tab and tap *Connect MyAnimeList* once. At the top you pick *Plan to Watch* or *Completed*; tap **+** to search MyAnimeList and add one, or long-press results to add several at once (inside a folder, they go into that folder). Tapping an anime lets you change its status, count the episodes you've watched (the last one marks it *Completed*) or remove it; every change goes to MyAnimeList. Long-press an anime to put it in a folder, or long-press and move to drag it. The website has the same list.
 
 ### How the sync works
 

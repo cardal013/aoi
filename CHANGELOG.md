@@ -14,6 +14,20 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Unreleased]
+### Changed
+- Anime have only two statuses, *Plan to Watch* and *Completed*. *Watching* anime become *Plan to Watch*, also on MyAnimeList (the episodes you watched stay)
+- Reaching the last episode marks the anime as *Completed*; going back below it returns it to *Plan to Watch*. A folder shows in *Completed* only when everything in it is completed
+- The *Recent* / *Manual* button moved to the top bar, next to the search icon, and only shows on the *Anime* tab
+
+### Added
+- Add several anime at once: long-press a search result to start selecting (the selection stays when you search again), then add them all with one status
+- *+* inside a folder: what you add goes into that folder (an anime already in your list moves there)
+- Website: the same changes
+
+### Other
+- Supabase migration `20261025_no_watching.sql`; local database migration 20
+
 ## [Aoi v0.23.0] - 2026-10-24
 ### Changed
 - The *Anime* tab now uses your MyAnimeList anime list instead of AniList: *Connect MyAnimeList* once (the login stays on the server, so it also works on other phones and on the website), search MyAnimeList, and every change goes to MyAnimeList first. Only the anime list is used; your MyAnimeList manga list is never read or changed, and the manga tracker is untouched
