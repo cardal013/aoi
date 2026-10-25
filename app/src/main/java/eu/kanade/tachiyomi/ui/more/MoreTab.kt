@@ -40,6 +40,7 @@ import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.more.account.AccountScreen
 import eu.kanade.tachiyomi.ui.more.admin.AdminScreen
+import eu.kanade.tachiyomi.ui.more.meals.MealsScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
 import eu.kanade.tachiyomi.ui.tutorial.TutorialAction
@@ -146,6 +147,7 @@ data object MoreTab : Tab {
             onClickAccount = { navigator.push(AccountScreen()) },
             isAdmin = isAdmin,
             onClickAdmin = { navigator.push(AdminScreen()) },
+            onClickMeals = { navigator.push(MealsScreen()) },
             onClickSettings = { navigator.push(SettingsScreen()) },
             onClickSupport = { navigator.push(SupportUsScreen()) },
             onClickAbout = { navigator.push(SettingsScreen(SettingsScreen.Destination.About)) },

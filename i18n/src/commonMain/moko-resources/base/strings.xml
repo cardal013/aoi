@@ -154,10 +154,18 @@
 
     <!-- Aoi: backup no More -->
     <string name="more_admin">Admin</string>
+    <string name="more_meals">Refeições</string>
     <string name="more_backup">Backup</string>
     <string name="more_backup_summary">Import a backup file or export your library to one.</string>
     <string name="more_backup_import">Import</string>
     <string name="more_backup_export">Export</string>
+
+    <!-- Aoi: Refeições (em português, é para a família) -->
+    <string name="meals_at_home">Almoço em casa</string>
+    <string name="meals_not_at_home">Não almoço em casa</string>
+    <string name="meals_hint">Toca num dia para o marcar: verde, vermelho e outra vez vazio. Todos os admins veem e mudam o mesmo calendário.</string>
+    <string name="meals_error">Não deu para carregar as refeições. Tenta outra vez.</string>
+    <string name="meals_save_failed">Não deu para guardar. Tenta outra vez.</string>
 
     <!-- Aoi: tutorial -->
     <string name="tutorial_progress">Step %1$d of %2$d</string>

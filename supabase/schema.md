@@ -105,6 +105,11 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 
 `public.is_admin()` (security definer) diz se a conta com sessão está em `admins`. O admin é pelo id da conta, por isso mudar o username não o tira.
 
+### admin_meals (desde 25/10/2026, [`20261025_admin_meals.sql`](migrations/20261025_admin_meals.sql))
+| Colunas | Acesso |
+|-|-|
+| `day` date PK, `at_home` boolean (true = almoço em casa), `updated_by` uuid (default `auth.uid()`), `updated_at` (trigger) | `ALL` para qualquer admin (`is_admin()`): o calendário é partilhado. Dia sem linha = por marcar |
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.
