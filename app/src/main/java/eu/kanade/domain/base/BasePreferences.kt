@@ -5,8 +5,10 @@ import dev.icerock.moko.resources.StringResource
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import eu.kanade.tachiyomi.ui.tutorial.TutorialStep
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.core.common.preference.getEnum
 import tachiyomi.i18n.MR
 
 @Inject
@@ -28,6 +30,11 @@ class BasePreferences(
     val shownOnboardingFlow: Preference<Boolean> = preferenceStore.getBoolean(
         Preference.appStateKey("onboarding_complete"),
         false,
+    )
+
+    val tutorialStep: Preference<TutorialStep> = preferenceStore.getEnum(
+        Preference.appStateKey("aoi_tutorial_step"),
+        TutorialStep.Done,
     )
 
     enum class ExtensionInstaller(val titleRes: StringResource, val requiresSystemPermission: Boolean) {

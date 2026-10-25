@@ -3,6 +3,7 @@ package eu.kanade.presentation.more
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.vectorResource
@@ -11,6 +12,8 @@ import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.ui.more.DownloadQueueState
+import eu.kanade.tachiyomi.ui.tutorial.TutorialTarget
+import eu.kanade.tachiyomi.ui.tutorial.tutorialTarget
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.Help
 import mihon.icons.materialsymbols.automirroredrounded.Label
@@ -78,6 +81,7 @@ fun MoreScreen(
             }
             item {
                 TextPreferenceWidget(
+                    modifier = Modifier.tutorialTarget(TutorialTarget.Account),
                     title = stringResource(MR.strings.account_title),
                     icon = MaterialSymbols.Rounded.Person,
                     onPreferenceClick = onClickAccount,
@@ -95,6 +99,7 @@ fun MoreScreen(
 
             item {
                 TextPreferenceWidget(
+                    modifier = Modifier.tutorialTarget(TutorialTarget.Backup),
                     title = stringResource(MR.strings.more_backup),
                     icon = MaterialSymbols.Rounded.Storage,
                     onPreferenceClick = onClickBackup,

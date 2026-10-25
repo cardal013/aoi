@@ -42,6 +42,8 @@ import eu.kanade.tachiyomi.ui.more.account.AccountScreen
 import eu.kanade.tachiyomi.ui.more.admin.AdminScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.stats.StatsScreen
+import eu.kanade.tachiyomi.ui.tutorial.TutorialAction
+import eu.kanade.tachiyomi.ui.tutorial.TutorialTarget
 import eu.kanade.tachiyomi.util.system.DeviceUtil
 import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.workManager
@@ -102,20 +104,26 @@ data object MoreTab : Tab {
             navigator.push(RestoreBackupScreen(it.toString()))
         }
 
+        val importBackup: () -> Unit = {
+            if (!BackupRestoreJob.isRunning(context.workManager)) {
+                if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
+                    context.toast(MR.strings.restore_miui_warning)
+                }
+                chooseBackup.launch("*/*")
+            } else {
+                context.toast(MR.strings.restore_in_progress)
+            }
+        }
+        TutorialAction(TutorialTarget.Backup, importBackup)
+        TutorialAction(TutorialTarget.Account) { navigator.push(AccountScreen()) }
+
         var showBackupDialog by remember { mutableStateOf(false) }
         if (showBackupDialog) {
             BackupDialog(
                 onDismissRequest = { showBackupDialog = false },
                 onImport = {
                     showBackupDialog = false
-                    if (!BackupRestoreJob.isRunning(context.workManager)) {
-                        if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
-                            context.toast(MR.strings.restore_miui_warning)
-                        }
-                        chooseBackup.launch("*/*")
-                    } else {
-                        context.toast(MR.strings.restore_in_progress)
-                    }
+                    importBackup()
                 },
                 onExport = {
                     showBackupDialog = false

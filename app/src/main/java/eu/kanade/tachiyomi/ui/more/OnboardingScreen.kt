@@ -8,12 +8,9 @@ import androidx.compose.ui.platform.LocalContext
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.more.onboarding.OnboardingScreen
-import eu.kanade.presentation.more.settings.screen.SearchableSettings
-import eu.kanade.presentation.more.settings.screen.SettingsDataScreen
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.ui.setting.SettingsScreen
+import eu.kanade.tachiyomi.ui.tutorial.TutorialStep
 import mihon.app.di.appGraph
-import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsState
 
 class OnboardingScreen : Screen() {
@@ -27,23 +24,17 @@ class OnboardingScreen : Screen() {
         val shownOnboardingFlow by basePreferences.shownOnboardingFlow.collectAsState()
 
         val finishOnboarding: () -> Unit = {
+            if (!basePreferences.shownOnboardingFlow.get()) {
+                basePreferences.tutorialStep.set(TutorialStep.Start)
+            }
             basePreferences.shownOnboardingFlow.set(true)
             navigator.pop()
         }
-
-        val restoreSettingKey = stringResource(SettingsDataScreen.restorePreferenceKeyString)
 
         BackHandler(enabled = !shownOnboardingFlow) {
             // Prevent exiting if onboarding hasn't been completed
         }
 
-        OnboardingScreen(
-            onComplete = finishOnboarding,
-            onRestoreBackup = {
-                finishOnboarding()
-                SearchableSettings.highlightKey = restoreSettingKey
-                navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage))
-            },
-        )
+        OnboardingScreen(onComplete = finishOnboarding)
     }
 }

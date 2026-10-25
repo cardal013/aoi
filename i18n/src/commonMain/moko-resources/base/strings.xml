@@ -159,6 +159,20 @@
     <string name="more_backup_import">Import</string>
     <string name="more_backup_export">Export</string>
 
+    <!-- Aoi: tutorial -->
+    <string name="tutorial_progress">Step %1$d of %2$d</string>
+    <string name="tutorial_more">Tap More</string>
+    <string name="tutorial_more_summary">Your account, backups and settings are all in here.</string>
+    <string name="tutorial_more_again">Tap More again</string>
+    <string name="tutorial_more_again_summary">A second tap opens Settings, where you can add the extensions you need to find manga.</string>
+    <string name="tutorial_backup">Already have a backup?</string>
+    <string name="tutorial_backup_summary">Import it to bring your library back. You can skip this and do it later in More → Backup.</string>
+    <string name="tutorial_account">Create an account</string>
+    <string name="tutorial_account_summary">Keep your library and reading progress in the cloud and see them on the website. You can skip this and do it later in More → Account.</string>
+    <string name="tutorial_account_open">Open Account</string>
+    <string name="tutorial_skip">Skip</string>
+    <string name="pref_aoi_tutorial">Show tutorial</string>
+
     <!-- Aoi: animes -->
     <string name="anime_tab">Anime</string>
     <string name="anime_status_plan_to_watch">Plan to Watch</string>
