@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.27.0
+- *Refeições* reminder for admins, before each marked day (how many days before and at what time can be set below the calendar)
+
 ### 0.26.0
 - *Refeições* in *More* (admins only): shared calendar of the days you have lunch at home (green) or not (red)
 

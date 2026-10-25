@@ -14,6 +14,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.27.0] - 2026-10-25
+### Added
+- *Refeições* reminder: admins get a notification before each marked day saying *"Amanhã o Afonso **come** em casa"* or *"Amanhã o Afonso **não** come em casa"*. Days with no mark have no reminder
+- Below the calendar, *Quando cai o lembrete*: how many days before (1 to 7) and at what time (default 1 day before, 19:00). Shared by all admins
+
 ## [Aoi v0.26.0] - 2026-10-25
 ### Added
 - *More → Refeições* (admins only, between *Admin* and *Backup*): a monthly calendar shared by all admins to say which days you have lunch at home. Tap a day to mark it green (lunch at home), red (not at home) or clear it again
