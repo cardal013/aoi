@@ -166,6 +166,11 @@
     <string name="meals_hint">Toca num dia para o marcar: verde, vermelho e outra vez vazio. Todos os admins veem e mudam o mesmo calendário.</string>
     <string name="meals_error">Não deu para carregar as refeições. Tenta outra vez.</string>
     <string name="meals_save_failed">Não deu para guardar. Tenta outra vez.</string>
+    <string name="meals_reminder_title">Quando cai o lembrete</string>
+    <string name="meals_reminder_summary">Os admins recebem o lembrete %1$s antes, por volta das %2$s, a dizer se o Afonso come em casa. Os dias por marcar não têm lembrete.</string>
+    <string name="meals_reminder_days_before">Antecedência</string>
+    <string name="meals_reminder_time">Hora</string>
+    <string name="meals_reminder_failed">Não deu para guardar o lembrete. Tenta outra vez.</string>
 
     <!-- Aoi: tutorial -->
     <string name="tutorial_progress">Step %1$d of %2$d</string>

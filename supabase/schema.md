@@ -110,6 +110,11 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 |-|-|
 | `day` date PK, `at_home` boolean (true = almoço em casa), `updated_by` uuid (default `auth.uid()`), `updated_at` (trigger) | `ALL` para qualquer admin (`is_admin()`): o calendário é partilhado. Dia sem linha = por marcar |
 
+### admin_meal_reminder (desde 25/10/2026, [`20261025_admin_meal_reminder.sql`](migrations/20261025_admin_meal_reminder.sql))
+| Colunas | Acesso |
+|-|-|
+| `id` smallint PK (sempre 1), `days_before` smallint (1 a 7), `remind_at` time (default 19:00), `updated_by`, `updated_at` (trigger) | select, insert, update para qualquer admin: as definições do lembrete são comuns |
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.

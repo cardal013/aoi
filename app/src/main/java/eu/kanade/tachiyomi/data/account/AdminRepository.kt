@@ -70,6 +70,12 @@ class AdminRepository(
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
+    /** Pergunta à cloud se a conta com sessão é admin agora (para os trabalhos em segundo plano). */
+    suspend fun isAdminNow(): Boolean {
+        val userId = currentUserId() ?: return false
+        return fetchIsAdmin(userId)
+    }
+
     private suspend fun fetchIsAdmin(userId: String): Boolean =
         supabase.postgrest["admins"]
             .select(columns = Columns.raw("user_id")) { filter { eq("user_id", userId) } }

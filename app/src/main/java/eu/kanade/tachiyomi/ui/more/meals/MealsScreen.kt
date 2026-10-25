@@ -1,7 +1,9 @@
 package eu.kanade.tachiyomi.ui.more.meals
 
+import android.app.TimePickerDialog
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,9 +14,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -27,6 +31,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -37,18 +42,23 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.metroViewModel
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.util.Screen
+import eu.kanade.tachiyomi.data.account.MealsRepository
 import eu.kanade.tachiyomi.util.system.toast
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.ChevronLeft
 import mihon.icons.materialsymbols.automirroredrounded.ChevronRight
+import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Refresh
+import mihon.icons.materialsymbols.rounded.Remove
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
@@ -71,6 +81,7 @@ class MealsScreen : Screen() {
             viewModel.events.collect { event ->
                 when (event) {
                     MealsViewModel.Event.SaveFailed -> context.toast(MR.strings.meals_save_failed)
+                    MealsViewModel.Event.ReminderSaveFailed -> context.toast(MR.strings.meals_reminder_failed)
                 }
             }
         }
@@ -128,6 +139,13 @@ class MealsScreen : Screen() {
                     modifier = Modifier.padding(horizontal = 16.dp),
                 )
                 Legend(modifier = Modifier.padding(16.dp))
+                HorizontalDivider()
+                ReminderSection(
+                    reminder = state.reminder,
+                    onDaysBeforeChange = viewModel::setDaysBefore,
+                    onTimeChange = viewModel::setReminderTime,
+                    modifier = Modifier.padding(16.dp),
+                )
             }
         }
     }
@@ -265,7 +283,84 @@ private fun LegendItem(color: Color, text: String) {
     }
 }
 
+/** Quando cai o lembrete: quantos dias antes e a que horas (comum a todos os admins). */
+@Composable
+private fun ReminderSection(
+    reminder: MealsRepository.Reminder,
+    onDaysBeforeChange: (Int) -> Unit,
+    onTimeChange: (LocalTime) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val days = pluralStringResource(MR.plurals.meals_reminder_days, reminder.daysBefore, reminder.daysBefore)
+    val time = reminder.time.format(TIME_FORMAT)
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(text = stringResource(MR.strings.meals_reminder_title), style = MaterialTheme.typography.titleMedium)
+        Text(
+            text = stringResource(MR.strings.meals_reminder_summary, days, time),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = stringResource(MR.strings.meals_reminder_days_before),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            IconButton(
+                onClick = { onDaysBeforeChange(reminder.daysBefore - 1) },
+                enabled = reminder.daysBefore > MealsViewModel.MIN_DAYS_BEFORE,
+            ) {
+                Icon(imageVector = MaterialSymbols.Rounded.Remove, contentDescription = null)
+            }
+            Text(
+                text = days,
+                modifier = Modifier.widthIn(min = 64.dp),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            IconButton(
+                onClick = { onDaysBeforeChange(reminder.daysBefore + 1) },
+                enabled = reminder.daysBefore < MealsViewModel.MAX_DAYS_BEFORE,
+            ) {
+                Icon(imageVector = MaterialSymbols.Rounded.Add, contentDescription = null)
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable {
+                    TimePickerDialog(
+                        context,
+                        { _, hour, minute -> onTimeChange(LocalTime.of(hour, minute)) },
+                        reminder.time.hour,
+                        reminder.time.minute,
+                        true,
+                    ).show()
+                }
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = stringResource(MR.strings.meals_reminder_time),
+                modifier = Modifier.weight(1f),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            Text(
+                text = time,
+                modifier = Modifier.widthIn(min = 64.dp).padding(end = 48.dp),
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
 private val PORTUGUESE = Locale.forLanguageTag("pt-PT")
+private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 private val MONTH_FORMAT = DateTimeFormatter.ofPattern("LLLL 'de' yyyy", PORTUGUESE)
 private val AT_HOME = Color(0xFF2E7D32)
 private val NOT_AT_HOME = Color(0xFFC62828)
