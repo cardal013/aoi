@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.26.0] - 2026-10-25
+### Added
+- *More → Refeições* (admins only, between *Admin* and *Backup*): a monthly calendar shared by all admins to say which days you have lunch at home. Tap a day to mark it green (lunch at home), red (not at home) or clear it again
+
 ## [Aoi v0.25.0] - 2026-10-25
 ### Added
 - Tutorial on first install: tap *More* twice to open *Settings* (where the app offers to add extensions), then optionally import a backup and create an account. Can be shown again in *Settings → Advanced → Show tutorial*

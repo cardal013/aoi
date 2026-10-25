@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.26.0
+- *Refeições* in *More* (admins only): shared calendar of the days you have lunch at home (green) or not (red)
+
 ### 0.25.0
 - Tutorial on first install: tap *More* twice to add extensions, then import a backup and create an account (both optional)
 
