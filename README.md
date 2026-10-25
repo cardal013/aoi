@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.25.0
+- Tutorial on first install: tap *More* twice to add extensions, then import a backup and create an account (both optional)
+
 ### 0.24.2
 - *Recent*/*Manual* button to the left of the search icon in the *Anime* tab
 

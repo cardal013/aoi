@@ -14,6 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.25.0] - 2026-10-25
+### Added
+- Tutorial on first install: tap *More* twice to open *Settings* (where the app offers to add extensions), then optionally import a backup and create an account. Can be shown again in *Settings → Advanced → Show tutorial*
+
+### Removed
+- The *Guides* step of the first-launch setup (its backup restore is now in the tutorial)
+
 ## [Aoi v0.24.2] - 2026-10-24
 ### Changed
 - *Anime* tab: the *Recent* / *Manual* button is now to the left of the search icon (app and website)
