@@ -15,6 +15,8 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
 ## [Aoi v0.34.2] - 2026-10-28
+### Added
+- Site (no APK needed): select several chapters of a manga, or all of them, and mark them read or unread at once, like in the app. Long-press a chapter or tap *Select*; Shift+click picks a range
 ### Removed
 - *Support us* in *More* and the donation pop-up when opening the app (they came from Mihon and pointed to Mihon's donations)
 

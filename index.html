@@ -661,6 +661,14 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .chapter-check{ flex-shrink:0; width:40px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text-faint); font-weight:700; }
 .chapter-check:hover{ border-color:#1E9E6B; }
 .chapter-row.read .chapter-check{ color:#1E9E6B; border-color:#1E9E6B; }
+/* Vários capítulos de uma vez: carregar sem largar (ou Select) e depois tocar; Shift+clique escolhe um intervalo */
+.chapter-list-head .btn{ margin-left:auto; }
+.chapter-select-bar{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-top:10px; padding:8px 10px; border:1px solid var(--accent); border-radius:var(--radius-m); background:color-mix(in srgb, var(--accent) 10%, var(--bg)); font-size:13px; font-weight:700; }
+.chapter-select-bar .count{ margin-right:auto; }
+.chapter-list.selecting .chapter-open{ cursor:pointer; opacity:1; }
+.chapter-list.selecting .chapter-check{ display:none; }
+.chapter-row.selected .chapter-open{ border-color:var(--accent); background:color-mix(in srgb, var(--accent) 14%, var(--bg)); color:var(--text); }
+.chapter-open{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
 .watch-site-help{ color:var(--text-muted); font-size:13px; line-height:1.5; margin-top:10px; }
 .watch-pick-host{ margin-left:auto; color:var(--text-faint); font-family:var(--font-mono); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .watch-pick-row{ display:flex; gap:6px; }
@@ -1982,6 +1990,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     activeMangaId = id;
     qs('statusModalTitle').textContent = manga.title;
     qs('statusOptions').innerHTML = STATUSES.map(s => `<button type="button" class="status-option ${s===manga.status?'current':''}" data-status="${s}"><span class="dot" style="background:${STATUS_DOT_VAR[s]}"></span>${STATUS_LABEL[s]}</button>`).join('');
+    clearChapterSelection();
     renderMangaRead(manga);
     openModal(statusScrim);
     loadChapters(manga.sourceId).then(() => { if (activeMangaId === id) renderMangaRead(manga); });
@@ -2072,12 +2081,24 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     else if (cache.error) html += '<p class="manga-read-hint">Couldn\'t load the chapters.</p>';
     else if (cache.list.length) {
       const readCount = cache.list.filter(c => cache.read.has(c.id)).length;
-      html += `<div class="chapter-list-head">Chapters · ${readCount}/${cache.list.length} read</div><div class="chapter-list">`;
+      const selecting = chapterSelection.sourceId === manga.sourceId && chapterSelection.ids.size > 0;
+      html += `<div class="chapter-list-head">Chapters · ${readCount}/${cache.list.length} read${selecting ? '' : '<button type="button" class="btn btn-ghost btn-sm" data-select-start="1">Select</button>'}</div>`;
+      if (selecting) {
+        html += `<div class="chapter-select-bar">
+          <span class="count">${chapterSelection.ids.size} selected</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-select-all="1">${chapterSelection.ids.size === cache.list.length ? 'Select none' : 'Select all'}</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-select-mark="unread">Mark unread</button>
+          <button type="button" class="btn btn-primary btn-sm" data-select-mark="read">Mark read</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-select-cancel="1" aria-label="Cancel">✕</button>
+        </div>`;
+      }
+      html += `<div class="chapter-list ${selecting ? 'selecting' : ''}">`;
       html += cache.list.slice().reverse().map(c => {
         const read = cache.read.has(c.id);
-        const classes = ['chapter-row', read ? 'read' : '', next && next.id === c.id ? 'next' : ''].join(' ');
+        const selected = selecting && chapterSelection.ids.has(c.id);
+        const classes = ['chapter-row', read ? 'read' : '', next && next.id === c.id ? 'next' : '', selected ? 'selected' : ''].join(' ');
         return `<div class="${classes}">
-          <button type="button" class="chapter-open" data-read-open="${esc(c.id)}" ${c.web_url ? '' : 'disabled'} title="${c.web_url ? 'Open on ' + esc(manga.sourceName) : 'No link yet'}">${esc(chapterLabel(c))}</button>
+          <button type="button" class="chapter-open" data-read-open="${esc(c.id)}" ${c.web_url || selecting ? '' : 'disabled'} title="${selecting ? '' : c.web_url ? 'Open on ' + esc(manga.sourceName) : 'No link yet'}">${esc(chapterLabel(c))}</button>
           <button type="button" class="chapter-check" data-read-toggle="${esc(c.id)}" title="${read ? 'Mark as unread' : 'Mark as read'}" aria-label="${read ? 'Mark as unread' : 'Mark as read'}">✓</button>
         </div>`;
       }).join('') + '</div>';
@@ -2085,10 +2106,77 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     box.innerHTML = html;
   }
 
+  // Seleção de vários capítulos (como na app): ids escolhidos e o último tocado, para o Shift+clique
+  const chapterSelection = { sourceId: null, ids: new Set(), anchor: null };
+  function clearChapterSelection(){ chapterSelection.sourceId = null; chapterSelection.ids = new Set(); chapterSelection.anchor = null; }
+  function toggleChapterSelected(manga, id, range){
+    const cache = chapterCache[manga.sourceId];
+    if (chapterSelection.sourceId !== manga.sourceId) clearChapterSelection();
+    chapterSelection.sourceId = manga.sourceId;
+    if (range && chapterSelection.anchor && cache) {
+      const ids = cache.list.map(c => c.id);
+      const [from, to] = [ids.indexOf(chapterSelection.anchor), ids.indexOf(id)].sort((a, b) => a - b);
+      if (from >= 0) ids.slice(from, to + 1).forEach(x => chapterSelection.ids.add(x));
+    } else if (chapterSelection.ids.has(id)) chapterSelection.ids.delete(id);
+    else chapterSelection.ids.add(id);
+    chapterSelection.anchor = id;
+    renderMangaRead(manga);
+  }
+
+  // Carregar sem largar num capítulo começa a seleção; o clique que vem a seguir não abre o capítulo
+  let chapterPress = null;
+  let suppressChapterClick = false;
+  qs('mangaRead').addEventListener('pointerdown', (e) => {
+    const row = e.target.closest('.chapter-open');
+    if (!row || e.button !== 0) return;
+    chapterPress = { id: row.dataset.readOpen, x: e.clientX, y: e.clientY };
+    chapterPress.timer = setTimeout(() => {
+      const manga = state.library.find(m => m.mangaId === activeMangaId);
+      if (manga && chapterPress) { suppressChapterClick = true; toggleChapterSelected(manga, chapterPress.id, false); }
+      chapterPress = null;
+    }, LONG_PRESS_MS);
+  });
+  qs('mangaRead').addEventListener('pointermove', (e) => {
+    if (chapterPress && Math.hypot(e.clientX - chapterPress.x, e.clientY - chapterPress.y) > MOVE_TOLERANCE_PX) { clearTimeout(chapterPress.timer); chapterPress = null; }
+  });
+  ['pointerup', 'pointercancel'].forEach(type => qs('mangaRead').addEventListener(type, () => {
+    if (chapterPress) { clearTimeout(chapterPress.timer); chapterPress = null; }
+  }));
+  qs('mangaRead').addEventListener('contextmenu', (e) => { if (e.target.closest('.chapter-open')) e.preventDefault(); });
+
   qs('mangaRead').onclick = (e) => {
     const manga = state.library.find(m => m.mangaId === activeMangaId);
     if (!manga) return;
     const cache = chapterCache[manga.sourceId];
+    if (suppressChapterClick) { suppressChapterClick = false; e.preventDefault(); return; }
+    if (e.target.closest('[data-select-start]') && cache && cache.list.length) {
+      const next = nextChapterOf(cache);
+      toggleChapterSelected(manga, (next || cache.list[cache.list.length - 1]).id, false);
+      return;
+    }
+    if (e.target.closest('[data-select-cancel]')) { clearChapterSelection(); renderMangaRead(manga); return; }
+    if (e.target.closest('[data-select-all]') && cache) {
+      const all = chapterSelection.ids.size === cache.list.length;
+      chapterSelection.sourceId = manga.sourceId;
+      chapterSelection.ids = all ? new Set() : new Set(cache.list.map(c => c.id));
+      renderMangaRead(manga);
+      return;
+    }
+    const mark = e.target.closest('[data-select-mark]');
+    if (mark && cache) {
+      // Pela ordem de leitura: o último lido fica o capítulo mais avançado dos escolhidos
+      const ids = cache.list.map(c => c.id).filter(id => chapterSelection.ids.has(id));
+      clearChapterSelection();
+      setChaptersRead(manga, ids, mark.dataset.selectMark === 'read').then(() => renderMangaRead(manga));
+      return;
+    }
+    const selecting = chapterSelection.sourceId === manga.sourceId && chapterSelection.ids.size > 0;
+    const chapterRow = e.target.closest('[data-read-open]');
+    if (chapterRow && cache && (selecting || e.shiftKey)) {
+      if (!selecting) chapterSelection.anchor = nextChapterOf(cache) ? nextChapterOf(cache).id : null;
+      toggleChapterSelected(manga, chapterRow.dataset.readOpen, e.shiftKey);
+      return;
+    }
     if (e.target.closest('[data-read-source]')) { window.open(manga.webUrl, '_blank', 'noopener'); return; }
     const open = e.target.closest('[data-read-open]');
     if (open && cache) {
@@ -2118,10 +2206,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // Marca ou desmarca na cloud (o mesmo que a app grava); lido passa a ser o último capítulo do manga
   async function setChaptersRead(manga, chapterIds, read){
     const now = new Date().toISOString();
-    const { error } = await supabase.from('user_chapter_progress').upsert(chapterIds.map(id => ({
-      user_id: currentUser.id, chapter_id: id, manga_id: manga.sourceId, read: read, last_page_read: 0, updated_at: now
-    })), { onConflict: 'user_id,chapter_id' });
-    if (error) { console.error('chapter progress', error); alert("Couldn't save the change. Try again."); return false; }
+    if (!chapterIds.length) return true;
+    for (let from = 0; from < chapterIds.length; from += CHAPTER_PAGE) {
+      const { error } = await supabase.from('user_chapter_progress').upsert(chapterIds.slice(from, from + CHAPTER_PAGE).map(id => ({
+        user_id: currentUser.id, chapter_id: id, manga_id: manga.sourceId, read: read, last_page_read: 0, updated_at: now
+      })), { onConflict: 'user_id,chapter_id' });
+      if (error) { console.error('chapter progress', error); alert("Couldn't save the change. Try again."); return false; }
+    }
     if (read) {
       const { error: libraryError } = await supabase.from('user_library')
         .update({ last_chapter_id: chapterIds[chapterIds.length - 1], last_page: 0, last_read_at: now })
