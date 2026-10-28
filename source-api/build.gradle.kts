@@ -20,6 +20,7 @@ dependencies {
     implementation(libs.injekt)
     implementation(libs.rxJava)
     implementation(libs.jsoup)
+    implementation(libs.nanohttpd)
 
     implementation(libs.androidx.preference)
 
