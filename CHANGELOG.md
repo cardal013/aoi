@@ -14,6 +14,19 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.28.0] - 2026-10-28
+### Added
+- *Admin → Trello*: your Trello boards inside the Admin (app and website), through the Trello API. Board with columns, drag cards between lists (press and hold on the phone), create/rename/archive lists and cards, description, due date, labels, checklists, comments, attachments (links and files), calendar view, filters and board switching. The API key and token go in *Admin → Definições → Trello* and stay on that device
+- *Admin → Savearth*: press and hold a day to start selecting, drag across days or tap to add more, then add the same shift to all of them or delete their hours at once
+- Website: *Admin* tab for admin accounts, with everything the app has (Savearth, Gits, Refeições, Trello, Definições) plus *Users*
+- Home screen widget with the IPMA weather forecast for Porto: today on 2×2, the next days on 4×1, both on 4×2. Updates every hour; tap to open the IPMA forecast
+
+### Changed
+- *Refeições* moved into the Admin menu (between *Gits* and *Definições*) and is now per account, saved with the rest of the Admin data, so it shows on the website too. Days already marked are kept. New 🗑️ button (top right) clears every mark
+
+### Removed
+- *More → Refeições* and the Refeições reminder notification
+
 ## [Aoi v0.27.0] - 2026-10-25
 ### Added
 - *Refeições* reminder: admins get a notification before each marked day saying *"Amanhã o Afonso **come** em casa"* or *"Amanhã o Afonso **não** come em casa"*. Days with no mark have no reminder

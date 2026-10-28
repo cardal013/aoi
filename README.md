@@ -97,6 +97,13 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.28.0
+- *Admin → Trello*: your Trello boards inside the Admin, in the app and on the website (drag cards, lists, labels, due dates, checklists, comments, attachments, calendar)
+- *Admin → Savearth*: select several days at once (press and hold, then drag or tap) to add or delete hours
+- Website: *Admin* tab for admins, with everything the app has plus *Users*
+- *Refeições* moved into the Admin, per account and on the website too, with a button to clear everything; the reminder was removed
+- IPMA weather widget (Porto) for the home screen
+
 ### 0.27.0
 - *Refeições* reminder for admins, before each marked day (how many days before and at what time can be set below the calendar)
 
