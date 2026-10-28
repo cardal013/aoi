@@ -143,7 +143,14 @@ class AnimeExtensions(
             return null
         }
         val signature = signatures(pkgInfo)?.lastOrNull() ?: return null
-        if ("$pkg:$signature" !in trusted()) return Untrusted(pkg, name, versionName, signature)
+        if ("$pkg:$signature" !in trusted()) {
+            // Instalada a partir do Aoi (repositório que o utilizador pôs): confia logo, sem mais um passo
+            if (pkg !in requested()) return Untrusted(pkg, name, versionName, signature)
+            prefs.edit {
+                putStringSet(KEY_TRUSTED, trusted() + "$pkg:$signature")
+                putStringSet(KEY_REQUESTED, requested() - pkg)
+            }
+        }
 
         val classLoader = try {
             DelegateLastClassLoaderCompat(appInfo.sourceDir, null, context.classLoader)
@@ -191,6 +198,8 @@ class AnimeExtensions(
 
     private fun trusted(): Set<String> = prefs.getStringSet(KEY_TRUSTED, emptySet()).orEmpty()
 
+    private fun requested(): Set<String> = prefs.getStringSet(KEY_REQUESTED, emptySet()).orEmpty()
+
     fun trust(untrusted: Untrusted) {
         prefs.edit { putStringSet(KEY_TRUSTED, trusted() + "${untrusted.pkg}:${untrusted.signature}") }
         reloadInstalled()
@@ -205,10 +214,12 @@ class AnimeExtensions(
 
     private fun repos(): List<String> = prefs.getStringSet(KEY_REPOS, emptySet()).orEmpty().sorted()
 
-    /** Aceita o link do index.min.json ou da pasta onde ele está. */
+    /**
+     * Aceita o link do index.min.json, da pasta onde ele está, do repositório no GitHub ou um
+     * `aniyomi://add-repo?url=…`; sem `https://` também serve.
+     */
     fun addRepo(url: String): Boolean {
-        val base = url.trim().removeSuffix("/").removeSuffix("/index.min.json").removeSuffix("/repo.json")
-        if (!base.startsWith("https://")) return false
+        val base = AnimeRepoUrl.base(url) ?: return false
         prefs.edit { putStringSet(KEY_REPOS, repos().toSet() + base) }
         _state.update { it.copy(repos = repos()) }
         refreshAvailable()
@@ -266,6 +277,7 @@ class AnimeExtensions(
 
     /** Descarrega o APK e abre o instalador do Android. */
     suspend fun install(ext: Available) {
+        prefs.edit { putStringSet(KEY_REQUESTED, requested() + ext.pkg) }
         val dir = File(context.cacheDir, "anime_extensions").apply { mkdirs() }
         val file = File(dir, "${ext.pkg}.apk")
         network.client.newCall(GET(ext.apkUrl)).awaitSuccess().use { response ->
@@ -286,6 +298,7 @@ class AnimeExtensions(
         val SUPPORTED_LIB_VERSIONS = listOf(14.0, 16.0, 17.0)
         const val KEY_REPOS = "repos"
         const val KEY_TRUSTED = "trusted"
+        const val KEY_REQUESTED = "requested"
 
         @Suppress("DEPRECATION")
         val PACKAGE_FLAGS = PackageManager.GET_CONFIGURATIONS or

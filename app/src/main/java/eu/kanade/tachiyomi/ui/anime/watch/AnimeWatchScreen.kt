@@ -7,10 +7,12 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,6 +50,7 @@ import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.animesource.model.SEpisode
 import eu.kanade.tachiyomi.data.anime.AnimeDownloads
 import kotlinx.coroutines.delay
+import mihon.app.di.appGraph
 import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.rounded.Delete
 import mihon.icons.materialsymbols.rounded.Download
@@ -55,6 +59,7 @@ import mihon.icons.materialsymbols.rounded.Refresh
 import mihon.icons.materialsymbols.rounded.Search
 import mihon.icons.materialsymbols.rounded.Sync
 import mihon.icons.materialsymbols.roundedfilled.CheckCircle
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.i18n.stringResource
@@ -92,7 +97,22 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
             }
         }
 
+        val play: (SEpisode) -> Unit = play@{ episode ->
+            val sourceId = viewModel.linkedSource()?.id ?: return@play
+            context.startActivity(AnimePlayerActivity.intent(context, sourceId, malId, episode))
+        }
+
         Scaffold(
+            floatingActionButton = {
+                val next = state.nextEpisode
+                if (!state.choosing && !state.episodesLoading && next != null) {
+                    ExtendedFloatingActionButton(
+                        text = { Text(stringResource(MR.strings.anime_watch_play, episodeLabel(next.episode_number))) },
+                        icon = { Icon(MaterialSymbols.RoundedFilled.PlayArrow, null) },
+                        onClick = { play(next) },
+                    )
+                }
+            },
             topBar = {
                 AppBar(
                     title = state.anime?.title ?: stringResource(MR.strings.anime_watch),
@@ -120,24 +140,22 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
             Box(modifier = Modifier.fillMaxSize().padding(padding)) {
                 when {
                     !state.ready -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                    state.choosing && sources.isEmpty() -> EmptyScreen(
-                        stringRes = MR.strings.anime_watch_no_extensions,
-                        actions = listOf(
-                            EmptyScreenAction(
-                                stringRes = MR.strings.anime_extensions,
-                                icon = MaterialSymbols.Rounded.Explore,
-                                onClick = { navigator.push(AnimeExtensionsScreen()) },
-                            ),
-                        ),
+                    // Ainda sem extensões: pôr o repositório e instalar aqui mesmo; depois procura sozinho
+                    sources.isEmpty() && state.link == null -> AnimeExtensionsList(
+                        extensions = context.appGraph.animeExtensions,
+                        header = {
+                            Text(
+                                stringResource(MR.strings.anime_watch_no_extensions),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        },
                     )
                     state.choosing -> ChooseSource(viewModel, state, sources)
                     else -> Episodes(
                         state = state,
                         downloads = downloads,
-                        onPlay = { episode ->
-                            val sourceId = viewModel.linkedSource()?.id ?: return@Episodes
-                            context.startActivity(AnimePlayerActivity.intent(context, sourceId, malId, episode))
-                        },
+                        onPlay = play,
                         onDownload = viewModel::download,
                         onDelete = viewModel::deleteDownload,
                         onRetry = viewModel::loadEpisodes,
@@ -161,6 +179,13 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
                     .padding(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                if (sources.size > 1) {
+                    FilterChip(
+                        selected = state.source == null,
+                        onClick = { viewModel.chooseSource(null) },
+                        label = { Text(stringResource(MR.strings.anime_watch_all_sources)) },
+                    )
+                }
                 sources.forEach { source ->
                     FilterChip(
                         selected = state.source?.id == source.id,
@@ -183,21 +208,39 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
                 keyboardActions = KeyboardActions(onSearch = { viewModel.search() }),
             )
             when {
-                state.searching -> Box(Modifier.fillMaxSize()) { CircularProgressIndicator(Modifier.align(Alignment.Center)) }
+                state.searching -> Column(
+                    modifier = Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator()
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        stringResource(MR.strings.anime_watch_looking),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 state.searchError -> EmptyScreen(stringRes = MR.strings.anime_watch_search_error)
                 state.results.isEmpty() -> EmptyScreen(stringRes = MR.strings.no_results_found)
                 else -> LazyColumn {
-                    items(state.results) { anime ->
+                    items(state.results, key = { it.source.id.toString() + it.anime.url }) { result ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { viewModel.pick(anime) }
+                                .clickable { viewModel.pick(result) }
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            MangaCover.Book(data = anime.thumbnail_url, modifier = Modifier.width(52.dp))
+                            MangaCover.Book(data = result.anime.thumbnail_url, modifier = Modifier.width(52.dp))
                             Spacer(Modifier.width(12.dp))
-                            Text(anime.title, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                            Column {
+                                Text(result.anime.title, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    "${result.source.name} (${result.source.lang})",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -221,7 +264,7 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
                 actions = listOf(EmptyScreenAction(MR.strings.action_retry, MaterialSymbols.Rounded.Refresh, onRetry)),
             )
             state.episodes.isEmpty() -> EmptyScreen(stringRes = MR.strings.anime_watch_no_episodes)
-            else -> LazyColumn {
+            else -> LazyColumn(contentPadding = PaddingValues(bottom = 88.dp)) {
                 items(state.episodes, key = { it.url }) { episode ->
                     val watched = episode.episode_number > 0 &&
                         episode.episode_number <= (state.anime?.episodesWatched ?: 0)

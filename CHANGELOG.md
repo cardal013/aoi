@@ -14,6 +14,16 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.30.0] - 2026-10-28
+### Improved
+- *Watch episodes* now does the work by itself: it searches the anime in all your installed extensions (title and English title, "2nd Season" = "Season 2") and, when a result matches, opens its episodes straight away. Only when nothing matches well does it show the results to pick from (with the source of each one). *Change source* searches all extensions again
+- *Play episode N* button that starts the episode after the last one you watched
+- No extensions yet: the repository field and the extensions to install show up right in *Watch episodes*. The link can be pasted any way (without `https://`, the GitHub repository page or an `aniyomi://add-repo` link), and extensions installed from there are trusted automatically
+### Added
+- Website: *Watch in the Aoi app* in each anime's sheet (on Android it opens the app on that anime's episodes; it installs the app if it's missing) and the official streaming services where the anime is available
+### Fixed
+- Website *Admin → Users*: an unknown error now shows the full message instead of only the code (e.g. "Erro (P0001)")
+
 ## [Aoi v0.29.0] - 2026-10-28
 ### Added
 - Watch anime from your MyAnimeList list: *Watch episodes* in each anime's sheet. Pick the source and the right anime once (saved on the device and in the cloud), then the episode list with play and download

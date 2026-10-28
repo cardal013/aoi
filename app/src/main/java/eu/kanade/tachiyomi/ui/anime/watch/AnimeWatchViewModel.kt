@@ -16,15 +16,24 @@ import eu.kanade.tachiyomi.data.account.supabase
 import eu.kanade.tachiyomi.data.anime.AnimeDownloads
 import eu.kanade.tachiyomi.data.anime.AnimeExtensions
 import eu.kanade.tachiyomi.data.anime.AnimeLinks
+import eu.kanade.tachiyomi.data.anime.AnimeMatch
 import eu.kanade.tachiyomi.data.anime.AnimeVideos
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.system.logcat
@@ -32,8 +41,9 @@ import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.repository.AnimeRepository
 
 /**
- * Ver um anime da lista do MAL: escolher (uma vez) a fonte e o anime certo nela, e depois a lista de episódios
- * com ver e transferir. A escolha fica no aparelho e no Supabase ([AnimeLinks]).
+ * Ver um anime da lista do MAL. Da primeira vez procura o anime em todas as fontes instaladas e, se um
+ * resultado bater certo com o título do MAL, fica logo com ele; senão mostra os resultados para escolher.
+ * A escolha fica no aparelho e no Supabase ([AnimeLinks]).
  */
 @OptIn(UnstableApi::class)
 @Inject
@@ -46,27 +56,39 @@ class AnimeWatchViewModel(
     val downloads: AnimeDownloads,
 ) : ViewModel() {
 
+    /** Um resultado da pesquisa, com a fonte de onde veio. */
+    data class Result(val source: AnimeSource, val anime: SAnime, val score: Double)
+
     data class State(
         val anime: Anime? = null,
         val link: AnimeLinks.Link? = null,
         val ready: Boolean = false,
         val choosing: Boolean = false,
+        // null = todas as fontes
         val source: AnimeSource? = null,
         val query: String = "",
-        val results: List<SAnime> = emptyList(),
+        val results: List<Result> = emptyList(),
         val searching: Boolean = false,
         val searchError: Boolean = false,
         val episodes: List<SEpisode> = emptyList(),
         val episodesLoading: Boolean = false,
         val episodesError: Boolean = false,
         val message: String? = null,
-    )
+    ) {
+        /** O episódio a seguir ao último visto (ou o primeiro). */
+        val nextEpisode: SEpisode?
+            get() {
+                val watched = anime?.episodesWatched ?: 0
+                return episodes.firstOrNull { it.episode_number > watched } ?: episodes.firstOrNull()
+            }
+    }
 
     private val _state = MutableStateFlow(State())
     val state: StateFlow<State> = _state.asStateFlow()
     val extensionsState = extensions.state
     private var malId = 0L
     private var searchJob: Job? = null
+    private var autoSearched = false
 
     fun init(malId: Long) {
         if (this.malId == malId) return
@@ -79,7 +101,20 @@ class AnimeWatchViewModel(
             _state.update {
                 it.copy(anime = anime, link = link, ready = true, choosing = link == null, query = anime?.title.orEmpty())
             }
-            if (link != null) loadEpisodes() else extensions.sources.firstOrNull()?.let { chooseSource(it) }
+            if (link != null) loadEpisodes()
+            // As extensões carregam à parte (no arranque, ou quando uma acaba de instalar): quando houver fontes,
+            // procura o anime se ainda não está ligado, ou volta a tentar os episódios
+            extensions.state.map { st -> st.installed.isNotEmpty() }.distinctUntilChanged().collect { hasSources ->
+                val st = _state.value
+                when {
+                    !hasSources -> Unit
+                    st.link == null && !autoSearched -> {
+                        autoSearched = true
+                        search(auto = true)
+                    }
+                    st.link != null && st.episodesError -> loadEpisodes()
+                }
+            }
         }
         viewModelScope.launch {
             animeRepository.getAllAsFlow(supabase.auth.currentUserOrNull()?.id ?: return@launch).collect { list ->
@@ -93,15 +128,15 @@ class AnimeWatchViewModel(
     // ---------- Escolher a fonte ----------
 
     fun startChoosing() {
-        _state.update { it.copy(choosing = true, query = it.anime?.title.orEmpty()) }
-        (linkedSource() ?: extensions.sources.firstOrNull())?.let { chooseSource(it) }
+        _state.update { it.copy(choosing = true, source = null, query = it.anime?.title.orEmpty()) }
+        search()
     }
 
     fun stopChoosing() {
         if (_state.value.link != null) _state.update { it.copy(choosing = false) }
     }
 
-    fun chooseSource(source: AnimeSource) {
+    fun chooseSource(source: AnimeSource?) {
         _state.update { it.copy(source = source) }
         search()
     }
@@ -110,28 +145,54 @@ class AnimeWatchViewModel(
         _state.update { it.copy(query = query) }
     }
 
-    fun search() {
-        val source = _state.value.source ?: return
-        val query = _state.value.query.trim()
-        if (query.isEmpty()) return
+    /**
+     * Pesquisa na fonte escolhida ou em todas. Com [auto], pesquisa com o título e o título em inglês e,
+     * se o melhor resultado bater certo, liga-o logo e mostra os episódios.
+     */
+    fun search(auto: Boolean = false) {
+        val st = _state.value
+        val titles = listOfNotNull(st.anime?.title, st.anime?.titleEnglish).filter { it.isNotBlank() }.distinct()
+        val queries = if (auto) titles else listOf(st.query.trim()).filter { it.isNotEmpty() }
+        val sources = st.source?.let { listOf(it) } ?: extensions.sources
+        if (queries.isEmpty() || sources.isEmpty()) return
+        val scoreTitles = (titles + queries).distinct()
         searchJob?.cancel()
         searchJob = viewModelScope.launchIO {
             _state.update { it.copy(searching = true, searchError = false, results = emptyList()) }
-            try {
-                val page = source.getSearchAnime(1, query, source.getFilterList())
-                _state.update { it.copy(results = page.animes, searching = false) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                logcat(LogPriority.WARN, e) { "Anime: pesquisa em ${source.name} falhou" }
-                _state.update { it.copy(searching = false, searchError = true) }
+            val limit = Semaphore(4)
+            val found = coroutineScope {
+                sources.flatMap { source -> queries.map { query -> source to query } }.map { (source, query) ->
+                    async {
+                        limit.withPermit {
+                            withTimeoutOrNull(SEARCH_TIMEOUT) { searchOne(source, query, scoreTitles) }
+                        }
+                    }
+                }.awaitAll()
             }
+            val ok = found.filterNotNull()
+            val results = ok.flatten()
+                .distinctBy { it.source.id to it.anime.url }
+                .sortedByDescending { it.score }
+            _state.update { it.copy(results = results, searching = false, searchError = ok.isEmpty()) }
+            val best = results.firstOrNull()
+            if (auto && best != null && best.score >= AnimeMatch.AUTO_PICK) pick(best)
         }
     }
 
-    fun pick(anime: SAnime) {
-        val source = _state.value.source ?: return
-        val link = AnimeLinks.Link(source.id.toString(), anime.url, anime.title)
+    private suspend fun searchOne(source: AnimeSource, query: String, titles: List<String>): List<Result>? {
+        return try {
+            source.getSearchAnime(1, query, source.getFilterList()).animes
+                .map { Result(source, it, AnimeMatch.score(titles, it.title)) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN, e) { "Anime: pesquisa em ${source.name} falhou" }
+            null
+        }
+    }
+
+    fun pick(result: Result) {
+        val link = AnimeLinks.Link(result.source.id.toString(), result.anime.url, result.anime.title)
         _state.update { it.copy(link = link, choosing = false, episodes = emptyList()) }
         viewModelScope.launchIO {
             links.set(malId, link)
@@ -190,4 +251,8 @@ class AnimeWatchViewModel(
     fun deleteDownload(episode: SEpisode) = downloads.remove(episode.url)
 
     fun messageShown() = _state.update { it.copy(message = null) }
+
+    private companion object {
+        const val SEARCH_TIMEOUT = 20_000L
+    }
 }

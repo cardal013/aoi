@@ -162,7 +162,10 @@
     <!-- Aoi: ver e transferir animes (extensões do Aniyomi) -->
     <string name="anime_watch">Watch episodes</string>
     <string name="anime_watch_choose_source">Choose where to watch</string>
-    <string name="anime_watch_no_extensions">Install an anime extension first</string>
+    <string name="anime_watch_no_extensions">Paste your extension repository link once and install an extension. After that, Watch episodes finds the anime and opens its episodes by itself.</string>
+    <string name="anime_watch_looking">Looking for this anime in your extensions…</string>
+    <string name="anime_watch_all_sources">All</string>
+    <string name="anime_watch_play">Play episode %1$s</string>
     <string name="anime_watch_change_source">Change source</string>
     <string name="anime_watch_search_error">The search failed. Try another source or title</string>
     <string name="anime_watch_episodes_error">Couldn\'t load the episodes</string>
@@ -175,8 +178,8 @@
     <string name="anime_extensions">Anime extensions</string>
     <string name="anime_ext_repos">Repositories</string>
     <string name="anime_ext_add_repo">Add</string>
-    <string name="anime_ext_repo_hint">Link to index.min.json</string>
-    <string name="anime_ext_repo_invalid">The link must start with https://</string>
+    <string name="anime_ext_repo_hint">Repository link</string>
+    <string name="anime_ext_repo_invalid">That doesn\'t look like a link</string>
     <string name="anime_ext_installed">Installed</string>
     <string name="anime_ext_available">Available</string>
     <string name="anime_ext_untrusted">Not trusted yet: only trust extensions you know</string>

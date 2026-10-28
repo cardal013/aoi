@@ -47,7 +47,12 @@
     42501: 'Só um admin com sessão iniciada pode fazer isto.',
   };
   const userError = code => new Error(USER_ERRORS[code] || `Erro (${code})`);
-  const rpcError = e => userError(Object.keys(USER_ERRORS).find(c => e.message.includes(c)) || e.code);
+  // Erro conhecido → texto em português; desconhecido → código e mensagem do Postgres, para se saber a causa
+  const rpcError = e => {
+    const known = Object.keys(USER_ERRORS).find(c => (e.message || '').includes(c) || e.code === c);
+    if (known) return userError(known);
+    return new Error(`Erro (${[e.code, e.message, e.details, e.hint].filter(Boolean).join(' · ')})`);
+  };
 
   window.Aoi = {
     userId: () => uid,

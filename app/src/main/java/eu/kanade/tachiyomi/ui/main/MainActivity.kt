@@ -81,6 +81,7 @@ import eu.kanade.tachiyomi.data.download.DownloadCache
 import eu.kanade.tachiyomi.data.notification.NotificationReceiver
 import eu.kanade.tachiyomi.extension.api.ExtensionApi
 import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
+import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
 import eu.kanade.tachiyomi.ui.browse.source.browse.BrowseSourceScreen
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreen
@@ -577,6 +578,13 @@ class MainActivity : BaseActivity() {
                 if (intent.data.toString().endsWith(".tachibk")) {
                     navigator.popUntilRoot()
                     navigator.push(RestoreBackupScreen(intent.data.toString()))
+                }
+                // Aoi: o site abre os episódios de um anime
+                else if (intent.scheme == "aoi" && intent.data?.host == "anime-watch") {
+                    intent.data?.getQueryParameter("mal")?.toLongOrNull()?.let { malId ->
+                        navigator.popUntilRoot()
+                        navigator.push(AnimeWatchScreen(malId))
+                    }
                 }
                 // Deep link to add extension store
                 else if (intent.isAddExtensionStoreIntent()) {

@@ -574,6 +574,14 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .ep-row button:disabled{ opacity:.4; }
 .anime-modal-actions{ display:flex; justify-content:space-between; align-items:center; gap:10px; margin-top:22px; padding-top:18px; border-top:1px solid var(--border); }
 .anime-modal-actions a{ color:var(--accent); font-weight:700; font-size:14px; }
+.anime-watch{ margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+.anime-watch .btn{ display:inline-flex; align-items:center; justify-content:center; gap:8px; align-self:flex-start; }
+.anime-watch-hint{ color:var(--text-muted); font-size:13px; margin:0; }
+.anime-watch-hint:empty{ display:none; }
+.anime-streams{ display:flex; flex-wrap:wrap; gap:8px; }
+.anime-streams a{ padding:7px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; font-weight:600; }
+.anime-streams a:hover{ border-color:var(--accent); color:var(--accent); }
+.anime-streams .muted{ color:var(--text-muted); font-size:13px; }
 .anime-query{ width:100%; padding:12px 16px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:15px; }
 .anime-results{ display:flex; flex-direction:column; gap:8px; max-height:52vh; overflow:auto; margin-top:14px; }
 .anime-results .hint{ color:var(--text-muted); font-size:13.5px; padding:14px 4px; }
@@ -1039,6 +1047,14 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button type="button" id="animeEpMinus" aria-label="One episode less">−</button>
         <button type="button" id="animeEpPlus" aria-label="One episode more">+</button>
       </span>
+    </div>
+    <div class="anime-watch">
+      <a class="btn btn-primary btn-sm" id="animeWatchApp" href="#">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+        Watch in the Aoi app
+      </a>
+      <p class="anime-watch-hint" id="animeWatchHint"></p>
+      <div class="anime-streams" id="animeStreams"></div>
     </div>
     <div class="anime-modal-actions">
       <a id="animeMalLink" href="#" target="_blank" rel="noopener">Open on MyAnimeList</a>
@@ -2474,6 +2490,42 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('animeEpMinus').disabled = a.episodes_watched <= 0;
     qs('animeEpPlus').disabled = a.num_episodes != null && a.episodes_watched >= a.num_episodes;
     qs('animeMalLink').href = `https://myanimelist.net/anime/${a.mal_id}`;
+    renderAnimeWatch(a);
+  }
+
+  // Ver: o browser não corre as extensões do Android, por isso o site abre o Aoi no telemóvel já nos
+  // episódios deste anime e mostra onde o anime dá oficialmente (lista do MAL, pela API do Jikan)
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
+  const APK_URL = 'https://github.com/cardal013/aoi/releases/latest/download/app-universal-release.apk';
+  const animeStreamsCache = {};
+  function renderAnimeWatch(a){
+    const btn = qs('animeWatchApp');
+    btn.href = IS_ANDROID
+      ? `intent://anime-watch?mal=${a.mal_id}#Intent;scheme=aoi;package=com.cardal.aoi;S.browser_fallback_url=${encodeURIComponent(APK_URL)};end`
+      : `aoi://anime-watch?mal=${a.mal_id}`;
+    btn.style.display = IS_ANDROID ? '' : 'none';
+    qs('animeWatchHint').textContent = IS_ANDROID
+      ? ''
+      : 'To watch the episodes, open this page on your phone: the button opens them in the Aoi app.';
+    loadAnimeStreams(a.mal_id);
+  }
+  async function loadAnimeStreams(malId){
+    const box = qs('animeStreams');
+    const show = list => {
+      if (animeState.activeId !== malId) return;
+      box.innerHTML = list.length
+        ? '<span class="muted">Official:</span>' + list.map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.name)} ↗</a>`).join('')
+        : '';
+    };
+    if (animeStreamsCache[malId]) return show(animeStreamsCache[malId]);
+    box.innerHTML = '';
+    try {
+      const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}/streaming`, { signal: AbortSignal.timeout(8000) });
+      if (!r.ok) return;
+      const list = ((await r.json()).data || []).filter(s => /^https?:\/\//.test(s.url || ''));
+      animeStreamsCache[malId] = list;
+      show(list);
+    } catch (err) {}
   }
   function openAnimeModal(malId){
     animeState.activeId = malId;
