@@ -18,6 +18,7 @@ Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 ### Changed
 - With no anime extension installed, Aoi offers to install 2Dhive, Anikoto and Lunar (instead of Re:ANIME, KickAssAnime and Anikoto)
 - Site: *Watch* comes with 2Dhive, Anikoto and Lunar and asks on which one to open the episode each time; your own site is optional and shows up as a fourth. *Yes, next episode* stays on the same site
+- Site (after the APK): *Watch* opens the episode itself, not just the site (2Dhive by MyAnimeList ID; Anikoto, AnimeSuge and Lunar through `/api/watch`); any site can be removed with ✕ and more can be added (*Profile → Watch sites → Edit* or *Add a site…*)
 
 ## [Aoi v0.33.0] - 2026-10-28
 ### Fixed

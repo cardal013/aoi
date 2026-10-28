@@ -623,7 +623,12 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .watch-done-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:20px; }
 .watch-site-field{ width:100%; margin-top:14px; }
 .watch-site-help{ color:var(--text-muted); font-size:13px; line-height:1.5; margin-top:10px; }
-.watch-pick-host{ margin-left:auto; color:var(--text-faint); font-family:var(--font-mono); font-size:12px; font-weight:400; }
+.watch-pick-host{ margin-left:auto; color:var(--text-faint); font-family:var(--font-mono); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.watch-pick-row{ display:flex; gap:6px; }
+.watch-pick-row .anime-menu-item{ flex:1; min-width:0; }
+.watch-pick-row .anime-menu-item:disabled{ cursor:default; border-color:var(--border); }
+.watch-pick-remove{ flex-shrink:0; width:46px; display:flex; align-items:center; justify-content:center; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text-muted); }
+.watch-pick-remove:hover{ border-color:#D6455D; color:#D6455D; }
 .watch-site-help code{ font-family:var(--font-mono); font-size:12px; background:var(--bg-elevated-2); padding:1px 5px; border-radius:5px; }
 /* Colunas da grelha escolhidas à mão (como na app); sem escolha fica o automático */
 .manga-grid.fixed-cols{ grid-template-columns:repeat(var(--grid-cols), minmax(0,1fr)); }
@@ -1027,7 +1032,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <div class="k">Watch sites</div>
           <div class="v" id="profileWatchSite"></div>
         </div>
-        <button type="button" class="btn btn-ghost btn-sm" id="openWatchSite">Change</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="openWatchSite">Edit</button>
       </div>
       <div class="profile-actions">
         <button type="button" class="btn btn-danger btn-block" id="logoutBtnProfile">Logout</button>
@@ -1082,7 +1087,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
         <span id="animeWatchSiteLabel">Watch episode 1</span>
       </button>
-      <button type="button" class="btn btn-ghost btn-sm" id="animeWatchSiteChange">Your own site…</button>
       <a class="btn btn-ghost btn-sm" id="animeWatchApp" href="#">
         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
         Watch in the Aoi app
@@ -1155,8 +1159,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="watchSiteTitle">
     <div class="modal-head">
       <div>
-        <h3 id="watchSiteTitle">Your own site</h3>
-        <p>Shows up in Watch next to 2Dhive, Anikoto and Lunar</p>
+        <h3 id="watchSiteTitle">Add a site</h3>
+        <p>Shows up in Watch with the others</p>
       </div>
       <button type="button" class="modal-close" id="closeWatchSiteModal" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -1169,11 +1173,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <div class="field-error" id="watchSiteError">The link must start with https://</div>
       </div>
       <p class="watch-site-help">
-        Search for any anime on the site you want and copy the link of the results page. Put <code>{title}</code> where the anime's name goes (and <code>{episode}</code> if the site has it in the link). Without <code>{title}</code>, Watch just opens the link.
+        Search for any anime on the site you want and copy the link of the results page. Put <code>{title}</code> where the anime's name goes, <code>{episode}</code> for the episode and <code>{mal}</code> for the MyAnimeList ID, if the site has them in the link. Without them, Watch just opens the link. AnimeSuge (anisuge.tv) goes straight to the episode.
         When the episode should be over, Aoi asks if you watched it to the end and marks it on MyAnimeList (it shows up in the app too). This browser only.
       </p>
       <div class="modal-foot" style="display:flex; gap:10px; margin-top:6px;">
-        <button type="button" class="btn btn-ghost" id="clearWatchSite" style="flex:1">Remove</button>
+        <button type="button" class="btn btn-ghost" id="cancelWatchSite" style="flex:1">Cancel</button>
         <button type="submit" class="btn btn-primary" style="flex:1">Save</button>
       </div>
     </form>
@@ -2689,19 +2693,25 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   // ---------- Ver num site de fora (Watch) ----------
   // O browser não corre as extensões da app, por isso Watch abre o episódio noutro separador, num site de
-  // streaming que se escolhe a cada Watch: os 3 das extensões de origem da app e, se houver, um à escolha
-  // (link de pesquisa com {title} e, se o site deixar, {episode}). "Yes, next episode" fica no mesmo. O site de
+  // streaming que se escolhe a cada Watch: os 3 das extensões de origem da app e os que a pessoa acrescentar
+  // (qualquer um sai com ✕). O link vai direto ao episódio: o 2Dhive usa o ID do MAL e o Anikoto, o AnimeSuge e
+  // o Lunar passam pela função /api/watch do Vercel, que encontra o anime e redireciona. Os outros usam
+  // {title}, {episode} e {mal} no link. "Yes, next episode" fica no mesmo site. O site de
   // fora não avisa quando o episódio acaba: o Aoi conta a duração do episódio (do Jikan; 24 min se não
   // souber) e nessa altura manda uma notificação (tocar nela traz de volta este separador) e pisca o título.
   // Ao voltar ao separador depois de 3/4 da duração pergunta logo. "Yes" manda o episódio para o MAL pela
   // edge function `mal` (fica também na cópia do Supabase e chega à app). Tudo isto só neste browser.
   const WATCH_SITE_KEY = 'aoi_watch_site';
+  const WATCH_SITES_KEY = 'aoi_watch_sites';
+  const WATCH_API = 'https://aoi-mangas.vercel.app/api/watch';
   // Os mesmos das extensões de origem da app (AnimeDefaultExtensions)
-  const WATCH_SITES = [
-    { name: '2Dhive', url: 'https://2dhive.com/?s={title}' },
-    { name: 'Anikoto', url: 'https://anikototv.to/filter?keyword={title}' },
-    { name: 'Lunar', url: 'https://lunarx.to/anime/search?search={title}' },
+  const DEFAULT_WATCH_SITES = [
+    { id: '2dhive', name: '2Dhive', host: '2dhive.com', url: 'https://2dhive.com/episode?anime={mal}&ep_num={episode}' },
+    { id: 'anikoto', name: 'Anikoto', host: 'anikototv.to', url: `${WATCH_API}?site=anikoto&mal={mal}&episode={episode}&title={title}` },
+    { id: 'lunar', name: 'Lunar', host: 'lunarx.to', url: `${WATCH_API}?site=lunar&mal={mal}&episode={episode}&title={title}` },
   ];
+  // Sites acrescentados que /api/watch sabe abrir no episódio, seja qual for o link que se colou
+  const KNOWN_WATCH_HOSTS = { 'anisuge.tv': `${WATCH_API}?site=anisuge&mal={mal}&episode={episode}&title={title}` };
   const WATCH_PENDING_KEY = 'aoi_watch_pending';
   const DEFAULT_EPISODE_MS = 24 * 60 * 1000;
   // Abrir o site, ver o genérico: dá-se mais um minuto antes de perguntar
@@ -2716,11 +2726,39 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) {}
   }
 
-  function watchSite(){ return readStore(WATCH_SITE_KEY) || ''; }
-  function siteHost(url){ return url.replace(/^https?:\/\//, '').split('/')[0].replace(/^www\./, ''); }
+  function siteHost(url){ return url.replace(/^https?:\/\//, '').split(/[/?#]/)[0].replace(/^www\./, ''); }
+
+  // { hidden: [ids das predefinidas tiradas], own: [{ name, url }] }; o site único das versões antigas passa para own
+  function readWatchConfig(){
+    let config = null;
+    try { config = JSON.parse(readStore(WATCH_SITES_KEY) || 'null'); } catch (_) {}
+    if (!config) {
+      const legacy = readStore(WATCH_SITE_KEY);
+      config = { hidden: [], own: legacy ? [{ name: siteHost(legacy), url: legacy }] : [] };
+      writeWatchConfig(config);
+      writeStore(WATCH_SITE_KEY, null);
+    }
+    return { hidden: config.hidden || [], own: config.own || [] };
+  }
+  function writeWatchConfig(config){ writeStore(WATCH_SITES_KEY, JSON.stringify(config)); }
+
+  // Lista mostrada: key para tirar, host para mostrar e link com {title}/{episode}/{mal}
   function watchSites(){
-    const own = watchSite();
-    return own ? [...WATCH_SITES, { name: siteHost(own), url: own }] : WATCH_SITES;
+    const config = readWatchConfig();
+    return [
+      ...DEFAULT_WATCH_SITES.filter(site => !config.hidden.includes(site.id))
+        .map(site => ({ key: `d:${site.id}`, name: site.name, host: site.host, link: site.url })),
+      ...config.own.map((site, index) => ({
+        key: `o:${index}`, name: site.name, host: siteHost(site.url), link: KNOWN_WATCH_HOSTS[siteHost(site.url)] || site.url,
+      })),
+    ];
+  }
+  function removeWatchSite(key){
+    const config = readWatchConfig();
+    const [kind, id] = key.split(':');
+    if (kind === 'd') config.hidden = [...new Set([...config.hidden, id])];
+    else config.own.splice(Number(id), 1);
+    writeWatchConfig(config);
   }
   function readPendingWatch(){
     try { return JSON.parse(readStore(WATCH_PENDING_KEY) || 'null'); } catch (_) { return null; }
@@ -2737,6 +2775,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     return template
       .replace(/\{title\}/g, encodeURIComponent(a.title))
       .replace(/\{title_en\}/g, encodeURIComponent(a.title_english || a.title))
+      .replace(/\{mal\}/g, String(a.mal_id))
       .replace(/\{episode\}/g, String(episode));
   }
 
@@ -2866,66 +2905,89 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     markWatched(pending);
   };
 
-  // Escolher o site de cada vez
+  // Escolher o site de cada vez (sem anime, só para tirar e acrescentar sites: Profile → Edit)
   var watchPickScrim = qs('watchPickScrim');
   let watchPickTarget = null;
   function openWatchPick(a, episode){
-    watchPickTarget = { a, episode };
-    qs('watchPickTitle').textContent = `Watch episode ${episode}`;
-    qs('watchPickText').textContent = a.title;
-    qs('watchPickItems').innerHTML = watchSites().map((site, index) =>
-      `<button type="button" class="anime-menu-item" data-index="${index}">${esc(site.name)}<span class="watch-pick-host">${esc(siteHost(site.url))}</span></button>`
-    ).join('') + `<button type="button" class="anime-menu-item" data-own="1">${watchSite() ? 'Change your own site…' : 'Add your own site…'}</button>`;
-    openModal(watchPickScrim);
+    watchPickTarget = a ? { a, episode } : null;
+    qs('watchPickTitle').textContent = a ? `Watch episode ${episode}` : 'Watch sites';
+    qs('watchPickText').textContent = a ? a.title : 'Where Watch can open the episodes';
+    renderWatchPick();
+    if (!watchPickScrim.classList.contains('open')) openModal(watchPickScrim);
+  }
+  function renderWatchPick(){
+    const hidden = readWatchConfig().hidden.length > 0;
+    qs('watchPickItems').innerHTML = watchSites().map(site =>
+      `<div class="watch-pick-row">
+        <button type="button" class="anime-menu-item" data-key="${esc(site.key)}" ${watchPickTarget ? '' : 'disabled'}>${esc(site.name)}<span class="watch-pick-host">${esc(site.host)}</span></button>
+        <button type="button" class="watch-pick-remove" data-remove="${esc(site.key)}" aria-label="Remove ${esc(site.name)}" title="Remove">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>`
+    ).join('')
+      + `<button type="button" class="anime-menu-item" data-action="add">Add a site…</button>`
+      + (hidden ? `<button type="button" class="anime-menu-item" data-action="restore">Bring back 2Dhive, Anikoto and Lunar</button>` : '');
   }
   function closeWatchPick(){ watchPickTarget = null; closeModal(watchPickScrim); }
   registerModal(watchPickScrim, closeWatchPick);
   qs('closeWatchPick').onclick = closeWatchPick;
   qs('watchPickItems').onclick = (e) => {
+    const remove = e.target.closest('[data-remove]');
+    if (remove) { removeWatchSite(remove.dataset.remove); renderWatchPick(); renderWatchSiteProfile(); return; }
     const row = e.target.closest('.anime-menu-item');
+    if (!row) return;
     const target = watchPickTarget;
-    if (!row || !target) return;
+    if (row.dataset.action === 'restore') {
+      writeWatchConfig({ ...readWatchConfig(), hidden: [] });
+      renderWatchPick();
+      renderWatchSiteProfile();
+      return;
+    }
+    if (row.dataset.action === 'add') {
+      closeWatchPick();
+      openWatchSiteModal(() => openWatchPick(target && target.a, target && target.episode));
+      return;
+    }
+    const site = watchSites().find(x => x.key === row.dataset.key);
+    if (!site || !target) return;
     closeWatchPick();
-    if (row.dataset.own) { openWatchSiteModal(() => openWatchPick(target.a, target.episode)); return; }
-    const site = watchSites()[Number(row.dataset.index)];
-    if (site) startWatch(target.a, target.episode, site.url);
+    startWatch(target.a, target.episode, site.link);
   };
 
-  // O site à escolha
+  // Acrescentar um site
   var watchSiteScrim = qs('watchSiteScrim');
-  let afterWatchSiteSaved = null;
+  let afterWatchSiteClosed = null;
   function renderWatchSiteProfile(){
-    qs('profileWatchSite').textContent = watchSites().map(site => site.name).join(', ');
+    qs('profileWatchSite').textContent = watchSites().map(site => site.name).join(', ') || 'None';
   }
   function openWatchSiteModal(then){
-    afterWatchSiteSaved = then || null;
-    qs('watchSiteInput').value = watchSite();
+    afterWatchSiteClosed = then || null;
+    qs('watchSiteInput').value = '';
     qs('watchSiteError').classList.remove('show');
     openModal(watchSiteScrim);
     qs('watchSiteInput').focus();
   }
-  function closeWatchSiteModal(){ afterWatchSiteSaved = null; closeModal(watchSiteScrim); }
+  // Fechar (com ou sem guardar) volta à lista de sites
+  function closeWatchSiteModal(){
+    const then = afterWatchSiteClosed;
+    afterWatchSiteClosed = null;
+    closeModal(watchSiteScrim);
+    if (then) then();
+  }
   registerModal(watchSiteScrim, closeWatchSiteModal);
   qs('closeWatchSiteModal').onclick = closeWatchSiteModal;
-  qs('clearWatchSite').onclick = () => {
-    writeStore(WATCH_SITE_KEY, null);
-    renderWatchSiteProfile();
-    const then = afterWatchSiteSaved;
-    closeWatchSiteModal();
-    if (then) then();
-  };
+  qs('cancelWatchSite').onclick = closeWatchSiteModal;
   qs('watchSiteForm').onsubmit = (e) => {
     e.preventDefault();
-    const site = qs('watchSiteInput').value.trim();
-    if (!/^https?:\/\/\S+$/i.test(site)) { qs('watchSiteError').classList.add('show'); return; }
-    writeStore(WATCH_SITE_KEY, site);
+    const url = qs('watchSiteInput').value.trim();
+    if (!/^https?:\/\/\S+$/i.test(url)) { qs('watchSiteError').classList.add('show'); return; }
+    const config = readWatchConfig();
+    config.own.push({ name: siteHost(url), url });
+    writeWatchConfig(config);
     renderWatchSiteProfile();
-    const then = afterWatchSiteSaved;
     closeWatchSiteModal();
-    if (then) then();
   };
-  qs('openWatchSite').onclick = () => openWatchSiteModal();
-  qs('animeWatchSiteChange').onclick = () => openWatchSiteModal();
+  qs('openWatchSite').onclick = () => openWatchPick(null);
   qs('animeWatchSite').onclick = () => {
     const a = animeState.list.find(x => x.mal_id === animeState.activeId);
     if (a) startWatch(a, nextEpisode(a));
