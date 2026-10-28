@@ -186,6 +186,11 @@ quickJs = { module = "com.github.zhanghai.quickjs-java:quickjs-android", version
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 rxJava = { module = "io.reactivex:rxjava", version.ref = "rxJava" }
 nanohttpd = { module = "org.nanohttpd:nanohttpd", version = "2.3.1" }
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version = "1.5.1" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version = "1.5.1" }
+media3-exoplayer-dash = { module = "androidx.media3:media3-exoplayer-dash", version = "1.5.1" }
+media3-ui = { module = "androidx.media3:media3-ui", version = "1.5.1" }
+media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version = "1.5.1" }
 shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku" }
 shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku" }
 spotless-gradle = { module = "com.diffplug.spotless:spotless-plugin-gradle", version.ref = "spotless" }

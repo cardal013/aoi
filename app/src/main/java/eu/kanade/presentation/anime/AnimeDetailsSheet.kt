@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -28,6 +29,7 @@ import mihon.icons.materialsymbols.MaterialSymbols
 import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
 import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Delete
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.model.AnimeStatus
 import tachiyomi.i18n.MR
@@ -42,6 +44,7 @@ fun AnimeDetailsSheet(
     onChangeEpisodes: (Long) -> Unit,
     onRemove: () -> Unit,
     onOpenMyAnimeList: () -> Unit,
+    onWatch: () -> Unit,
 ) {
     ModalBottomSheet(onDismissRequest = onDismissRequest) {
         Column(
@@ -76,6 +79,12 @@ fun AnimeDetailsSheet(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            Button(onClick = onWatch, modifier = Modifier.fillMaxWidth()) {
+                Icon(imageVector = MaterialSymbols.RoundedFilled.PlayArrow, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(MR.strings.anime_watch))
             }
 
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {

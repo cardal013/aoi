@@ -1,5 +1,8 @@
 package eu.kanade.presentation.anime
 
+import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.currentOrThrow
+import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -84,6 +87,7 @@ fun AnimeListPage(
     }
 
     val uriHandler = LocalUriHandler.current
+    val navigator = LocalNavigator.currentOrThrow
     var openedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var dialog by remember { mutableStateOf<ShelfDialog?>(null) }
 
@@ -169,6 +173,10 @@ fun AnimeListPage(
                 onRemove(opened)
             },
             onOpenMyAnimeList = { uriHandler.openUri(myAnimeListUrl(opened.malId)) },
+            onWatch = {
+                openedId = null
+                navigator.push(AnimeWatchScreen(opened.malId))
+            },
         )
     }
 }

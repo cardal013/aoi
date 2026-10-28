@@ -298,6 +298,14 @@ dependencies {
     // HTML parser
     implementation(libs.jsoup)
 
+    // Aoi: player e downloads de anime
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.exoplayer.dash)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.datasource.okhttp)
+    implementation(libs.nanohttpd)
+
     // Disk
     implementation(libs.diskLruCache)
     implementation(libs.unifile)

@@ -73,6 +73,10 @@ interface AppGraph : ViewModelGraph {
     fun inject(notificationReceiver: SecureActivityDelegateImpl)
     fun inject(extensionInstallActivity: ExtensionInstallActivity)
     fun inject(malAuthActivity: MalAuthActivity)
+    fun inject(animePlayerActivity: eu.kanade.tachiyomi.ui.anime.watch.AnimePlayerActivity)
+
+    val animeDownloads: eu.kanade.tachiyomi.data.anime.AnimeDownloads
+    val animeExtensions: eu.kanade.tachiyomi.data.anime.AnimeExtensions
 
     val context: Context
 

@@ -196,6 +196,17 @@
         </activity>
 
         <activity
+            android:name=".ui.anime.watch.AnimePlayerActivity"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
+            android:exported="false"
+            android:theme="@android:style/Theme.Material.NoActionBar.Fullscreen" />
+
+        <service
+            android:name=".data.anime.AnimeDownloadService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
+        <activity
             android:name=".ui.setting.track.TrackLoginActivity"
             android:exported="true"
             android:label="@string/track_activity_name">

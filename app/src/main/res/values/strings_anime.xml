@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aoi: canal das notificações dos downloads de anime (o DownloadService do Media3 pede um R.string) e o player -->
+    <string name="anime_downloads_channel">Anime downloads</string>
+    <string name="anime_player_loading">Loading episode…</string>
+    <string name="anime_player_quality">Quality</string>
+    <string name="anime_player_no_source">This source is not installed anymore</string>
+    <string name="anime_player_no_videos">The source did not return any video for this episode</string>
+    <string name="anime_player_error">Cannot play this video (%1$s). Try another quality</string>
+</resources>

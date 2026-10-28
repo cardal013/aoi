@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.anime
 
+import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
@@ -150,6 +151,10 @@ class AnimeFolderScreen(private val folderId: String) : Screen() {
                     viewModel.remove(opened)
                 },
                 onOpenMyAnimeList = { uriHandler.openUri(myAnimeListUrl(opened.malId)) },
+                onWatch = {
+                    openedId = null
+                    navigator.push(AnimeWatchScreen(opened.malId))
+                },
             )
         }
     }

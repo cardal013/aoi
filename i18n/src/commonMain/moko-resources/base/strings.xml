@@ -159,6 +159,33 @@
     <string name="more_backup_import">Import</string>
     <string name="more_backup_export">Export</string>
 
+    <!-- Aoi: ver e transferir animes (extensões do Aniyomi) -->
+    <string name="anime_watch">Watch episodes</string>
+    <string name="anime_watch_choose_source">Choose where to watch</string>
+    <string name="anime_watch_no_extensions">Install an anime extension first</string>
+    <string name="anime_watch_change_source">Change source</string>
+    <string name="anime_watch_search_error">The search failed. Try another source or title</string>
+    <string name="anime_watch_episodes_error">Couldn\'t load the episodes</string>
+    <string name="anime_watch_no_episodes">No episodes found</string>
+    <string name="anime_watch_episode">Episode %1$s</string>
+    <string name="anime_watch_watched">Watched</string>
+    <string name="anime_download">Download</string>
+    <string name="anime_download_delete">Delete download</string>
+    <string name="anime_download_failed">Couldn\'t start the download</string>
+    <string name="anime_extensions">Anime extensions</string>
+    <string name="anime_ext_repos">Repositories</string>
+    <string name="anime_ext_add_repo">Add</string>
+    <string name="anime_ext_repo_hint">Link to index.min.json</string>
+    <string name="anime_ext_repo_invalid">The link must start with https://</string>
+    <string name="anime_ext_installed">Installed</string>
+    <string name="anime_ext_available">Available</string>
+    <string name="anime_ext_untrusted">Not trusted yet: only trust extensions you know</string>
+    <string name="anime_ext_trust">Trust</string>
+    <string name="anime_ext_install">Install</string>
+    <string name="anime_ext_update">Update</string>
+    <string name="anime_ext_uninstall">Uninstall</string>
+    <string name="anime_ext_none">Add a repository to see its extensions</string>
+
     <!-- Aoi: tutorial -->
     <string name="tutorial_progress">Step %1$d of %2$d</string>
     <string name="tutorial_more">Tap More</string>
