@@ -1,10 +1,9 @@
 package eu.kanade.presentation.anime
 
 import cafe.adriel.voyager.navigator.LocalNavigator
+import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,24 +12,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,18 +58,20 @@ import tachiyomi.domain.anime.model.AnimeTabMode
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
+import kotlinx.coroutines.launch
 import tachiyomi.presentation.core.components.material.PullRefresh
+import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 import tachiyomi.presentation.core.util.plus
 
 /**
- * Página Anime da biblioteca. Sem MAL ligado só mostra "Connect MyAnimeList".
- * Com o MAL ligado: estados em cima (com o menu para desligar o MAL; o botão Recentes/Manual está na barra
- * de cima, à esquerda da lupa: [AnimeTabModeButton]), grelha
- * com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL e botão para acrescentar.
- * Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (a aba passa a Manual).
+ * Conteúdo do separador Watch. Sem MAL ligado só mostra "Connect MyAnimeList".
+ * Com o MAL ligado: separadores dos estados com a contagem, como os dos mangas (deslizar muda de estado),
+ * com o menu para desligar o MAL ao lado (o botão Recentes/Manual está na barra de cima, à esquerda da lupa:
+ * [AnimeTabModeButton]); grelha com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL
+ * e botão para acrescentar. Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (passa a Manual).
  */
 @Composable
 fun AnimeListPage(
@@ -97,14 +102,27 @@ fun AnimeListPage(
     var dialog by remember { mutableStateOf<ShelfDialog?>(null) }
 
     val query = searchQuery?.trim().orEmpty()
-    val tab = state.status
-    val tabItems = state.itemsFor(tab)
-    val visibleItems = remember(tabItems, query) { tabItems.filter { itemMatchesQuery(it, query) } }
+    val statuses = AnimeStatus.entries
+    val scope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(initialPage = statuses.indexOf(state.status)) { statuses.size }
+    // O separador mostrado é o estado escolhido (o botão Recentes/Manual e o + seguem-no)
+    LaunchedEffect(pagerState.settledPage) { onSelectStatus(statuses[pagerState.settledPage]) }
+    val gridPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = contentPadding.calculateBottomPadding() + 88.dp)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
+        // A barra de cima é do ecrã (WatchTab): os separadores ficam logo por baixo dela
+        Column(modifier = Modifier.fillMaxSize().padding(top = contentPadding.calculateTopPadding())) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                StatusChips(state = state, onSelectStatus = onSelectStatus, modifier = Modifier.weight(1f))
+                PrimaryTabRow(selectedTabIndex = pagerState.currentPage, modifier = Modifier.weight(1f)) {
+                    statuses.forEachIndexed { index, status ->
+                        Tab(
+                            selected = pagerState.currentPage == index,
+                            onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
+                            text = { TabText(text = status.label(), badgeCount = state.countFor(status)) },
+                            unselectedContentColor = MaterialTheme.colorScheme.onSurface,
+                        )
+                    }
+                }
                 MalMenu(malUsername = state.malUsername, onDisconnect = onDisconnect)
             }
 
@@ -113,44 +131,21 @@ fun AnimeListPage(
                 enabled = true,
                 onRefresh = onRefresh,
             ) {
-                if (visibleItems.isEmpty()) {
-                    EmptyScreen(
-                        stringRes = if (query.isEmpty()) MR.strings.anime_empty else MR.strings.no_results_found,
-                        modifier = Modifier.padding(contentPadding),
+                HorizontalPager(state = pagerState, key = { statuses[it] }) { page ->
+                    val tab = statuses[page]
+                    val tabItems = state.itemsFor(tab)
+                    val visibleItems = remember(tabItems, query) { tabItems.filter { itemMatchesQuery(it, query) } }
+                    StatusGrid(
+                        tab = tab,
+                        visibleItems = visibleItems,
+                        query = query,
+                        gridPadding = gridPadding,
+                        navigator = navigator,
+                        onClickAnime = { openedId = it },
+                        onOpenFolder = onOpenFolder,
+                        onMenu = { dialog = it },
+                        onTabReordered = onTabReordered,
                     )
-                } else {
-                    ReorderableCoverGrid(
-                        items = visibleItems,
-                        key = { it.key },
-                        // Com uma pesquisa a lista está filtrada: arrastar baralhava a ordem real
-                        dragEnabled = query.isEmpty(),
-                        contentPadding = contentPadding + PaddingValues(start = 8.dp, end = 8.dp, bottom = 88.dp),
-                        onClick = { item ->
-                            when (item) {
-                                is AnimeShelf.LooseAnime -> openedId = item.anime.malId
-                                is AnimeShelf.Folder -> onOpenFolder(item.folder.id)
-                            }
-                        },
-                        onMenu = { item ->
-                            dialog = when (item) {
-                                is AnimeShelf.LooseAnime -> ShelfDialog.AnimeMenu(item.anime)
-                                is AnimeShelf.Folder -> ShelfDialog.FolderMenu(item.folder.id)
-                            }
-                        },
-                        onReordered = { orderedKeys, movedKey -> onTabReordered(tab, orderedKeys, movedKey) },
-                    ) { item ->
-                        val onContinue = AnimeShelf.animeToContinue(item)?.let { anime ->
-                            { navigator.push(AnimeWatchScreen(anime.malId, autoPlay = true)) }
-                        }
-                        when (item) {
-                            is AnimeShelf.LooseAnime -> AnimeGridItem(
-                                anime = item.anime,
-                                showStatus = false,
-                                onContinue = onContinue,
-                            )
-                            is AnimeShelf.Folder -> FolderGridItem(folder = item, onContinue = onContinue)
-                        }
-                    }
                 }
             }
         }
@@ -190,6 +185,59 @@ fun AnimeListPage(
                 navigator.push(AnimeWatchScreen(opened.malId))
             },
         )
+    }
+}
+
+/** A grelha de um separador (Plan to Watch ou Completed), com os animes soltos e as pastas. */
+@Composable
+private fun StatusGrid(
+    tab: AnimeStatus,
+    visibleItems: List<AnimeShelf.Item>,
+    query: String,
+    gridPadding: PaddingValues,
+    navigator: Navigator,
+    onClickAnime: (Long) -> Unit,
+    onOpenFolder: (folderId: String) -> Unit,
+    onMenu: (ShelfDialog) -> Unit,
+    onTabReordered: (tab: AnimeStatus, orderedKeys: List<String>, movedKey: String) -> Unit,
+) {
+    if (visibleItems.isEmpty()) {
+        EmptyScreen(stringRes = if (query.isEmpty()) MR.strings.anime_empty else MR.strings.no_results_found)
+        return
+    }
+    ReorderableCoverGrid(
+        items = visibleItems,
+        key = { it.key },
+        // Com uma pesquisa a lista está filtrada: arrastar baralhava a ordem real
+        dragEnabled = query.isEmpty(),
+        contentPadding = gridPadding,
+        onClick = { item ->
+            when (item) {
+                is AnimeShelf.LooseAnime -> onClickAnime(item.anime.malId)
+                is AnimeShelf.Folder -> onOpenFolder(item.folder.id)
+            }
+        },
+        onMenu = { item ->
+            onMenu(
+                when (item) {
+                    is AnimeShelf.LooseAnime -> ShelfDialog.AnimeMenu(item.anime)
+                    is AnimeShelf.Folder -> ShelfDialog.FolderMenu(item.folder.id)
+                },
+            )
+        },
+        onReordered = { orderedKeys, movedKey -> onTabReordered(tab, orderedKeys, movedKey) },
+    ) { item ->
+        val onContinue = AnimeShelf.animeToContinue(item)?.let { anime ->
+            { navigator.push(AnimeWatchScreen(anime.malId, autoPlay = true)) }
+        }
+        when (item) {
+            is AnimeShelf.LooseAnime -> AnimeGridItem(
+                anime = item.anime,
+                showStatus = false,
+                onContinue = onContinue,
+            )
+            is AnimeShelf.Folder -> FolderGridItem(folder = item, onContinue = onContinue)
+        }
     }
 }
 
@@ -252,28 +300,6 @@ private fun NotConnectedPage(
             ),
         ),
     )
-}
-
-@Composable
-private fun StatusChips(
-    state: AnimeListViewModel.State,
-    onSelectStatus: (AnimeStatus) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Row(
-        modifier = modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        AnimeStatus.entries.forEach { status ->
-            FilterChip(
-                selected = status == state.status,
-                onClick = { onSelectStatus(status) },
-                label = { Text("${status.label()} · ${state.countFor(status)}") },
-            )
-        }
-    }
 }
 
 /** Botão do modo da aba (na barra de cima da biblioteca): mostra o modo atual e tocar troca entre Recentes e Manual. */

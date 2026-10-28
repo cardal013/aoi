@@ -14,6 +14,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.32.2] - 2026-10-28
+### Fixed
+- *Watch*: the status bar was hidden under the top bar, so *Plan to Watch* didn't show
+### Changed
+- *Watch*: *Plan to Watch* and *Completed* are now tabs across the whole width, with their counts, like the manga categories; swipe to change
+
 ## [Aoi v0.32.1] - 2026-10-28
 ### Changed
 - *Watch episodes* (in the anime's sheet) no longer starts playing by itself: it shows the episodes and the extensions. Only the ▶ on the cover goes straight to the next episode

@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.32.2
+- *Watch*: *Plan to Watch* and *Completed* as full-width tabs with counts (the status bar was hidden under the top bar)
+
 ### 0.32.1
 - A broken anime extension no longer closes the app; if one does, *Watch* offers to uninstall it. *Watch episodes* shows the episodes, the ▶ on the cover plays
 
