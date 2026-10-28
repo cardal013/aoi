@@ -620,6 +620,17 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-play{ position:absolute; right:8px; bottom:8px; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--accent); color:#fff; box-shadow:var(--shadow); cursor:pointer; }
 .anime-play svg{ width:18px; height:18px; }
 .anime-play:hover{ filter:brightness(1.1); }
+/* ⋮ no canto de cima das capas: abre o mesmo menu do clique direito. Só aparece com rato (passar por cima) */
+.anime-more{ position:absolute; top:8px; right:8px; width:30px; height:30px; border-radius:8px; display:none; align-items:center; justify-content:center; background:color-mix(in srgb, var(--bg) 82%, transparent); color:var(--text); box-shadow:var(--shadow); cursor:pointer; }
+.anime-more svg{ width:18px; height:18px; }
+.anime-more:hover{ background:var(--accent); color:#fff; }
+@media (hover:hover){
+  .anime-grid .manga-card:hover .anime-more, .anime-more:focus-visible{ display:flex; }
+  .anime-grid .manga-card:hover .anime-badges{ right:44px; }
+}
+#openAnimeAdd{ max-width:260px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.new-folder-bar{ display:flex; align-items:center; gap:10px; margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13.5px; font-weight:700; }
+.new-folder-bar .btn{ margin-left:auto; }
 .watch-done-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:20px; }
 .watch-site-field{ width:100%; margin-top:14px; }
 .watch-site-help{ color:var(--text-muted); font-size:13px; line-height:1.5; margin-top:10px; }
@@ -957,6 +968,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
         <button class="btn btn-ghost btn-sm" id="animeRefresh" type="button">Refresh</button>
+        <button class="btn btn-ghost btn-sm" id="openNewFolder" type="button">New folder</button>
         <button class="btn btn-primary btn-sm" id="openAnimeAdd" type="button">Add anime</button>
       </div>
     </div>
@@ -986,7 +998,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button type="button" class="btn btn-ghost btn-sm" id="animeFolderMore">More…</button>
       </div>
 
-      <p class="anime-hint">Press and hold a cover: let go to open its menu, or move it to drag. Right-click also opens the menu.</p>
+      <p class="anime-hint">Press and hold a cover: let go to open its menu, or move it to drag. On a computer, ⋮ on a cover (or right-click) opens the menu.</p>
       <div class="manga-grid anime-grid" id="animeGrid"></div>
       <div class="empty-state" id="animeEmpty" style="display:none;">
         <h3>Nothing here yet</h3>
@@ -1131,6 +1143,32 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 <!-- ============================================================
      MODAL — NOME DE UMA PASTA (criar ou mudar o nome)
 ============================================================ -->
+<div class="modal-scrim" id="newFolderScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="newFolderTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="newFolderTitle">New folder</h3>
+        <p id="newFolderSub">Pick the anime that go in it</p>
+      </div>
+      <button type="button" class="modal-close" id="closeNewFolder" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <form id="newFolderForm" novalidate>
+      <div class="field">
+        <label for="newFolderName">Folder name</label>
+        <input type="text" id="newFolderName" autocomplete="off" placeholder="Frieren">
+      </div>
+      <input type="search" class="anime-query" id="newFolderQuery" placeholder="Search this list…" autocomplete="off">
+      <div class="anime-results" id="newFolderResults"></div>
+      <div class="new-folder-bar">
+        <span id="newFolderCount">Pick at least one anime</span>
+        <button type="submit" class="btn btn-primary btn-sm" id="newFolderCreate" disabled>Create</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <div class="modal-scrim" id="folderNameScrim">
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="folderNameTitle">
     <div class="modal-head">
@@ -2176,6 +2214,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   function playHTML(a){
     return a ? `<span class="anime-play" role="button" title="Continue watching" data-play="${a.mal_id}">${PLAY_ICON}</span>` : '';
   }
+  const MORE_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5.5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18.5" r="1.8"/></svg>';
+  function moreHTML(key){
+    return `<span class="anime-more" role="button" tabindex="0" title="Menu" aria-label="Menu" data-more="${esc(key)}">${MORE_ICON}</span>`;
+  }
 
   // Em Plan to Watch já começado mostra os episódios vistos; dentro de uma pasta mostra também o estado de cada temporada
   function animeCardHTML(a, showStatus){
@@ -2183,14 +2225,14 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (showStatus) badges.push(`<span class="anime-badge">${ANIME_LABEL[a.status]}</span>`);
     if (a.status === 'PLAN_TO_WATCH' && a.episodes_watched > 0) badges.push(`<span class="anime-badge accent">${a.episodes_watched}/${a.num_episodes ?? '?'}</span>`);
     const play = playHTML(a.status !== 'COMPLETED' ? a : null);
-    return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div>${play}</div><div class="title">${esc(a.title)}</div></button>`;
+    return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div>${play}${moreHTML('anime:' + a.mal_id)}</div><div class="title">${esc(a.title)}</div></button>`;
   }
 
   // A pasta aparece como um anime (com a capa escolhida), com o ícone de pasta e o número de animes
   function folderCardHTML(item){
     const badge = `<span class="anime-badge accent">▣ ${item.members.length}</span>`;
     const play = playHTML(animeToContinue(item.members));
-    return `<button type="button" class="manga-card" data-key="${item.key}"><div class="cover-wrap">${coverHTML(item.cover ? item.cover.cover_url : null)}<div class="anime-badges">${badge}</div>${play}</div><div class="title">${esc(item.folder.name)}</div></button>`;
+    return `<button type="button" class="manga-card" data-key="${item.key}"><div class="cover-wrap">${coverHTML(item.cover ? item.cover.cover_url : null)}<div class="anime-badges">${badge}</div>${play}${moreHTML(item.key)}</div><div class="title">${esc(item.folder.name)}</div></button>`;
   }
 
   function animeMatchesQuery(a, query){
@@ -2213,7 +2255,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const showConnect = animeState.connected === false;
     qs('animeConnect').style.display = showConnect ? 'block' : 'none';
     qs('animeMain').style.display = connected ? 'block' : 'none';
-    ['openAnimeAdd', 'animeSearchToggle', 'animeModeBtn', 'animeRefresh'].forEach(id => { qs(id).style.display = connected ? '' : 'none'; });
+    ['openAnimeAdd', 'openNewFolder', 'animeSearchToggle', 'animeModeBtn', 'animeRefresh'].forEach(id => { qs(id).style.display = connected ? '' : 'none'; });
     if (!connected) return;
 
     qs('animeTabs').querySelectorAll('button').forEach(b => {
@@ -2225,6 +2267,9 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (animeState.openFolderId && !folderItem) animeState.openFolderId = null;
     // O modo é da aba: dentro de uma pasta não conta
     if (folderItem) qs('animeModeBtn').style.display = 'none';
+    if (folderItem) qs('openNewFolder').style.display = 'none';
+    qs('openAnimeAdd').textContent = folderItem ? `Add to “${folderItem.folder.name}”` : 'Add anime';
+    qs('openAnimeAdd').title = folderItem ? `Add anime to the folder ${folderItem.folder.name}` : '';
     if (folderItem) renderFolderView(folderItem);
     else renderTabView();
     if (animeState.activeId != null && animeScrim.classList.contains('open')) renderAnimeModal();
@@ -2341,6 +2386,24 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     });
   }
 
+  // New folder: cria a pasta com os animes escolhidos, pela ordem em que aparecem
+  function createFolderWith(name, animes){
+    const folderId = crypto.randomUUID();
+    return changeShelf(async () => {
+      const { error } = await supabase.from('user_anime_folders').insert({
+        id: folderId,
+        user_id: currentUser.id,
+        name: name.trim(),
+        cover_mal_id: null,
+        sort_order: 'DATE_ASC',
+        manual_position: null,
+        manual_tab: null
+      });
+      if (error) throw error;
+      for (let index = 0; index < animes.length; index++) await setAnimeFolder(animes[index], folderId, index);
+    });
+  }
+
   // Põe o anime no fim da ordem à mão da pasta (um anime só está numa pasta)
   function moveToFolder(a, folderId){
     const members = animeState.list.filter(x => x.folder_id === folderId);
@@ -2433,6 +2496,57 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const entry = animeMenuEntries[Number(row.dataset.index)];
     closeModal(animeMenuScrim);
     if (entry) entry.onClick();
+  };
+
+  // New folder: nome e animes soltos da aba aberta (os que já estão numa pasta mudam-se pelo menu)
+  var newFolderScrim = qs('newFolderScrim');
+  const newFolder = { candidates: [], selected: new Set() };
+  function openNewFolder(){
+    const folderIds = new Set(animeState.folders.map(f => f.id));
+    newFolder.candidates = animeState.list
+      .filter(a => a.status === animeState.filter && (!a.folder_id || !folderIds.has(a.folder_id)))
+      .sort((first, second) => first.title.localeCompare(second.title));
+    newFolder.selected = new Set();
+    qs('newFolderSub').textContent = `Pick the anime from ${ANIME_LABEL[animeState.filter]} that go in it`;
+    qs('newFolderName').value = '';
+    qs('newFolderQuery').value = '';
+    renderNewFolder();
+    openModal(newFolderScrim);
+    qs('newFolderName').focus();
+  }
+  function renderNewFolder(){
+    const query = qs('newFolderQuery').value.trim().toLowerCase();
+    const shown = newFolder.candidates.filter(a => animeMatchesQuery(a, query));
+    qs('newFolderResults').innerHTML = shown.length ? shown.map(a => {
+      const selected = newFolder.selected.has(a.mal_id);
+      const img = a.cover_url ? `<img src="${esc(a.cover_url)}" alt="" loading="lazy">` : '<span class="noimg"></span>';
+      const episodes = `${a.episodes_watched}/${a.num_episodes ?? '?'} episodes`;
+      return `<button type="button" class="anime-result ${selected ? 'selected' : ''}" data-id="${a.mal_id}">${img}<div><div class="t">${esc(a.title)}</div><div class="m">${esc(episodes)}</div></div>${selected ? '<span class="check">✓</span>' : ''}</button>`;
+    }).join('') : `<div class="hint">${newFolder.candidates.length ? 'Nothing matches.' : 'No anime outside folders in this list.'}</div>`;
+    const count = newFolder.selected.size;
+    qs('newFolderCount').textContent = count ? `${count} selected` : 'Pick at least one anime';
+    qs('newFolderCreate').disabled = !count || !qs('newFolderName').value.trim();
+  }
+  registerModal(newFolderScrim, () => closeModal(newFolderScrim));
+  qs('closeNewFolder').onclick = () => closeModal(newFolderScrim);
+  qs('openNewFolder').onclick = openNewFolder;
+  qs('newFolderName').oninput = renderNewFolder;
+  qs('newFolderQuery').oninput = renderNewFolder;
+  qs('newFolderResults').onclick = (e) => {
+    const row = e.target.closest('.anime-result');
+    if (!row) return;
+    const malId = Number(row.dataset.id);
+    if (newFolder.selected.has(malId)) newFolder.selected.delete(malId);
+    else newFolder.selected.add(malId);
+    renderNewFolder();
+  };
+  qs('newFolderForm').onsubmit = (e) => {
+    e.preventDefault();
+    const name = qs('newFolderName').value.trim();
+    const animes = newFolder.candidates.filter(a => newFolder.selected.has(a.mal_id));
+    if (!name || !animes.length) return;
+    closeModal(newFolderScrim);
+    createFolderWith(name, animes);
   };
 
   // Modal do nome de uma pasta (criar ou mudar o nome): chama onSave(nome) ao guardar um nome não vazio
@@ -2532,7 +2646,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   animeGrid.addEventListener('pointerdown', (e) => {
     const card = e.target.closest('.manga-card');
-    if (!card || e.button !== 0 || e.target.closest('.anime-play')) return;
+    if (!card || e.button !== 0 || e.target.closest('.anime-play, .anime-more')) return;
     endPress();
     press = { key: card.dataset.key, card: card, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, longPressed: false, moved: false };
     press.timer = setTimeout(() => {
@@ -2590,6 +2704,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   animeGrid.addEventListener('click', (e) => {
     if (suppressNextClick) { suppressNextClick = false; e.preventDefault(); return; }
+    const more = e.target.closest('.anime-more');
+    if (more) { e.preventDefault(); openGridItemMenu(more.dataset.more); return; }
     const play = e.target.closest('.anime-play');
     if (play) {
       const a = animeState.list.find(x => x.mal_id === Number(play.dataset.play));
