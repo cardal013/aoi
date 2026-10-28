@@ -188,6 +188,18 @@
     <string name="anime_ext_update">Update</string>
     <string name="anime_ext_uninstall">Uninstall</string>
     <string name="anime_ext_none">Add a repository to see its extensions</string>
+    <string name="anime_ext_search">Search extensions</string>
+    <string name="anime_ext_no_match">No extension matches the search</string>
+    <string name="anime_ext_defaults_title">Install the recommended extensions?</string>
+    <string name="anime_ext_defaults_text">You don\'t have any anime extension yet. Install these to start watching:\n\n%1$s\n\nAndroid asks you to confirm each one.</string>
+    <string name="anime_ext_defaults_install">Install</string>
+    <string name="anime_ext_defaults_later">Not now</string>
+    <string name="anime_ext_defaults_installing">Installing %1$d of %2$d: %3$s</string>
+
+    <!-- Aoi: separadores Read e Watch -->
+    <string name="label_read">Read</string>
+    <string name="label_watch">Watch</string>
+    <string name="anime_continue">Continue watching</string>
 
     <!-- Aoi: tutorial -->
     <string name="tutorial_progress">Step %1$d of %2$d</string>

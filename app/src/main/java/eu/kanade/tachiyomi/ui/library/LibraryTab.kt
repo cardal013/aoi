@@ -11,11 +11,8 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
@@ -29,34 +26,23 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
 import dev.zacsweers.metrox.viewmodel.metroViewModel
-import eu.kanade.presentation.anime.AnimeListPage
-import eu.kanade.presentation.anime.AnimeTabModeButton
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.category.visualName
 import eu.kanade.presentation.library.DeleteLibraryMangaDialog
 import eu.kanade.presentation.library.LibrarySettingsDialog
 import eu.kanade.presentation.library.components.LibraryContent
-import eu.kanade.presentation.library.components.LibraryExtraPage
 import eu.kanade.presentation.library.components.LibraryToolbar
-import eu.kanade.presentation.library.components.LibraryToolbarTitle
 import eu.kanade.presentation.manga.components.LibraryBottomActionMenu
 import eu.kanade.presentation.more.onboarding.GETTING_STARTED_URL
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
-import eu.kanade.tachiyomi.data.anime.MalAnimeSync
 import eu.kanade.tachiyomi.data.library.LibraryUpdateJob
-import eu.kanade.tachiyomi.ui.anime.AnimeFolderScreen
-import eu.kanade.tachiyomi.ui.anime.AnimeListViewModel
-import eu.kanade.tachiyomi.ui.anime.AnimeSearchScreen
-import eu.kanade.tachiyomi.ui.anime.shelfActions
 import eu.kanade.tachiyomi.ui.browse.source.globalsearch.GlobalSearchScreen
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.manga.MangaScreen
 import eu.kanade.tachiyomi.ui.reader.ReaderActivity
-import eu.kanade.tachiyomi.util.system.openInBrowser
-import eu.kanade.tachiyomi.util.system.toast
 import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
@@ -87,7 +73,7 @@ data object LibraryTab : Tab {
             val image = AnimatedImageVector.animatedVectorResource(R.drawable.anim_library_enter)
             return TabOptions(
                 index = 0u,
-                title = stringResource(MR.strings.label_library),
+                title = stringResource(MR.strings.label_read),
                 icon = rememberAnimatedVectorPainter(image, isSelected),
             )
         }
@@ -109,12 +95,6 @@ data object LibraryTab : Tab {
 
         val snackbarHostState = remember { SnackbarHostState() }
 
-        val animeViewModel = metroViewModel<AnimeListViewModel>()
-        val animeState by animeViewModel.state.collectAsStateWithLifecycle()
-        val animeShelfActions = remember(animeViewModel) { animeViewModel.shelfActions() }
-        var onAnimePage by rememberSaveable { mutableStateOf(false) }
-        val animeTitle = stringResource(MR.strings.anime_tab)
-
         val onClickRefresh: (Category?) -> Boolean = { category ->
             val started = LibraryUpdateJob.startNow(context.workManager, category)
             scope.launch {
@@ -132,15 +112,11 @@ data object LibraryTab : Tab {
             topBar = { scrollBehavior ->
                 val activeCategory = state.activeCategory
                 val categoryName = activeCategory?.visualName ?: stringResource(MR.strings.label_default)
-                val title = if (onAnimePage) {
-                    LibraryToolbarTitle(animeTitle, animeState.animes.size.takeIf { state.showMangaCount })
-                } else {
-                    state.getToolbarTitle(
-                        defaultTitle = stringResource(MR.strings.label_library),
-                        page = state.coercedActiveCategoryIndex,
-                        categoryName = categoryName,
-                    )
-                }
+                val title = state.getToolbarTitle(
+                    defaultTitle = stringResource(MR.strings.label_read),
+                    page = state.coercedActiveCategoryIndex,
+                    categoryName = categoryName,
+                )
                 LibraryToolbar(
                     hasActiveFilters = state.hasActiveFilters,
                     selectedCount = state.selection.size,
@@ -167,16 +143,6 @@ data object LibraryTab : Tab {
                     onSearchQueryChange = viewModel::search,
                     // For scroll overlay when no tab
                     scrollBehavior = scrollBehavior.takeIf { !state.showCategoryTabs },
-                    showMangaActions = !onAnimePage,
-                    animeActions = {
-                        if (animeState.connection == MalAnimeSync.Connection.CONNECTED) {
-                            val tab = animeState.status
-                            AnimeTabModeButton(
-                                mode = animeState.modeFor(tab),
-                                onChangeMode = { animeViewModel.setTabMode(tab, it) },
-                            )
-                        }
-                    },
                 )
             },
             bottomBar = {
@@ -236,40 +202,6 @@ data object LibraryTab : Tab {
                     getDisplayMode = { viewModel.getDisplayMode() },
                     getColumnsForOrientation = { viewModel.getColumnsForOrientation(it) },
                     getItemsForCategory = { state.getItemsForCategory(it) },
-                    extraPage = LibraryExtraPage(
-                        title = animeTitle,
-                        count = animeState.animes.size.takeIf { state.showMangaCount },
-                    ) { pagePadding ->
-                        AnimeListPage(
-                            state = animeState,
-                            searchQuery = state.searchQuery,
-                            contentPadding = pagePadding,
-                            onSelectStatus = animeViewModel::selectStatus,
-                            onClickAdd = { navigator.push(AnimeSearchScreen(animeState.status)) },
-                            onOpenFolder = { folderId -> navigator.push(AnimeFolderScreen(folderId)) },
-                            onChangeStatus = animeViewModel::setStatus,
-                            onChangeEpisodes = animeViewModel::setEpisodesWatched,
-                            onRemove = animeViewModel::remove,
-                            onTabReordered = animeViewModel::onTabReordered,
-                            shelfActions = animeShelfActions,
-                            onConnect = {
-                                animeViewModel.connect(
-                                    openUrl = { url -> context.openInBrowser(url) },
-                                    onError = { context.toast(MR.strings.anime_mal_connect_failed) },
-                                )
-                            },
-                            onDisconnect = {
-                                animeViewModel.disconnect(
-                                    onError = { context.toast(MR.strings.anime_mal_disconnect_failed) },
-                                )
-                            },
-                            onRefresh = animeViewModel::refresh,
-                        )
-                    },
-                    onExtraPageSelected = { selected ->
-                        onAnimePage = selected
-                        if (selected) animeViewModel.onPageOpened()
-                    },
                 )
             }
         }

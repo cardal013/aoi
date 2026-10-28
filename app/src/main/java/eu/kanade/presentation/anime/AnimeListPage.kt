@@ -12,17 +12,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -43,6 +47,7 @@ import mihon.icons.materialsymbols.automirroredrounded.OpenInNew
 import mihon.icons.materialsymbols.rounded.Add
 import mihon.icons.materialsymbols.rounded.Folder
 import mihon.icons.materialsymbols.rounded.MoreVert
+import mihon.icons.materialsymbols.roundedfilled.PlayArrow
 import tachiyomi.domain.anime.AnimeShelf
 import tachiyomi.domain.anime.model.Anime
 import tachiyomi.domain.anime.model.AnimeStatus
@@ -134,9 +139,16 @@ fun AnimeListPage(
                         },
                         onReordered = { orderedKeys, movedKey -> onTabReordered(tab, orderedKeys, movedKey) },
                     ) { item ->
+                        val onContinue = AnimeShelf.animeToContinue(item)?.let { anime ->
+                            { navigator.push(AnimeWatchScreen(anime.malId)) }
+                        }
                         when (item) {
-                            is AnimeShelf.LooseAnime -> AnimeGridItem(anime = item.anime, showStatus = false)
-                            is AnimeShelf.Folder -> FolderGridItem(folder = item)
+                            is AnimeShelf.LooseAnime -> AnimeGridItem(
+                                anime = item.anime,
+                                showStatus = false,
+                                onContinue = onContinue,
+                            )
+                            is AnimeShelf.Folder -> FolderGridItem(folder = item, onContinue = onContinue)
                         }
                     }
                 }
@@ -328,11 +340,13 @@ private fun MalMenu(
 /**
  * Capa e título de um anime na grelha. Em Plan to Watch já começado mostra os episódios vistos.
  * Com [showStatus] (dentro de uma pasta, onde cada temporada tem o seu estado) mostra também o estado.
+ * Com [onContinue], o botão ▶ no canto da capa (vai logo para o episódio seguinte).
  */
 @Composable
 fun AnimeGridItem(
     anime: Anime,
     showStatus: Boolean,
+    onContinue: (() -> Unit)? = null,
 ) {
     Column {
         Box {
@@ -349,6 +363,7 @@ fun AnimeGridItem(
                     Badge(text = episodesShort(anime))
                 }
             }
+            onContinue?.let { ContinueWatchingButton(onClick = it, modifier = Modifier.align(Alignment.BottomEnd)) }
         }
         Text(
             text = anime.title,
@@ -362,7 +377,7 @@ fun AnimeGridItem(
 
 /** Uma pasta na grelha: aparece como um anime (com a capa escolhida), com o ícone e o número de animes. */
 @Composable
-private fun FolderGridItem(folder: AnimeShelf.Folder) {
+private fun FolderGridItem(folder: AnimeShelf.Folder, onContinue: (() -> Unit)?) {
     Column {
         Box {
             MangaCover.Book(
@@ -374,6 +389,7 @@ private fun FolderGridItem(folder: AnimeShelf.Folder) {
                 Badge(imageVector = MaterialSymbols.Rounded.Folder)
                 Badge(text = folder.members.size.toString())
             }
+            onContinue?.let { ContinueWatchingButton(onClick = it, modifier = Modifier.align(Alignment.BottomEnd)) }
         }
         Text(
             text = folder.folder.name,
@@ -381,6 +397,28 @@ private fun FolderGridItem(folder: AnimeShelf.Folder) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp),
+        )
+    }
+}
+
+/** O mesmo botão ▶ do "continuar a ler" dos mangas (`CommonMangaItem`), no canto da capa. */
+@Composable
+private fun ContinueWatchingButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    FilledIconButton(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.small,
+        colors = IconButtonDefaults.filledIconButtonColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = contentColorFor(MaterialTheme.colorScheme.primaryContainer),
+        ),
+        modifier = modifier
+            .padding(10.dp)
+            .size(32.dp),
+    ) {
+        Icon(
+            imageVector = MaterialSymbols.RoundedFilled.PlayArrow,
+            contentDescription = stringResource(MR.strings.anime_continue),
+            modifier = Modifier.size(20.dp),
         )
     }
 }

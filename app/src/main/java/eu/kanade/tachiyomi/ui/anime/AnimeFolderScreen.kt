@@ -127,7 +127,12 @@ class AnimeFolderScreen(private val folderId: String) : Screen() {
                         viewModel.onFolderReordered(folderId, orderedKeys.map { it.toLong() })
                     },
                 ) { anime ->
-                    AnimeGridItem(anime = anime, showStatus = true)
+                    AnimeGridItem(
+                        anime = anime,
+                        showStatus = true,
+                        onContinue = { navigator.push(AnimeWatchScreen(anime.malId)) }
+                            .takeIf { anime.status != AnimeStatus.COMPLETED },
+                    )
                 }
             }
         }

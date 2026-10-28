@@ -227,6 +227,12 @@ h1,h2,h3{ font-family:var(--font-display); font-weight:500; letter-spacing:-.01e
   border-bottom:1px solid var(--border);
 }
 .mobile-panel .mobile-cta{ margin-top:24px; display:flex; gap:10px; }
+/* Com sessão: Profile, Library, Anime… um por linha, como os links de cima */
+#mobileUserButtons button{
+  display:block; width:100%; text-align:left; padding:16px 4px; font-size:19px; font-weight:700;
+  background:none; border:none; border-bottom:1px solid var(--border); color:var(--text); cursor:pointer;
+}
+#mobileUserButtons button.danger{ color:#D6455D; border-bottom:none; }
 
 /* ============================================================
    HERO
@@ -565,7 +571,7 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .cover-wrap{ position:relative; }
 .cover-wrap .manga-cover{ width:100%; }
 .ep-badge{ position:absolute; top:8px; left:8px; font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--accent); color:#fff; }
-.anime-head-actions{ display:flex; gap:8px; align-items:center; }
+.anime-head-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .anime-info{ color:var(--text-muted); font-size:13px; margin-top:6px; }
 .anime-status-options{ grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); }
 .ep-row{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:20px 0 4px; font-weight:700; }
@@ -610,6 +616,17 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-badges{ position:absolute; top:8px; left:8px; right:8px; display:flex; gap:4px; flex-wrap:wrap; }
 .anime-badge{ font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--bg-elevated-2); color:var(--text); }
 .anime-badge.accent{ background:var(--accent); color:#fff; }
+/* Botão ▶ no canto da capa: vai logo para o episódio seguinte (como o "continuar a ler" da app) */
+.anime-play{ position:absolute; right:8px; bottom:8px; width:34px; height:34px; border-radius:9px; display:flex; align-items:center; justify-content:center; background:var(--accent); color:#fff; box-shadow:var(--shadow); cursor:pointer; }
+.anime-play svg{ width:18px; height:18px; }
+.anime-play:hover{ filter:brightness(1.1); }
+.watch-done-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:20px; }
+.watch-site-field{ width:100%; margin-top:14px; }
+.watch-site-help{ color:var(--text-muted); font-size:13px; line-height:1.5; margin-top:10px; }
+.watch-site-help code{ font-family:var(--font-mono); font-size:12px; background:var(--bg-elevated-2); padding:1px 5px; border-radius:5px; }
+/* Colunas da grelha escolhidas à mão (como na app); sem escolha fica o automático */
+.manga-grid.fixed-cols{ grid-template-columns:repeat(var(--grid-cols), minmax(0,1fr)); }
+.cols-select{ background:var(--bg-elevated); color:var(--text); border:1px solid var(--border-strong); border-radius:999px; padding:6px 10px; font:inherit; font-size:13px; font-weight:600; cursor:pointer; }
 .anime-menu{ display:flex; flex-direction:column; gap:6px; max-height:60vh; overflow:auto; }
 .anime-menu-item{ display:flex; align-items:center; gap:12px; padding:12px 14px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text); text-align:left; font-weight:600; font-size:14px; width:100%; }
 .anime-menu-item:hover{ border-color:var(--accent); }
@@ -898,9 +915,12 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   <section id="app-view-library" class="container active">
     <div class="app-view-head">
       <h1>Library</h1>
-      <button class="icon-btn" id="searchToggle" type="button" aria-label="Search library">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-      </button>
+      <div class="anime-head-actions">
+        <select class="cols-select" aria-label="Columns" title="Covers per row"></select>
+        <button class="icon-btn" id="searchToggle" type="button" aria-label="Search library">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+      </div>
     </div>
     <div class="lib-toolbar">
       <div class="status-tabs" id="libraryTabs">
@@ -925,6 +945,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div class="app-view-head">
       <h1>Anime</h1>
       <div class="anime-head-actions" id="animeHeadActions">
+        <select class="cols-select" aria-label="Columns" title="Covers per row"></select>
         <button type="button" class="btn btn-ghost btn-sm" id="animeModeBtn" title="Recent: last changed first. Manual: your own order">Recent</button>
         <button class="icon-btn" id="animeSearchToggle" type="button" aria-label="Search anime">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
@@ -1000,6 +1021,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         </div>
         <button type="button" class="btn btn-ghost btn-sm" id="openChangePassword">Change Password</button>
       </div>
+      <div class="kv-row">
+        <div>
+          <div class="k">Watch site</div>
+          <div class="v" id="profileWatchSite">Not set</div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="openWatchSite">Change</button>
+      </div>
       <div class="profile-actions">
         <button type="button" class="btn btn-danger btn-block" id="logoutBtnProfile">Logout</button>
       </div>
@@ -1049,7 +1077,12 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </span>
     </div>
     <div class="anime-watch">
-      <a class="btn btn-primary btn-sm" id="animeWatchApp" href="#">
+      <button type="button" class="btn btn-primary btn-sm" id="animeWatchSite">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
+        <span id="animeWatchSiteLabel">Watch episode 1</span>
+      </button>
+      <button type="button" class="btn btn-ghost btn-sm" id="animeWatchSiteChange">Watch site…</button>
+      <a class="btn btn-ghost btn-sm" id="animeWatchApp" href="#">
         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>
         Watch in the Aoi app
       </a>
@@ -1111,6 +1144,60 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button type="submit" class="btn btn-primary" id="saveFolderNameBtn" style="flex:1">Save</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — SITE ONDE SE VEEM OS EPISÓDIOS (o browser não corre as extensões da app)
+============================================================ -->
+<div class="modal-scrim" id="watchSiteScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="watchSiteTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="watchSiteTitle">Watch site</h3>
+        <p>Where Watch opens the episodes</p>
+      </div>
+      <button type="button" class="modal-close" id="closeWatchSiteModal" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <form id="watchSiteForm" novalidate>
+      <div class="field">
+        <label for="watchSiteInput">Search link of the site</label>
+        <input type="url" id="watchSiteInput" placeholder="https://example.com/search?keyword={title}" autocomplete="off">
+        <div class="field-error" id="watchSiteError">The link must start with https://</div>
+      </div>
+      <p class="watch-site-help">
+        Search for any anime on the site you use and copy the link of the results page. Put <code>{title}</code> where the anime's name goes (and <code>{episode}</code> if the site has it in the link). Without <code>{title}</code>, Watch just opens the link.
+        When the episode should be over, Aoi asks if you watched it to the end and marks it on MyAnimeList (it shows up in the app too). This browser only.
+      </p>
+      <div class="modal-foot" style="display:flex; gap:10px; margin-top:6px;">
+        <button type="button" class="btn btn-ghost" id="clearWatchSite" style="flex:1">Remove</button>
+        <button type="submit" class="btn btn-primary" style="flex:1">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — VISTE O EPISÓDIO ATÉ AO FIM?
+============================================================ -->
+<div class="modal-scrim" id="watchDoneScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="watchDoneTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="watchDoneTitle">Finished the episode?</h3>
+        <p id="watchDoneText"></p>
+      </div>
+      <button type="button" class="modal-close" id="closeWatchDone" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="watch-done-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="watchDoneNo">Not to the end</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="watchDoneYes">Yes</button>
+      <button type="button" class="btn btn-primary btn-sm" id="watchDoneNext">Yes, next episode</button>
+    </div>
   </div>
 </div>
 
@@ -1631,6 +1718,35 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (e.origin === location.origin && e.data && e.data.aoiAdmin === 'close') showAppView('library');
   });
 
+  // --- COLUNAS DAS GRELHAS ---
+  // Como na app (retrato/paisagem): um valor para o telemóvel e outro para ecrãs largos, guardados neste
+  // browser. 0 = automático (o tamanho das capas decide). No telemóvel, 3 por defeito
+  const GRID_COLS_KEYS = { narrow: 'aoi_grid_cols_narrow', wide: 'aoi_grid_cols_wide' };
+  const GRID_COLS_DEFAULT = { narrow: 3, wide: 0 };
+  const GRID_COLS_MAX = 8;
+  const narrowScreen = window.matchMedia('(max-width:720px)');
+  function screenKind(){ return narrowScreen.matches ? 'narrow' : 'wide'; }
+  function gridCols(){
+    const saved = parseInt(readStore(GRID_COLS_KEYS[screenKind()]), 10);
+    return Number.isInteger(saved) && saved >= 0 && saved <= GRID_COLS_MAX ? saved : GRID_COLS_DEFAULT[screenKind()];
+  }
+  function applyGridCols(){
+    const cols = gridCols();
+    ['mangaGrid', 'animeGrid'].forEach(id => {
+      qs(id).classList.toggle('fixed-cols', cols > 0);
+      qs(id).style.setProperty('--grid-cols', String(cols));
+    });
+    document.querySelectorAll('.cols-select').forEach(select => { select.value = String(cols); });
+  }
+  document.querySelectorAll('.cols-select').forEach(select => {
+    const options = ['<option value="0">Cols: auto</option>'];
+    for (let n = 1; n <= GRID_COLS_MAX; n++) options.push(`<option value="${n}">Cols: ${n}</option>`);
+    select.innerHTML = options.join('');
+    select.onchange = () => { writeStore(GRID_COLS_KEYS[screenKind()], select.value); applyGridCols(); };
+  });
+  narrowScreen.addEventListener('change', applyGridCols);
+  applyGridCols();
+
   // --- LIBRARY RENDERING ---
   function mangaCardHTML(m){
     const cover = m.thumbnailUrl ?
@@ -1824,6 +1940,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     return episodesWatched >= a.num_episodes ? 'COMPLETED' : 'PLAN_TO_WATCH';
   }
 
+  // Temporada aberta pelo ▶ de uma pasta: a que se está a ver (começada e por acabar); senão a primeira
+  // por ver pela data de estreia. Tudo visto -> null (sem botão)
+  function animeToContinue(members){
+    const notCompleted = sortMembers(members, 'DATE_ASC').filter(a => a.status !== 'COMPLETED');
+    return notCompleted.find(a => a.episodes_watched > 0) || notCompleted[0] || null;
+  }
+
   // Capa escolhida se ainda estiver na pasta; senão a primeira temporada (estreia mais antiga)
   function folderCover(folder, members){
     const chosen = members.find(a => a.mal_id === folder.cover_mal_id);
@@ -1970,6 +2093,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       console.error('anime copy', err);
     }
     renderAnime();
+    // Um episódio que acabou antes de a lista chegar (ex.: com a página recarregada) pergunta agora
+    scheduleWatchCheck();
   }
 
   // Ao abrir o site, ao entrar na aba Anime, quando volta a rede e no botão Refresh
@@ -2023,18 +2148,26 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     return `<img src="${esc(url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy" draggable="false">`;
   }
 
+  // Botão ▶ no canto da capa (um span: a capa já é um botão). Abre o episódio seguinte de `a`
+  const PLAY_ICON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>';
+  function playHTML(a){
+    return a ? `<span class="anime-play" role="button" title="Continue watching" data-play="${a.mal_id}">${PLAY_ICON}</span>` : '';
+  }
+
   // Em Plan to Watch já começado mostra os episódios vistos; dentro de uma pasta mostra também o estado de cada temporada
   function animeCardHTML(a, showStatus){
     const badges = [];
     if (showStatus) badges.push(`<span class="anime-badge">${ANIME_LABEL[a.status]}</span>`);
     if (a.status === 'PLAN_TO_WATCH' && a.episodes_watched > 0) badges.push(`<span class="anime-badge accent">${a.episodes_watched}/${a.num_episodes ?? '?'}</span>`);
-    return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div></div><div class="title">${esc(a.title)}</div></button>`;
+    const play = playHTML(a.status !== 'COMPLETED' ? a : null);
+    return `<button type="button" class="manga-card" data-key="anime:${a.mal_id}"><div class="cover-wrap">${coverHTML(a.cover_url)}<div class="anime-badges">${badges.join('')}</div>${play}</div><div class="title">${esc(a.title)}</div></button>`;
   }
 
   // A pasta aparece como um anime (com a capa escolhida), com o ícone de pasta e o número de animes
   function folderCardHTML(item){
     const badge = `<span class="anime-badge accent">▣ ${item.members.length}</span>`;
-    return `<button type="button" class="manga-card" data-key="${item.key}"><div class="cover-wrap">${coverHTML(item.cover ? item.cover.cover_url : null)}<div class="anime-badges">${badge}</div></div><div class="title">${esc(item.folder.name)}</div></button>`;
+    const play = playHTML(animeToContinue(item.members));
+    return `<button type="button" class="manga-card" data-key="${item.key}"><div class="cover-wrap">${coverHTML(item.cover ? item.cover.cover_url : null)}<div class="anime-badges">${badge}</div>${play}</div><div class="title">${esc(item.folder.name)}</div></button>`;
   }
 
   function animeMatchesQuery(a, query){
@@ -2376,7 +2509,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   animeGrid.addEventListener('pointerdown', (e) => {
     const card = e.target.closest('.manga-card');
-    if (!card || e.button !== 0) return;
+    if (!card || e.button !== 0 || e.target.closest('.anime-play')) return;
     endPress();
     press = { key: card.dataset.key, card: card, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, longPressed: false, moved: false };
     press.timer = setTimeout(() => {
@@ -2434,6 +2567,12 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   animeGrid.addEventListener('click', (e) => {
     if (suppressNextClick) { suppressNextClick = false; e.preventDefault(); return; }
+    const play = e.target.closest('.anime-play');
+    if (play) {
+      const a = animeState.list.find(x => x.mal_id === Number(play.dataset.play));
+      if (a) startWatch(a, nextEpisode(a));
+      return;
+    }
     const card = e.target.closest('.manga-card');
     if (card) openGridItem(card.dataset.key);
   });
@@ -2499,6 +2638,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   const APK_URL = 'https://github.com/cardal013/aoi/releases/latest/download/app-universal-release.apk';
   const animeStreamsCache = {};
   function renderAnimeWatch(a){
+    qs('animeWatchSiteLabel').textContent = `Watch episode ${nextEpisode(a)}`;
     const btn = qs('animeWatchApp');
     btn.href = IS_ANDROID
       ? `intent://anime-watch?mal=${a.mal_id}#Intent;scheme=aoi;package=com.cardal.aoi;S.browser_fallback_url=${encodeURIComponent(APK_URL)};end`
@@ -2527,6 +2667,210 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       show(list);
     } catch (err) {}
   }
+
+  // ---------- Ver num site de fora (Watch) ----------
+  // O browser não corre as extensões da app, por isso Watch abre o episódio noutro separador, num site de
+  // streaming escolhido em Profile (link de pesquisa com {title} e, se o site deixar, {episode}). O site de
+  // fora não avisa quando o episódio acaba: o Aoi conta a duração do episódio (do Jikan; 24 min se não
+  // souber) e nessa altura manda uma notificação (tocar nela traz de volta este separador) e pisca o título.
+  // Ao voltar ao separador depois de 3/4 da duração pergunta logo. "Yes" manda o episódio para o MAL pela
+  // edge function `mal` (fica também na cópia do Supabase e chega à app). Tudo isto só neste browser.
+  const WATCH_SITE_KEY = 'aoi_watch_site';
+  const WATCH_PENDING_KEY = 'aoi_watch_pending';
+  const DEFAULT_EPISODE_MS = 24 * 60 * 1000;
+  // Abrir o site, ver o genérico: dá-se mais um minuto antes de perguntar
+  const WATCH_EXTRA_MS = 60 * 1000;
+  const episodeMsCache = {};
+  let watchTimer = null;
+  let watchBlinkTimer = null;
+  const pageTitle = document.title;
+
+  function readStore(key){ try { return localStorage.getItem(key); } catch (_) { return null; } }
+  function writeStore(key, value){
+    try { if (value == null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch (_) {}
+  }
+
+  function watchSite(){ return readStore(WATCH_SITE_KEY) || ''; }
+  function readPendingWatch(){
+    try { return JSON.parse(readStore(WATCH_PENDING_KEY) || 'null'); } catch (_) { return null; }
+  }
+  function writePendingWatch(pending){ writeStore(WATCH_PENDING_KEY, pending ? JSON.stringify(pending) : null); }
+
+  // O episódio seguinte ao último visto (num Completed, o último)
+  function nextEpisode(a){
+    if (a.num_episodes != null && a.episodes_watched >= a.num_episodes) return a.num_episodes;
+    return a.episodes_watched + 1;
+  }
+
+  function watchUrl(template, a, episode){
+    return template
+      .replace(/\{title\}/g, encodeURIComponent(a.title))
+      .replace(/\{title_en\}/g, encodeURIComponent(a.title_english || a.title))
+      .replace(/\{episode\}/g, String(episode));
+  }
+
+  // "24 min per ep", "1 hr 35 min" (Jikan) -> milissegundos
+  function parseEpisodeDuration(text){
+    if (!text) return null;
+    const hours = /(\d+)\s*hr/.exec(text);
+    const minutes = /(\d+)\s*min/.exec(text);
+    const total = (hours ? Number(hours[1]) * 60 : 0) + (minutes ? Number(minutes[1]) : 0);
+    return total > 0 ? total * 60 * 1000 : null;
+  }
+  async function episodeMs(malId){
+    if (episodeMsCache[malId]) return episodeMsCache[malId];
+    try {
+      const r = await fetch(`https://api.jikan.moe/v4/anime/${malId}`, { signal: AbortSignal.timeout(8000) });
+      if (r.ok) {
+        const ms = parseEpisodeDuration(((await r.json()).data || {}).duration);
+        if (ms) return (episodeMsCache[malId] = ms);
+      }
+    } catch (_) {}
+    return DEFAULT_EPISODE_MS;
+  }
+
+  // Tem de correr dentro do clique (senão o browser bloqueia o separador novo e a pergunta da notificação)
+  function startWatch(a, episode){
+    const site = watchSite();
+    if (!site) { openWatchSiteModal(() => startWatch(a, episode)); return; }
+    window.open(watchUrl(site, a, episode), '_blank', 'noopener');
+    if ('Notification' in window && Notification.permission === 'default') {
+      try { Notification.requestPermission(); } catch (_) {}
+    }
+    const pending = { malId: a.mal_id, title: a.title, episode: episode, startedAt: Date.now(), durationMs: DEFAULT_EPISODE_MS };
+    writePendingWatch(pending);
+    scheduleWatchCheck();
+    episodeMs(a.mal_id).then(ms => {
+      const current = readPendingWatch();
+      if (!current || current.startedAt !== pending.startedAt) return;
+      current.durationMs = ms;
+      writePendingWatch(current);
+      scheduleWatchCheck();
+    });
+  }
+
+  function scheduleWatchCheck(){
+    clearTimeout(watchTimer);
+    const pending = readPendingWatch();
+    if (!pending) return;
+    const wait = pending.startedAt + pending.durationMs + WATCH_EXTRA_MS - Date.now();
+    watchTimer = setTimeout(watchEpisodeOver, Math.max(0, wait));
+  }
+
+  function watchEpisodeOver(){
+    const pending = readPendingWatch();
+    if (!pending) return;
+    if (!document.hidden) { askWatched(pending); return; }
+    notifyEpisodeOver(pending);
+    clearInterval(watchBlinkTimer);
+    let blink = false;
+    watchBlinkTimer = setInterval(() => {
+      blink = !blink;
+      document.title = blink ? `▶ Finished episode ${pending.episode}?` : pageTitle;
+    }, 1000);
+  }
+
+  // No PC a notificação traz de volta este separador. No telemóvel o browser não deixa (nem conta o tempo
+  // com o separador em segundo plano): pergunta quando se volta ao Aoi
+  function notifyEpisodeOver(pending){
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      const n = new Notification(`Finished episode ${pending.episode}?`, {
+        body: `${pending.title}: tap to go back to Aoi and mark it on MyAnimeList.`,
+        tag: 'aoi-watch',
+        requireInteraction: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); askWatched(pending); };
+    } catch (_) {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) return;
+    clearInterval(watchBlinkTimer);
+    document.title = pageTitle;
+    const pending = readPendingWatch();
+    if (pending && Date.now() - pending.startedAt >= pending.durationMs * 0.75) askWatched(pending);
+  });
+
+  var watchDoneScrim = qs('watchDoneScrim');
+  function askWatched(pending){
+    if (!currentUser) return;
+    clearTimeout(watchTimer);
+    qs('watchDoneTitle').textContent = `Finished episode ${pending.episode}?`;
+    qs('watchDoneText').textContent = `Did you watch episode ${pending.episode} of ${pending.title} to the end?`;
+    const a = animeState.list.find(x => x.mal_id === pending.malId);
+    const isLast = a && a.num_episodes != null && pending.episode >= a.num_episodes;
+    qs('watchDoneNext').style.display = isLast ? 'none' : '';
+    if (!watchDoneScrim.classList.contains('open')) openModal(watchDoneScrim);
+  }
+
+  // Sobe os episódios vistos no MAL (nunca desce); o último passa o anime a Completed
+  async function markWatched(pending){
+    let a = animeState.list.find(x => x.mal_id === pending.malId);
+    if (!a) { await readAnimeCopy().catch(() => {}); a = animeState.list.find(x => x.mal_id === pending.malId); }
+    if (!a || pending.episode <= a.episodes_watched) return a;
+    await sendAnimeUpdate(a, statusForEpisodes(a, pending.episode), pending.episode);
+    return a;
+  }
+
+  function closeWatchDone(){
+    writePendingWatch(null);
+    closeModal(watchDoneScrim);
+  }
+  registerModal(watchDoneScrim, closeWatchDone);
+  qs('closeWatchDone').onclick = closeWatchDone;
+  qs('watchDoneNo').onclick = closeWatchDone;
+  qs('watchDoneYes').onclick = () => {
+    const pending = readPendingWatch();
+    closeWatchDone();
+    if (pending) markWatched(pending);
+  };
+  qs('watchDoneNext').onclick = () => {
+    const pending = readPendingWatch();
+    closeWatchDone();
+    if (!pending) return;
+    const a = animeState.list.find(x => x.mal_id === pending.malId) || { mal_id: pending.malId, title: pending.title };
+    // O separador novo abre já (ainda dentro do clique); o episódio vai para o MAL a seguir
+    startWatch(a, pending.episode + 1);
+    markWatched(pending);
+  };
+
+  // Escolher o site
+  var watchSiteScrim = qs('watchSiteScrim');
+  let afterWatchSiteSaved = null;
+  function renderWatchSiteProfile(){
+    const site = watchSite();
+    qs('profileWatchSite').textContent = site ? site.replace(/^https?:\/\//, '').split('/')[0] : 'Not set';
+  }
+  function openWatchSiteModal(then){
+    afterWatchSiteSaved = then || null;
+    qs('watchSiteInput').value = watchSite();
+    qs('watchSiteError').classList.remove('show');
+    openModal(watchSiteScrim);
+    qs('watchSiteInput').focus();
+  }
+  function closeWatchSiteModal(){ afterWatchSiteSaved = null; closeModal(watchSiteScrim); }
+  registerModal(watchSiteScrim, closeWatchSiteModal);
+  qs('closeWatchSiteModal').onclick = closeWatchSiteModal;
+  qs('clearWatchSite').onclick = () => { writeStore(WATCH_SITE_KEY, null); renderWatchSiteProfile(); closeWatchSiteModal(); };
+  qs('watchSiteForm').onsubmit = (e) => {
+    e.preventDefault();
+    const site = qs('watchSiteInput').value.trim();
+    if (!/^https?:\/\/\S+$/i.test(site)) { qs('watchSiteError').classList.add('show'); return; }
+    writeStore(WATCH_SITE_KEY, site);
+    renderWatchSiteProfile();
+    const then = afterWatchSiteSaved;
+    closeWatchSiteModal();
+    if (then) then();
+  };
+  qs('openWatchSite').onclick = () => openWatchSiteModal();
+  qs('animeWatchSiteChange').onclick = () => openWatchSiteModal();
+  qs('animeWatchSite').onclick = () => {
+    const a = animeState.list.find(x => x.mal_id === animeState.activeId);
+    if (a) startWatch(a, nextEpisode(a));
+  };
+  renderWatchSiteProfile();
+  scheduleWatchCheck();
   function openAnimeModal(malId){
     animeState.activeId = malId;
     renderAnimeModal();

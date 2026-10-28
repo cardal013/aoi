@@ -29,8 +29,11 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.jsonArray
@@ -299,7 +302,35 @@ class AnimeExtensions(
         context.startActivity(intent)
     }
 
+    // ---------- Extensões de origem ----------
+
+    /** Extensões de origem ([AnimeDefaultExtensions]) que estão nos repositórios e ainda não estão no aparelho. */
+    fun missingDefaults(st: State = _state.value): List<Available> {
+        val present = st.installed.map { it.pkg }.toSet() + st.untrusted.map { it.pkg }
+        return AnimeDefaultExtensions.missing(st.available, present)
+    }
+
+    /**
+     * Instala uma a uma: o instalador do Android pede confirmação de cada, por isso só abre a seguinte
+     * quando a anterior aparece no aparelho (ou ao fim de [INSTALL_WAIT_MS], se a pessoa a recusou).
+     */
+    suspend fun installAll(exts: List<Available>, onProgress: (index: Int, ext: Available) -> Unit) {
+        exts.forEachIndexed { index, ext ->
+            onProgress(index, ext)
+            try {
+                withContext(Dispatchers.IO) { install(ext) }
+            } catch (e: Exception) {
+                logcat(LogPriority.WARN, e) { "Não deu para instalar ${ext.pkg}" }
+                return@forEachIndexed
+            }
+            withTimeoutOrNull(INSTALL_WAIT_MS) {
+                state.first { st -> st.installed.any { it.pkg == ext.pkg } || st.untrusted.any { it.pkg == ext.pkg } }
+            }
+        }
+    }
+
     private companion object {
+        const val INSTALL_WAIT_MS = 90_000L
         const val EXTENSION_FEATURE = "tachiyomi.animeextension"
         const val METADATA_SOURCE_CLASS = "tachiyomi.animeextension.class"
         const val METADATA_NAME = "aniyomix.name"

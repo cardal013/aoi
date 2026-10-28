@@ -41,6 +41,7 @@ fun MoreScreen(
     incognitoMode: Boolean,
     onIncognitoModeChange: (Boolean) -> Unit,
     onClickDownloadQueue: () -> Unit,
+    onClickHistory: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
     onClickDataAndStorage: () -> Unit,
@@ -135,6 +136,14 @@ fun MoreScreen(
                     },
                     icon = MaterialSymbols.Rounded.Download,
                     onPreferenceClick = onClickDownloadQueue,
+                )
+            }
+            // Aoi: o History saiu da barra de baixo (o Watch ficou no lugar dele)
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.history),
+                    icon = ImageVector.vectorResource(R.drawable.ic_history_24dp),
+                    onPreferenceClick = onClickHistory,
                 )
             }
             item {

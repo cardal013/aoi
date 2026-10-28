@@ -14,6 +14,18 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.32.0] - 2026-10-28
+### Changed
+- Bottom bar: *Library* is now *Read* (manga only) and *History* gave its place to *Watch* (your anime list, folders included). History is in *More*
+### Added
+- ▶ button on anime and folder covers, like *continue reading* on manga: it opens the next episode straight away (in a folder, the season you are watching)
+- Search bar in *Anime extensions*
+- When no anime extension is installed, Aoi offers to install the recommended ones (the list will be filled in a later version)
+- Website: *Watch episode N* opens the episode on a streaming site of your choice (*Profile → Watch site*). When the episode should be over, Aoi sends a notification (on a computer, tapping it brings the Aoi tab back) and asks whether you watched it to the end; *Yes* marks it on MyAnimeList and in the app, *Yes, next episode* opens the next one. ▶ on the covers does the same
+- Website: choose how many covers per row (*Cols*), one value for the phone (3 by default) and one for wider screens
+### Fixed
+- Website on the phone: the menu (Profile, Library, Anime…) was laid out in one row with no style
+
 ## [Aoi v0.31.0] - 2026-10-28
 ### Added
 - Two anime extension repositories come preset (added once; removing one keeps it removed)

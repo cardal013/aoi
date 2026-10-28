@@ -36,6 +36,7 @@ import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabNavigator
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.tachiyomi.ui.anime.WatchTab
 import eu.kanade.tachiyomi.ui.browse.BrowseTab
 import eu.kanade.tachiyomi.ui.download.DownloadQueueScreen
 import eu.kanade.tachiyomi.ui.history.HistoryTab
@@ -71,10 +72,11 @@ object HomeScreen : Screen() {
     @Suppress("ConstPropertyName")
     private const val TabNavigatorKey = "HomeTabs"
 
+    // Aoi: Read (os mangas), Updates, Watch (os animes, no lugar do History, que passou para o More), Browse, More
     private val TABS = listOf(
         LibraryTab,
         UpdatesTab,
-        HistoryTab,
+        WatchTab,
         BrowseTab,
         MoreTab,
     )
@@ -164,10 +166,14 @@ object HomeScreen : Screen() {
                 }
                 launch {
                     openTabEvent.receiveAsFlow().collectLatest {
+                        if (it == Tab.History) {
+                            navigator.push(HistoryTab)
+                            return@collectLatest
+                        }
                         tabNavigator.current = when (it) {
                             is Tab.Library -> LibraryTab
                             Tab.Updates -> UpdatesTab
-                            Tab.History -> HistoryTab
+                            Tab.History -> MoreTab
                             is Tab.Browse -> {
                                 if (it.toExtensions) {
                                     BrowseTab.showExtension()

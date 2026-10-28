@@ -68,6 +68,8 @@ data object HistoryTab : Tab {
         HistoryScreen(
             state = state,
             snackbarHostState = snackbarHostState,
+            // Aoi: deixou de ser separador e abre-se pelo More
+            navigateUp = if (navigator.lastItem == this) navigateUp(navigator) else null,
             onSearchQueryChange = viewModel::updateSearchQuery,
             onClickCover = { navigator.push(MangaScreen(it)) },
             onClickResume = viewModel::getNextChapterForManga,
@@ -150,6 +152,8 @@ data object HistoryTab : Tab {
             }
         }
     }
+
+    private fun navigateUp(navigator: Navigator): () -> Unit = { navigator.pop() }
 
     private suspend fun openChapter(context: Context, chapter: Chapter?) {
         if (chapter != null) {

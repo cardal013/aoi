@@ -104,6 +104,21 @@ object AnimeShelf {
         return sortMembers(members, FolderSortOrder.DATE_ASC).firstOrNull()
     }
 
+    /**
+     * Anime aberto pelo botão ▶ da grelha (como o "continuar a ler" dos mangas): um anime solto se ainda
+     * não estiver Completed; numa pasta, a temporada que se está a ver (começada e por acabar) e, se não
+     * houver, a primeira por ver pela data de estreia. Tudo visto = null (sem botão).
+     */
+    fun animeToContinue(item: Item): Anime? = when (item) {
+        is LooseAnime -> item.anime.takeIf { it.status != AnimeStatus.COMPLETED }
+        is Folder -> animeToContinue(item.members)
+    }
+
+    fun animeToContinue(members: List<Anime>): Anime? {
+        val notCompleted = sortMembers(members, FolderSortOrder.DATE_ASC).filter { it.status != AnimeStatus.COMPLETED }
+        return notCompleted.firstOrNull { it.episodesWatched > 0 } ?: notCompleted.firstOrNull()
+    }
+
     /** Pastas com os seus animes (na ordem de cada pasta) e a capa de cada uma. */
     fun buildFolders(animes: List<Anime>, folders: List<AnimeFolder>): List<Folder> {
         val membersByFolder = animes.filter { it.folderId != null }.groupBy { it.folderId }

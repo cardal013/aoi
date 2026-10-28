@@ -213,4 +213,17 @@ class AnimeShelfTest {
 
         AnimeShelf.folderPositionsAfterDrag(members) shouldBe mapOf(2L to 0.0, 1L to 1.0)
     }
+
+    @Test
+    fun `botão de continuar vai para a temporada que se está a ver`() {
+        val s1 = anime(1, AnimeStatus.COMPLETED, startDate = "2020-01-01")
+        val s2 = anime(2, startDate = "2021-01-01")
+        val s3 = anime(3, startDate = "2022-01-01")
+
+        AnimeShelf.animeToContinue(listOf(s3, s2, s1)) shouldBe s2
+        AnimeShelf.animeToContinue(listOf(s2, s3.copy(episodesWatched = 4))) shouldBe s3.copy(episodesWatched = 4)
+        AnimeShelf.animeToContinue(listOf(s1)) shouldBe null
+        AnimeShelf.animeToContinue(AnimeShelf.LooseAnime(s1)) shouldBe null
+        AnimeShelf.animeToContinue(AnimeShelf.LooseAnime(s2)) shouldBe s2
+    }
 }
