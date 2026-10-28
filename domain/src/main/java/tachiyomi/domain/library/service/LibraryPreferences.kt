@@ -266,8 +266,9 @@ class LibraryPreferences(
     )
 
     // Já enviou a biblioteca toda com os links (web_url) e todos os capítulos, para o site
+    // (v2: na 0.34.0 marcava-se mesmo com extensões por instalar, sem links)
     fun cloudWebUrlsSent(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
-        "cloud_web_urls_sent_$userId",
+        "cloud_web_urls_sent_v2_$userId",
         false,
     )
 

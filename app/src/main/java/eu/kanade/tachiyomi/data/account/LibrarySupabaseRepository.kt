@@ -16,6 +16,8 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.EncodeDefault
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import logcat.LogPriority
@@ -156,6 +158,18 @@ class LibrarySupabaseRepository(
 
     private suspend fun chapterWebUrl(manga: Manga, chapter: Chapter): String? =
         (sourceManager.get(manga.source) as? HttpSource)?.let { runCatching { it.getChapterUrl(chapter.toSChapter()) }.getOrNull() }
+
+    // Sem link (extensão por instalar) o campo não vai, para não apagar o que outro aparelho mandou.
+    // O PostgREST quer as mesmas colunas em todo o lote: com e sem link vão em pedidos separados
+    private suspend fun upsertChapters(chapters: List<ChapterUpsertRemote>) {
+        chapters.partition { it.webUrl != null }.toList().filter { it.isNotEmpty() }.forEach { rows ->
+            supabase.postgrest["chapters"].upsert(rows) { onConflict = "id" }
+        }
+    }
+
+    /** Fontes da biblioteca que não estão instaladas (sem elas não há links). */
+    suspend fun missingSources(mangas: List<Manga>): Int =
+        mangas.map { it.source }.distinct().count { sourceManager.get(it) == null }
 
     private suspend fun chapterRemote(manga: Manga, chapter: Chapter, now: String) = ChapterUpsertRemote(
         id = chapterRemoteId(manga.source, manga.url, chapter.url),
@@ -328,7 +342,7 @@ class LibrarySupabaseRepository(
     private suspend fun uploadChapterRows(manga: Manga, chapters: List<Chapter>) {
         val now = Instant.now().toString()
         chapters.map { chapterRemote(manga, it, now) }.distinctBy { it.id }.chunked(UPSERT_BATCH_SIZE).forEach { batch ->
-            withRetry { supabase.postgrest["chapters"].upsert(batch) { onConflict = "id" } }
+            withRetry { upsertChapters(batch) }
         }
     }
 
@@ -376,17 +390,17 @@ class LibrarySupabaseRepository(
                     )
                 },
             )
-            supabase.postgrest["manga_sources"].upsert(
-                mangas.map {
-                    MangaSourceSyncRemote(
-                        id = sourceRemoteId(it.source, it.url),
-                        mangaId = mangaRemoteId(it.source, it.url),
-                        extensionId = it.source.toString(),
-                        sourceMangaId = it.url,
-                        webUrl = mangaWebUrl(it),
-                    )
-                },
-            )
+            mangas.map {
+                MangaSourceSyncRemote(
+                    id = sourceRemoteId(it.source, it.url),
+                    mangaId = mangaRemoteId(it.source, it.url),
+                    extensionId = it.source.toString(),
+                    sourceMangaId = it.url,
+                    webUrl = mangaWebUrl(it),
+                )
+            }.partition { it.webUrl != null }.toList().filter { it.isNotEmpty() }.forEach { rows ->
+                supabase.postgrest["manga_sources"].upsert(rows)
+            }
             supabase.postgrest["user_library"].upsert(
                 mangas.map {
                     UserLibraryEntrySimple(
@@ -432,9 +446,7 @@ class LibrarySupabaseRepository(
         }.distinctBy { it.chapterId }
 
         suspend fun push() = withRetry {
-            supabase.postgrest["chapters"].upsert(remoteChapters) {
-                onConflict = "id"
-            }
+            upsertChapters(remoteChapters)
             supabase.postgrest["user_chapter_progress"].upsert(remoteProgress) {
                 onConflict = "user_id,chapter_id"
             }
@@ -831,7 +843,9 @@ data class MangaSourceSyncRemote(
     @SerialName("manga_id") val mangaId: String,
     @SerialName("extension_id") val extensionId: String,
     @SerialName("source_manga_id") val sourceMangaId: String,
-    @SerialName("web_url") val webUrl: String?,
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    @SerialName("web_url") val webUrl: String? = null,
 )
 
 @Serializable
@@ -900,7 +914,9 @@ data class ChapterUpsertRemote(
     @SerialName("chapter_label") val chapterLabel: String?,
     val scanlator: String?,
     @SerialName("uploaded_at") val uploadedAt: String?,
-    @SerialName("web_url") val webUrl: String?,
+    @OptIn(ExperimentalSerializationApi::class)
+    @EncodeDefault(EncodeDefault.Mode.NEVER)
+    @SerialName("web_url") val webUrl: String? = null,
 )
 
 @Serializable

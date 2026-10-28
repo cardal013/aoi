@@ -188,10 +188,11 @@ class CloudSync(
 
         // No primeiro sync, enviar sem ter juntado o progresso da cloud podia fazer recuar capítulos lidos
         if (ok || !firstSync) {
+            val favorites = if (wholeUpload) mangaRepository.getFavorites() else emptyList()
             val result = if (wholeUpload) {
                 repo.uploadWholeLibrary(
                     userId = userId,
-                    localMangaList = mangaRepository.getFavorites(),
+                    localMangaList = favorites,
                     getChapters = getChaptersByMangaId,
                     onProgress = onProgress,
                 )
@@ -204,7 +205,8 @@ class CloudSync(
             }
             if (result.ok) {
                 // Só avança o marco se tudo correu bem; o que falhou volta a ir no próximo
-                if (wholeUpload) webUrlsSent.set(true)
+                // Com extensões por instalar faltam links: volta a enviar tudo depois de as instalar
+                if (wholeUpload && repo.missingSources(favorites) == 0) webUrlsSent.set(true)
                 uploadMarker.set(start)
                 mangaRepository.clearCloudSyncedBefore(start)
             } else {
