@@ -1,6 +1,6 @@
 # Aoi
 
-Leitor de manga/manhwa para Android, fork do Mihon, com contas e biblioteca na cloud (Supabase). Acrescenta ao Mihon: login por username, estados de leitura (A ler, Concluído, Abandonado, Planeado), sync de progresso e favoritos, animes com o MyAnimeList, tutorial na primeira instalação, Admin (Savearth, Gits, Refeições, Trello, Definições; a mesma página na app e no site), widget do tempo do IPMA e um site (`index.html`, Vercel). `applicationId com.cardal.aoi`, versão 0.29.0.
+Leitor de manga/manhwa para Android, fork do Mihon, com contas e biblioteca na cloud (Supabase). Acrescenta ao Mihon: login por username, estados de leitura (A ler, Concluído, Abandonado, Planeado), sync de progresso e favoritos, animes com o MyAnimeList, tutorial na primeira instalação, Admin (Savearth, Gits, Refeições, Trello, Definições; a mesma página na app e no site), widget do tempo do IPMA e um site (`index.html`, Vercel). `applicationId com.cardal.aoi`, versão 0.33.1.
 
 ## Compilar e correr
 - Criar `ignorance/local.properties` (gitignored) com `SUPABASE_URL` e `SUPABASE_ANON_KEY`; sem isto não há cloud

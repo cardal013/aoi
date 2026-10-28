@@ -14,6 +14,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.33.1] - 2026-10-28
+### Changed
+- With no anime extension installed, Aoi offers to install 2Dhive, Anikoto and Lunar (instead of Re:ANIME, KickAssAnime and Anikoto)
+- Site: *Watch* comes with 2Dhive, Anikoto and Lunar and asks on which one to open the episode each time; your own site is optional and shows up as a fourth. *Yes, next episode* stays on the same site
+
 ## [Aoi v0.33.0] - 2026-10-28
 ### Fixed
 - Anime extensions that bring their own Kotlin (the SalmanBappi ones: Re:ANIME, Hianimes, ZoroTv, AnimeSuge, AllAnime…) now load; before they showed as not installed

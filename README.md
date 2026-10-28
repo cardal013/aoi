@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.33.1
+- Recommended anime extensions: 2Dhive, Anikoto and Lunar; on the site, *Watch* asks which of the three (or your own site) to open
+
 ### 0.33.0
 - Many more anime extensions work (SalmanBappi ones, newer ext-lib 16 ones, videos split across servers); recommended extensions: Re:ANIME, KickAssAnime and Anikoto; English subtitles by default
 
