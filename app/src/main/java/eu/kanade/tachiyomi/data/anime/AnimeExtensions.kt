@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.os.Build
 import androidx.core.content.ContextCompat
+import dalvik.system.PathClassLoader
 import androidx.core.content.FileProvider
 import androidx.core.content.edit
 import androidx.core.content.pm.PackageInfoCompat
@@ -232,7 +233,15 @@ class AnimeExtensions(
                 .split(";")
                 .map { it.trim().let { cls -> if (cls.startsWith(".")) pkg + cls else cls } }
                 .flatMap {
-                    when (val obj = Class.forName(it, false, classLoader).getDeclaredConstructor().newInstance()) {
+                    val obj = try {
+                        Class.forName(it, false, classLoader).getDeclaredConstructor().newInstance()
+                    } catch (e: LinkageError) {
+                        // Extensões que trazem o próprio Kotlin (as do SalmanBappi): com as classes da extensão
+                        // primeiro há duas Continuation e dá LinkageError. Como no Aniyomi, tenta com as da app primeiro
+                        val fallback = PathClassLoader(appInfo.sourceDir, null, context.classLoader)
+                        Class.forName(it, false, fallback).getDeclaredConstructor().newInstance()
+                    }
+                    when (obj) {
                         is AnimeSource -> listOf(obj)
                         is AnimeSourceFactory -> obj.createSources()
                         else -> error("Tipo de fonte desconhecido: ${obj.javaClass}")

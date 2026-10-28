@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.33.0
+- Many more anime extensions work (SalmanBappi ones, newer ext-lib 16 ones, videos split across servers); recommended extensions: Re:ANIME, KickAssAnime and Anikoto; English subtitles by default
+
 ### 0.32.3
 - *Watch*: pill switch for the statuses and compact covers with progress; *Anime extensions*: magnifier in the top bar
 

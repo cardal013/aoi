@@ -7,8 +7,13 @@ package eu.kanade.tachiyomi.data.anime
  */
 object AnimeDefaultExtensions {
 
-    // Por preencher: o Afonso diz quais. Com a lista vazia a pergunta nunca aparece
-    val WANTED: List<String> = emptyList()
+    // As 3 que, no teste de 28/10/2026 (Frieren, One Piece, Dandadan), deram episódios e vídeo e mais resultados:
+    // Re:ANIME (SalmanBappi), KickAssAnime e Anikoto (Yūzōnō), todas em inglês com legendas à parte
+    val WANTED: List<String> = listOf(
+        "eu.kanade.tachiyomi.animeextension.en.reanime",
+        "eu.kanade.tachiyomi.animeextension.en.kickassanime",
+        "eu.kanade.tachiyomi.animeextension.en.anikoto",
+    )
 
     /** As de [wanted] que estão em [available] e ainda não estão no aparelho, pela ordem de [wanted]. */
     fun missing(

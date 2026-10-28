@@ -65,11 +65,17 @@ class AnimeDownloads(
         SimpleCache(dir, NoOpCacheEvictor(), database)
     }
 
+    // Cabeçalhos do último vídeo pedido (player ou download). Os segmentos HLS vêm muitas vezes de outro
+    // servidor, que ainda não tem cabeçalhos guardados, e sem o Referer da fonte respondem 403
+    @Volatile
+    private var lastHeaders: Map<String, String> = emptyMap()
+
     /** Pedidos à rede com os cabeçalhos guardados para o servidor de cada URL (os segmentos HLS também precisam). */
     val upstream: DataSource.Factory by lazy {
         val http = OkHttpDataSource.Factory(network.client)
         ResolvingDataSource.Factory(DefaultDataSource.Factory(context, http)) { spec ->
-            val headers = spec.uri.host?.let { headersFor(it) }.orEmpty()
+            val host = spec.uri.host
+            val headers = host?.let { headersFor(it) } ?: lastHeaders.also { if (host != null) saveHeaders(spec.uri.toString(), it) }
             if (headers.isEmpty()) spec else spec.withAdditionalHeaders(headers)
         }
     }
@@ -116,7 +122,9 @@ class AnimeDownloads(
 
     fun saveHeaders(url: String, headers: Map<String, String>) {
         val host = Uri.parse(url).host ?: return
-        if (headers.isNotEmpty()) headersPrefs.edit { putString(host, json.encodeToString(headers)) }
+        if (headers.isEmpty()) return
+        lastHeaders = headers
+        headersPrefs.edit { putString(host, json.encodeToString(headers)) }
     }
 
     private fun headersFor(host: String): Map<String, String>? =

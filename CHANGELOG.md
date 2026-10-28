@@ -14,6 +14,15 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.33.0] - 2026-10-28
+### Fixed
+- Anime extensions that bring their own Kotlin (the SalmanBappi ones: Re:ANIME, Hianimes, ZoroTv, AnimeSuge, AllAnime…) now load; before they showed as not installed
+- Newer extensions no longer fail to load episodes (missing `OkHttpClient.get`/`post` from extensions-lib 16, e.g. Anichi, AnimeKai)
+- Videos whose pieces come from other servers (e.g. KickAssAnime) no longer stop with error 403: the source's headers go to every server of that video
+### Added
+- With no anime extension installed, Aoi offers to install Re:ANIME, KickAssAnime and Anikoto: the three with the most results that played in tests, in English with subtitles you can change
+- The player starts with the English subtitles when the video has them (*CC* changes or turns them off)
+
 ## [Aoi v0.32.3] - 2026-10-28
 ### Changed
 - *Watch* with a new look: *Plan to Watch* / *Completed* in a pill switch with the counts, and compact covers with the title on the cover, a thin bar with the episodes watched and the ▶ next to the title

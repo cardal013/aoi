@@ -201,6 +201,10 @@ class AnimePlayerActivity : ComponentActivity() {
             .build()
             .also { p ->
                 playerView.player = p
+                // Legendas à parte: começa nas inglesas (se houver); o botão CC muda ou desliga
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setPreferredTextLanguage("en")
+                    .build()
                 p.addListener(
                     object : Player.Listener {
                         override fun onPlayerError(error: PlaybackException) {
