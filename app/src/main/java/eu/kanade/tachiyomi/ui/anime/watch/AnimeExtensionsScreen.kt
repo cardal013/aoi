@@ -44,7 +44,8 @@ import androidx.core.graphics.drawable.toBitmap
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import coil3.compose.AsyncImage
-import eu.kanade.presentation.components.AppBar
+import eu.kanade.presentation.components.AppBarTitle
+import eu.kanade.presentation.components.SearchToolbar
 import eu.kanade.presentation.util.Screen
 import eu.kanade.tachiyomi.data.anime.AnimeExtensions
 import kotlinx.coroutines.Job
@@ -67,37 +68,53 @@ class AnimeExtensionsScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
         val extensions = remember { context.appGraph.animeExtensions }
+        // Lupa na barra de cima, como nas extensões de manga; fechada = sem filtro
+        var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
 
         Scaffold(
-            topBar = {
-                AppBar(
-                    title = stringResource(MR.strings.anime_extensions),
+            topBar = { scrollBehavior ->
+                SearchToolbar(
+                    titleContent = { AppBarTitle(stringResource(MR.strings.anime_extensions)) },
+                    searchQuery = searchQuery,
+                    onChangeSearchQuery = { searchQuery = it },
+                    placeholderText = stringResource(MR.strings.anime_ext_search),
                     navigateUp = navigator::pop,
                     actions = {
                         IconButton(onClick = { extensions.refreshAvailable() }) {
                             Icon(MaterialSymbols.Rounded.Refresh, null)
                         }
                     },
+                    scrollBehavior = scrollBehavior,
                 )
             },
         ) { padding ->
-            AnimeExtensionsList(extensions, padding, header = { CrashedExtensions(extensions) })
+            AnimeExtensionsList(
+                extensions = extensions,
+                contentPadding = padding,
+                header = { CrashedExtensions(extensions) },
+                searchQuery = searchQuery.orEmpty(),
+            )
         }
     }
 }
 
-/** Lista de repositórios e extensões; também aparece no ecrã do anime enquanto não há nenhuma instalada. */
+/**
+ * Lista de repositórios e extensões; também aparece no ecrã do anime enquanto não há nenhuma instalada.
+ * Com [searchQuery] a pesquisa vem da lupa da barra de cima; sem ele há um campo de pesquisa na lista.
+ */
 @Composable
 fun AnimeExtensionsList(
     extensions: AnimeExtensions,
     contentPadding: PaddingValues = PaddingValues(),
     header: (@Composable () -> Unit)? = null,
+    searchQuery: String? = null,
 ) {
     val context = LocalContext.current
     val state by extensions.state.collectAsState()
     val scope = rememberCoroutineScope()
     var repoUrl by remember { mutableStateOf("") }
-    var query by rememberSaveable { mutableStateOf("") }
+    var localQuery by rememberSaveable { mutableStateOf("") }
+    val query = searchQuery ?: localQuery
     val invalidText = stringResource(MR.strings.anime_ext_repo_invalid)
 
     // Sem nenhuma extensão: pergunta se instala as de origem (uma vez por entrada no ecrã)
@@ -194,18 +211,18 @@ fun AnimeExtensionsList(
             item { Text(error, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
         }
 
-        item {
+        if (searchQuery == null) item {
             OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
+                value = localQuery,
+                onValueChange = { localQuery = it },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, top = 16.dp, end = 16.dp),
                 singleLine = true,
                 leadingIcon = { Icon(MaterialSymbols.Rounded.Search, null) },
                 trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = { query = "" }) { Icon(MaterialSymbols.Rounded.Close, null) }
+                    if (localQuery.isNotEmpty()) {
+                        IconButton(onClick = { localQuery = "" }) { Icon(MaterialSymbols.Rounded.Close, null) }
                     }
                 },
                 placeholder = { Text(stringResource(MR.strings.anime_ext_search)) },
@@ -291,12 +308,15 @@ fun CrashedExtensions(extensions: AnimeExtensions) {
     }
 }
 
-/** Pesquisa da lista: pelo nome, pela língua ou pelo pacote. Vazia = todas. */
+/**
+ * Pesquisa da lista: pelo nome, pela língua ou pelo fim do pacote (`en.allanime`; o início
+ * `eu.kanade.tachiyomi.animeextension.` é igual em todas e fazia "anime" apanhar tudo). Vazia = todas.
+ */
 private fun extensionMatches(query: String, name: String, lang: String, pkg: String): Boolean =
     query.isEmpty() ||
         name.contains(query, ignoreCase = true) ||
         lang.equals(query, ignoreCase = true) ||
-        pkg.contains(query, ignoreCase = true)
+        pkg.substringAfter("animeextension.").contains(query, ignoreCase = true)
 
 private suspend fun installOrToast(extensions: AnimeExtensions, ext: AnimeExtensions.Available, context: android.content.Context) {
     try {

@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.32.3
+- *Watch*: pill switch for the statuses and compact covers with progress; *Anime extensions*: magnifier in the top bar
+
 ### 0.32.2
 - *Watch*: *Plan to Watch* and *Completed* as full-width tabs with counts (the status bar was hidden under the top bar)
 

@@ -4,12 +4,16 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -23,8 +27,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.PrimaryTabRow
-import androidx.compose.material3.Tab
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.contentColorFor
@@ -38,9 +43,14 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.manga.components.MangaCover
 import eu.kanade.tachiyomi.data.anime.MalAnimeSync
@@ -60,7 +70,6 @@ import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
 import kotlinx.coroutines.launch
 import tachiyomi.presentation.core.components.material.PullRefresh
-import tachiyomi.presentation.core.components.material.TabText
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
@@ -68,8 +77,8 @@ import tachiyomi.presentation.core.util.plus
 
 /**
  * Conteúdo do separador Watch. Sem MAL ligado só mostra "Connect MyAnimeList".
- * Com o MAL ligado: separadores dos estados com a contagem, como os dos mangas (deslizar muda de estado),
- * com o menu para desligar o MAL ao lado (o botão Recentes/Manual está na barra de cima, à esquerda da lupa:
+ * Com o MAL ligado (opção D escolhida pelo Afonso): pílula com os estados e a contagem (deslizar a grelha
+ * também muda de estado), com o menu para desligar o MAL ao lado, e capas compactas com o título por cima (o botão Recentes/Manual está na barra de cima, à esquerda da lupa:
  * [AnimeTabModeButton]); grelha com animes soltos e pastas, puxar para baixo para ir buscar a lista ao MAL
  * e botão para acrescentar. Carregar sem largar: largar sem mexer abre o menu; mexer arrasta (passa a Manual).
  */
@@ -110,17 +119,22 @@ fun AnimeListPage(
     val gridPadding = PaddingValues(start = 8.dp, top = 8.dp, end = 8.dp, bottom = contentPadding.calculateBottomPadding() + 88.dp)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // A barra de cima é do ecrã (WatchTab): os separadores ficam logo por baixo dela
+        // A barra de cima é do ecrã (WatchTab): a pílula dos estados fica logo por baixo dela (opção D)
         Column(modifier = Modifier.fillMaxSize().padding(top = contentPadding.calculateTopPadding())) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PrimaryTabRow(selectedTabIndex = pagerState.currentPage, modifier = Modifier.weight(1f)) {
+            Row(
+                modifier = Modifier.padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.weight(1f)) {
                     statuses.forEachIndexed { index, status ->
-                        Tab(
+                        SegmentedButton(
                             selected = pagerState.currentPage == index,
                             onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                            text = { TabText(text = status.label(), badgeCount = state.countFor(status)) },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurface,
-                        )
+                            shape = SegmentedButtonDefaults.itemShape(index, statuses.size),
+                            icon = {},
+                        ) {
+                            Text("${status.label()} · ${state.countFor(status)}", maxLines = 1)
+                        }
                     }
                 }
                 MalMenu(malUsername = state.malUsername, onDisconnect = onDisconnect)
@@ -364,9 +378,9 @@ private fun MalMenu(
 }
 
 /**
- * Capa e título de um anime na grelha. Em Plan to Watch já começado mostra os episódios vistos.
+ * Um anime na grelha (opção D): capa com o título por cima, a barra dos episódios vistos no fundo (Plan to Watch
+ * já começado; sem total conhecido fica o "3/?" em cima) e, com [onContinue], o botão ▶ (episódio seguinte).
  * Com [showStatus] (dentro de uma pasta, onde cada temporada tem o seu estado) mostra também o estado.
- * Com [onContinue], o botão ▶ no canto da capa (vai logo para o episódio seguinte).
  */
 @Composable
 fun AnimeGridItem(
@@ -374,60 +388,87 @@ fun AnimeGridItem(
     showStatus: Boolean,
     onContinue: (() -> Unit)? = null,
 ) {
-    Column {
-        Box {
-            MangaCover.Book(
-                data = anime.coverUrl,
-                modifier = Modifier.fillMaxWidth(),
-                contentDescription = anime.title,
-            )
-            BadgeGroup(modifier = Modifier.padding(4.dp)) {
-                if (showStatus) {
-                    Badge(text = anime.status.label())
-                }
-                if (anime.status == AnimeStatus.PLAN_TO_WATCH && anime.episodesWatched > 0) {
-                    Badge(text = episodesShort(anime))
-                }
-            }
-            onContinue?.let { ContinueWatchingButton(onClick = it, modifier = Modifier.align(Alignment.BottomEnd)) }
-        }
-        Text(
-            text = anime.title,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp),
-        )
+    val started = anime.status == AnimeStatus.PLAN_TO_WATCH && anime.episodesWatched > 0
+    val total = anime.numEpisodes?.takeIf { it > 0 }
+    CompactCover(
+        coverUrl = anime.coverUrl,
+        title = anime.title,
+        progress = if (started && total != null) (anime.episodesWatched.toFloat() / total).coerceIn(0f, 1f) else null,
+        onContinue = onContinue,
+    ) {
+        if (showStatus) Badge(text = anime.status.label())
+        if (started && total == null) Badge(text = episodesShort(anime))
     }
 }
 
 /** Uma pasta na grelha: aparece como um anime (com a capa escolhida), com o ícone e o número de animes. */
 @Composable
 private fun FolderGridItem(folder: AnimeShelf.Folder, onContinue: (() -> Unit)?) {
-    Column {
-        Box {
-            MangaCover.Book(
-                data = folder.cover?.coverUrl,
-                modifier = Modifier.fillMaxWidth(),
-                contentDescription = folder.folder.name,
-            )
-            BadgeGroup(modifier = Modifier.padding(4.dp)) {
-                Badge(imageVector = MaterialSymbols.Rounded.Folder)
-                Badge(text = folder.members.size.toString())
-            }
-            onContinue?.let { ContinueWatchingButton(onClick = it, modifier = Modifier.align(Alignment.BottomEnd)) }
-        }
-        Text(
-            text = folder.folder.name,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 4.dp, start = 2.dp, end = 2.dp),
-        )
+    CompactCover(
+        coverUrl = folder.cover?.coverUrl,
+        title = folder.folder.name,
+        progress = null,
+        onContinue = onContinue,
+    ) {
+        Badge(imageVector = MaterialSymbols.Rounded.Folder)
+        Badge(text = folder.members.size.toString())
     }
 }
 
-/** O mesmo botão ▶ do "continuar a ler" dos mangas (`CommonMangaItem`), no canto da capa. */
+/** Capa com o título em baixo sobre um escurecido, emblemas em cima, ▶ ao lado do título e barra de progresso. */
+@Composable
+private fun CompactCover(
+    coverUrl: String?,
+    title: String,
+    progress: Float?,
+    onContinue: (() -> Unit)?,
+    badges: @Composable RowScope.() -> Unit,
+) {
+    Box(modifier = Modifier.clip(MaterialTheme.shapes.extraSmall)) {
+        MangaCover.Book(data = coverUrl, modifier = Modifier.fillMaxWidth(), contentDescription = title)
+        BadgeGroup(modifier = Modifier.padding(4.dp), content = badges)
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(0f to Color.Transparent, 1f to Color(0xCC000000))),
+        ) {
+            Row(
+                modifier = Modifier.padding(start = 6.dp, top = 20.dp, end = 4.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                Text(
+                    text = title,
+                    color = Color.White,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodySmall.copy(shadow = Shadow(blurRadius = 4f)),
+                    modifier = Modifier.weight(1f),
+                )
+                onContinue?.let { ContinueWatchingButton(onClick = it, modifier = Modifier.padding(start = 4.dp)) }
+            }
+            if (progress != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .background(Color.White.copy(alpha = 0.35f)),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress)
+                            .fillMaxHeight()
+                            .background(MaterialTheme.colorScheme.primary),
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** O mesmo botão ▶ do "continuar a ler" dos mangas (`CommonMangaItem`), ao lado do título na capa. */
 @Composable
 private fun ContinueWatchingButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     FilledIconButton(
@@ -437,14 +478,12 @@ private fun ContinueWatchingButton(onClick: () -> Unit, modifier: Modifier = Mod
             containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = contentColorFor(MaterialTheme.colorScheme.primaryContainer),
         ),
-        modifier = modifier
-            .padding(10.dp)
-            .size(32.dp),
+        modifier = modifier.size(28.dp),
     ) {
         Icon(
             imageVector = MaterialSymbols.RoundedFilled.PlayArrow,
             contentDescription = stringResource(MR.strings.anime_continue),
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(18.dp),
         )
     }
 }

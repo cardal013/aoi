@@ -14,6 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.32.3] - 2026-10-28
+### Changed
+- *Watch* with a new look: *Plan to Watch* / *Completed* in a pill switch with the counts, and compact covers with the title on the cover, a thin bar with the episodes watched and the ▶ next to the title
+- *Anime extensions*: search with the magnifier in the top bar, like the manga extensions
+### Fixed
+- Searching extensions for "anime" no longer matches all of them
+
 ## [Aoi v0.32.2] - 2026-10-28
 ### Fixed
 - *Watch*: the status bar was hidden under the top bar, so *Plan to Watch* didn't show
