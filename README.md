@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.29.0
+- Watch and download anime from your MyAnimeList list, with Aniyomi extensions and a player inside the app (episodes count on MyAnimeList)
+
 ### 0.28.0
 - *Admin → Trello*: your Trello boards inside the Admin, in the app and on the website (drag cards, lists, labels, due dates, checklists, comments, attachments, calendar)
 - *Admin → Savearth*: select several days at once (press and hold, then drag or tap) to add or delete hours
@@ -178,9 +181,11 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 O Aoi é um fork do [Mihon](https://github.com/mihonapp/mihon), distribuído sob a licença [Apache 2.0](LICENSE) (a mesma do Mihon). O leitor, as extensões e as fontes vêm do Mihon; o Aoi acrescenta contas, estados de leitura e a biblioteca na cloud. Obrigado à equipa do Mihon e aos seus contribuidores.
 
+A API das fontes de anime (`source-api/.../animesource`) e a forma de carregar as extensões de anime vêm do [Aniyomi](https://github.com/aniyomiorg/aniyomi), também Apache 2.0. Obrigado à equipa do Aniyomi.
+
 ## Disclaimer
 
-Aoi is a reader, not a content host. It does not distribute or store any manga or manhwa itself; all content is retrieved at request time from the sources you choose to enable.
+Aoi is a reader, not a content host. It does not distribute or store any manga, manhwa or anime itself; all content is retrieved at request time from the sources you choose to enable.
 
 ---
 

@@ -14,6 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.29.0] - 2026-10-28
+### Added
+- Watch anime from your MyAnimeList list: *Watch episodes* in each anime's sheet. Pick the source and the right anime once (saved on the device and in the cloud), then the episode list with play and download
+- Anime extensions (Aniyomi extensions, ext-lib 14/16/17): add a repository (`index.min.json` link), install, update, trust and uninstall in *Anime extensions*
+- Player inside the app (Media3): fullscreen, quality/server choice, subtitles, double tap to skip 10 s, resumes where you stopped. At 85% the episode counts on MyAnimeList (the last one marks the anime as Completed)
+- Downloads to the Aoi folder (`Android/data/com.cardal.aoi/files/anime`), one quality per episode, watchable offline
+
 ## [Aoi v0.28.0] - 2026-10-28
 ### Added
 - *Admin → Trello*: your Trello boards inside the Admin (app and website), through the Trello API. Board with columns, drag cards between lists (press and hold on the phone), create/rename/archive lists and cards, description, due date, labels, checklists, comments, attachments (links and files), calendar view, filters and board switching. The API key and token go in *Admin → Definições → Trello* and stay on that device
