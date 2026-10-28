@@ -34,6 +34,19 @@
                 android:name="com.samsung.android.sdk.subscreen.widget.support_visibility_callback"
                 android:value="true" />
         </receiver>
+        <receiver
+            android:name="tachiyomi.presentation.widget.IpmaGlanceReceiver"
+            android:enabled="@bool/glance_appwidget_available"
+            android:exported="false"
+            android:label="@string/ipma_widget_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/ipma_widget_info" />
+        </receiver>
 
     </application>
 </manifest>

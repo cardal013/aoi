@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aoi: widget do tempo (em português, como as Refeições) -->
+    <string name="ipma_widget_label">Tempo (IPMA)</string>
+    <string name="ipma_widget_description">Previsão do IPMA para o Porto: hoje e os próximos dias</string>
+</resources>
