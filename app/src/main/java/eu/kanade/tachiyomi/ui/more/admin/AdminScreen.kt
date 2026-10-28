@@ -10,11 +10,16 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.util.Base64
+import android.net.Uri
 import android.webkit.JavascriptInterface
+import android.webkit.ValueCallback
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -44,7 +49,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Admin: Savearth, Gits e Definições iguais aos da app Aoc, numa página web (assets/admin/index.html).
+ * Admin: Savearth, Gits, Refeições, Trello e Definições, numa página web (assets/admin/index.html, a mesma do site).
  * Só aparece no More para contas admin. Os dados sincronizam com a cloud através do [AdminViewModel].
  */
 class AdminScreen : Screen() {
@@ -54,6 +59,13 @@ class AdminScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val viewModel = metroViewModel<AdminViewModel>()
         var webView by remember { mutableStateOf<WebView?>(null) }
+
+        // <input type="file"> da página (anexos do Trello): a resposta tem de chegar sempre, mesmo vazia
+        var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+        val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+            fileCallback?.onReceiveValue(uri?.let { arrayOf(it) })
+            fileCallback = null
+        }
 
         // Voltar fecha primeiro o que estiver aberto na página (modal, menu, outra aba)
         BackHandler {
@@ -73,7 +85,16 @@ class AdminScreen : Screen() {
                 .background(BACKGROUND)
                 .windowInsetsPadding(WindowInsets.systemBars),
             factory = { context ->
-                createWebView(context, viewModel, onClose = { navigator.pop() }).also { webView = it }
+                createWebView(
+                    context = context,
+                    viewModel = viewModel,
+                    onClose = { navigator.pop() },
+                    onPickFile = { callback ->
+                        fileCallback?.onReceiveValue(null)
+                        fileCallback = callback
+                        filePicker.launch("*/*")
+                    },
+                ).also { webView = it }
             },
         )
 
@@ -96,12 +117,28 @@ class AdminScreen : Screen() {
     }
 
     @SuppressLint("SetJavaScriptEnabled")
-    private fun createWebView(context: Context, viewModel: AdminViewModel, onClose: () -> Unit): WebView =
+    private fun createWebView(
+        context: Context,
+        viewModel: AdminViewModel,
+        onClose: () -> Unit,
+        onPickFile: (ValueCallback<Array<Uri>>) -> Unit,
+    ): WebView =
         WebView(context).apply {
             setBackgroundColor(BACKGROUND_ARGB)
             settings.javaScriptEnabled = true
             settings.domStorageEnabled = true
             webViewClient = WebViewClient()
+            // Sem WebChromeClient, alert/confirm/prompt não aparecem e o <input type="file"> não abre
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(
+                    webView: WebView,
+                    filePathCallback: ValueCallback<Array<Uri>>,
+                    fileChooserParams: FileChooserParams,
+                ): Boolean {
+                    onPickFile(filePathCallback)
+                    return true
+                }
+            }
             addJavascriptInterface(Bridge(context, this, viewModel, onClose), "Aoi")
             loadUrl(PAGE_URL)
         }

@@ -23,6 +23,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import logcat.LogPriority
 import tachiyomi.core.common.preference.PreferenceStore
 import tachiyomi.core.common.util.system.logcat
@@ -82,12 +83,29 @@ class AdminRepository(
             .decodeList<AdminRow>()
             .isNotEmpty()
 
-    /** Todas as chaves guardadas na cloud, como um objeto JSON { chave: valor }. */
+    /**
+     * Todas as chaves guardadas na cloud, como um objeto JSON { chave: valor }. Sem a chave "meals",
+     * as Refeições vêm da tabela antiga admin_meals (partilhada pelos admins até à 0.28.0).
+     */
     suspend fun loadData(userId: String): JsonObject {
         val rows = supabase.postgrest["admin_data"]
             .select(columns = Columns.raw("key, value")) { filter { eq("user_id", userId) } }
             .decodeList<AdminDataRow>()
-        return JsonObject(rows.associate { it.key to (it.value ?: JsonNull) })
+        val data = rows.associate { it.key to (it.value ?: JsonNull) }
+        if (MEALS_KEY in data) return JsonObject(data)
+        return JsonObject(data + (MEALS_KEY to legacyMeals()))
+    }
+
+    private suspend fun legacyMeals(): JsonObject = try {
+        val rows = supabase.postgrest["admin_meals"]
+            .select(columns = Columns.raw("day, at_home"))
+            .decodeList<LegacyMealRow>()
+        JsonObject(rows.associate { it.day to JsonPrimitive(it.atHome) })
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        logcat(LogPriority.WARN, e) { "Admin: não deu para ler as Refeições antigas" }
+        JsonObject(emptyMap())
     }
 
     suspend fun save(userId: String, key: String, value: JsonElement) {
@@ -100,6 +118,9 @@ class AdminRepository(
     private data class AdminRow(@SerialName("user_id") val userId: String)
 
     @Serializable
+    private data class LegacyMealRow(val day: String, @SerialName("at_home") val atHome: Boolean)
+
+    @Serializable
     private data class AdminDataRow(val key: String, val value: JsonElement? = null)
 
     @Serializable
@@ -108,4 +129,8 @@ class AdminRepository(
         val key: String,
         val value: JsonElement,
     )
+
+    private companion object {
+        const val MEALS_KEY = "meals"
+    }
 }

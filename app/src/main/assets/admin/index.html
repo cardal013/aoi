@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Admin</title>
 <script src="xlsx.full.min.js"></script>
+<script>
+  // No site não há a ponte do Kotlin: web.js faz o mesmo com o supabase-js e a sessão do site
+  if(!window.Aoi) document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script><script src="web.js"><\/script>');
+</script>
 <!-- Savearth, Gits e Definições iguais aos da app Aoc (repo cardal013/aoc), dentro do Aoi para admins.
      Os dados ficam no localStorage e sincronizam com a tabela admin_data do Supabase (ponte window.Aoi). -->
 <style>
@@ -117,6 +121,33 @@
   .rem small{color:var(--c);margin-right:8px;font-weight:600}
   .rem button{background:none;border:none;color:var(--danger);font-size:18px;cursor:pointer}
 
+  /* Savearth: vários dias de uma vez */
+  .day.sel{background:rgba(108,140,255,.30);box-shadow:inset 0 0 0 2px var(--accent)}
+  .days.selecting .day{user-select:none;-webkit-user-select:none}
+  .selbar{position:fixed;left:14px;right:14px;bottom:14px;z-index:7;background:var(--card);border:1px solid var(--accent);border-radius:16px;padding:10px 12px;display:none;align-items:center;gap:8px;box-shadow:0 8px 30px rgba(0,0,0,.45)}
+  .selbar.show{display:flex}
+  .selbar b{flex:1;font-size:14px}
+  .selbar .btn{padding:10px 14px;font-size:14px}
+  .btn.danger{background:var(--danger)}
+
+  /* Refeições */
+  .day.meal-yes{background:rgba(74,222,128,.35)}
+  .day.meal-no{background:rgba(255,107,107,.35)}
+  .day.meal-yes .num,.day.meal-no .num{color:#fff;font-weight:700}
+  .legend{display:flex;gap:16px;justify-content:center;margin-top:12px;font-size:13px;color:var(--muted)}
+  .legend span::before{content:'';display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px;background:var(--c)}
+  #pageMeals .cal{min-height:380px}
+
+  /* Users (só no site) */
+  #pageUsers{max-width:720px;width:100%;margin:0 auto}
+  .user-row{background:var(--card);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;margin-top:8px}
+  .user-row .who{flex:1;min-width:0}
+  .user-row .who b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis}
+  .user-row .who small{color:var(--muted);font-size:12px}
+  .user-row label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+  .user-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
+  .user-row .pill-btn{height:34px;font-size:13px}
+
   @media (min-width:700px){
     .modal{align-items:center}
     .sheet{border-radius:22px}
@@ -144,7 +175,10 @@
   <header>
     <div><button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button></div>
     <h1 id="title">Savearth</h1>
-    <div class="right"><button class="icon-btn" id="closeBtn" aria-label="Voltar ao Aoi">✕</button></div>
+    <div class="right" style="gap:8px">
+      <button class="icon-btn" id="mealsClearBtn" aria-label="Apagar todas as marcações" style="display:none">🗑️</button>
+      <button class="icon-btn" id="closeBtn" aria-label="Voltar ao Aoi">✕</button>
+    </div>
   </header>
 
   <!-- Página Savearth -->
@@ -166,7 +200,13 @@
       <div class="weekdays"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div>
       <div class="days" id="days2"></div>
     </div>
-    <div class="stats-container">
+    <div class="selbar" id="selBar">
+      <b id="selCount"></b>
+      <button class="btn" id="selAdd">Adicionar</button>
+      <button class="btn danger" id="selDel">Apagar</button>
+      <button class="icon-btn" id="selCancel" aria-label="Cancelar seleção">✕</button>
+    </div>
+    <div class="stats-container" id="statsBox">
       <div class="stat-box">
         <small>Salário − Combustível</small>
         <div class="stat"><span>Total</span><b id="statTotal">0,00 €</b></div>
@@ -177,6 +217,36 @@
         <div class="stat"><span>Combustível</span><b id="statFuel">0,00 €</b></div>
       </div>
     </div>
+  </section>
+
+  <!-- Página Refeições: verde = almoço em casa, vermelho = não almoço -->
+  <section class="page" id="pageMeals">
+    <div class="cal-nav">
+      <button id="prevM" aria-label="Mês anterior">‹</button>
+      <div class="mid">
+        <h2 id="monthLabelM"></h2>
+        <button class="today-btn" id="todayM">Hoje</button>
+      </div>
+      <button id="nextM" aria-label="Mês seguinte">›</button>
+    </div>
+    <div class="cal">
+      <div class="weekdays"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div>
+      <div class="days" id="daysM"></div>
+    </div>
+    <div class="legend">
+      <span style="--c:rgba(74,222,128,.8)">Almoço em casa</span>
+      <span style="--c:rgba(255,107,107,.8)">Não almoço</span>
+    </div>
+  </section>
+
+  <!-- Página Trello (trello.js) -->
+  <section class="page" id="pageTrello"></section>
+
+  <!-- Página Users (só no site; na app está em Account) -->
+  <section class="page" id="pageUsers">
+    <input type="search" id="usersSearch" placeholder="Procurar username">
+    <div class="gits-msg" id="usersMsg" style="margin-top:10px"></div>
+    <div id="usersList"></div>
   </section>
 
   <!-- Página Definições -->
@@ -218,6 +288,19 @@
         </div>
         <button class="btn ghost" id="ghLogout">Terminar sessão</button>
       </div>
+      <div class="set-card">
+        <h4>Trello</h4>
+        <p id="trStatus"></p>
+        <div id="trLogin">
+          <p>API key e token de <span class="link" id="trHelp">trello.com/power-ups/admin</span> (app "Aoi" → Trello Auth). Ficam só neste aparelho.</p>
+          <input type="text" id="trKey" placeholder="API key" autocomplete="off" style="margin-top:6px">
+          <div class="row">
+            <input type="password" id="trToken" placeholder="Token" autocomplete="off">
+            <button class="btn" id="trSave">Entrar</button>
+          </div>
+        </div>
+        <button class="btn ghost" id="trLogout">Terminar sessão</button>
+      </div>
     </div>
   </section>
 
@@ -233,6 +316,9 @@
     <h3>Menu</h3>
     <button id="goSave">🌍 Savearth</button>
     <button id="goGits"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Gits</button>
+    <button id="goMeals">🍽️ Refeições</button>
+    <button id="goTrello">📋 Trello</button>
+    <button id="goUsers" style="display:none">👥 Users</button>
     <button id="goSettings">⚙️ Definições</button>
     <button id="goAoi">↩️ Voltar ao Aoi</button>
     <p class="sync" id="syncState"></p>
@@ -243,6 +329,7 @@
     <div class="sheet">
       <h3 id="shiftTitle"></h3>
       <div id="shiftList"></div>
+      <p id="shiftMulti" style="color:var(--muted);font-size:14px;display:none">Este horário é acrescentado a todos os dias selecionados.</p>
       <div class="row">
         <label class="field">Das <input type="time" id="shiftStart" value="09:00"></label>
         <label class="field">Até às <input type="time" id="shiftEnd" value="13:00"></label>
@@ -279,7 +366,7 @@ const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
 
 /* ---------- Dados: localStorage + cloud ---------- */
 // Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
-const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter'];
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals'];
 const SAVE_DELAY = 800;
 const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
 const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
@@ -335,9 +422,10 @@ function renderSync(msg){
   $('syncState').textContent = msg || (pending ? 'A guardar na cloud…' : 'Guardado na cloud.');
 }
 
-let shifts, rate, fuelPrice, consumption, shiftDefault, home, filter, sview;
+let shifts, rate, fuelPrice, consumption, shiftDefault, home, filter, sview, meals;
 function loadState(){
   shifts       = store.get('shifts', {});        // { 'YYYY-MM-DD': [{start,end}] }
+  meals        = store.get('meals', {});         // { 'YYYY-MM-DD': true (em casa) | false (fora) }
   rate         = store.get('rate', 0);           // € por hora
   fuelPrice    = store.get('fuelPrice', 2.00);   // € por litro
   consumption  = store.get('consumption', 7.5);  // L/100 km
@@ -360,7 +448,7 @@ const fuelPerDay = () => FUEL_KM * consumption / 100 * fuelPrice;
 const fmtH = min => { const h = Math.floor(min/60), m = min%60; return m ? `${h}h${String(m).padStart(2,'0')}` : `${h}h`; };
 
 /* Grelha de calendário */
-function renderGrid(box, labelEl, v, chipsFor, onDay){
+function renderGrid(box, labelEl, v, chipsFor, onDay, classFor = () => ''){
   labelEl.textContent = v.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
   const first = new Date(v.getFullYear(), v.getMonth(), 1);
   const daysInMonth = new Date(v.getFullYear(), v.getMonth()+1, 0).getDate();
@@ -374,7 +462,8 @@ function renderGrid(box, labelEl, v, chipsFor, onDay){
     const d = new Date(start); d.setDate(start.getDate()+i);
     const key = fmt(d);
     const el = document.createElement('div');
-    el.className = 'day' + (d.getMonth()!==v.getMonth()?' other':'') + (key===todayStr?' today':'');
+    el.className = 'day' + (d.getMonth()!==v.getMonth()?' other':'') + (key===todayStr?' today':'') + classFor(key);
+    el.dataset.key = key;
     const list = chipsFor(key);
     let html = `<span class="num">${d.getDate()}</span><div class="chips">`;
     const shown = list.length > MAX_CHIPS ? MAX_CHIPS-1 : list.length;
@@ -390,7 +479,10 @@ function renderGrid(box, labelEl, v, chipsFor, onDay){
 /* ---------- Savearth (horas de trabalho) ---------- */
 function renderSave(){
   renderGrid($('days2'), $('monthLabel2'), sview,
-    key => (shifts[key]||[]).map(s => `${s.start}–${s.end} (${fmtH(dur(s))})`), openShift);
+    key => (shifts[key]||[]).map(s => `${s.start}–${s.end} (${fmtH(dur(s))})`),
+    (key, d) => selected ? toggleSel(key) : openShift(key, d),
+    key => selected && selected.has(key) ? ' sel' : '');
+  renderSelBar();
   $('filterPill').style.display = filter ? 'inline-flex' : 'none';
   if(filter) $('filterText').textContent = `${fmtPT(filter.from)} → ${fmtPT(filter.to)}`;
   renderStats();
@@ -426,12 +518,83 @@ $('prev2').onclick = () => { sview.setMonth(sview.getMonth()-1); renderSave(); }
 $('next2').onclick = () => { sview.setMonth(sview.getMonth()+1); renderSave(); };
 $('today2').onclick = () => { sview = new Date(); sview.setDate(1); renderSave(); };
 
-/* Turnos de um dia */
+/* Vários dias: carregar sem largar começa a seleção, arrastar o dedo junta os dias por onde passa,
+   e depois cada toque marca ou desmarca um dia */
+let selected = null, dragSel = false, pressTimer = null, pressStart = null, suppressClick = false;
+const HOLD_MS = 450;
+function toggleSel(key, on){
+  if(!selected) return;
+  const want = on ?? !selected.has(key);
+  want ? selected.add(key) : selected.delete(key);
+  const cell = $('days2').querySelector(`[data-key="${key}"]`);
+  if(cell) cell.classList.toggle('sel', want);
+  renderSelBar();
+}
+function startSelection(key){
+  selected = new Set();
+  toggleSel(key, true);
+  if(navigator.vibrate) navigator.vibrate(30);
+}
+function endSelection(){ selected = null; dragSel = false; renderSave(); }
+function renderSelBar(){
+  const on = !!selected;
+  $('selBar').classList.toggle('show', on);
+  $('statsBox').style.display = on ? 'none' : '';
+  $('days2').classList.toggle('selecting', on);
+  if(on) $('selCount').textContent = `${selected.size} ${selected.size===1?'dia':'dias'}`;
+}
+const dayAt = (x, y) => { const el = document.elementFromPoint(x, y); return el && el.closest('#days2 .day'); };
+function pressDown(x, y){
+  const cell = dayAt(x, y); if(!cell) return;
+  pressStart = {x, y};
+  clearTimeout(pressTimer);
+  pressTimer = setTimeout(() => {
+    pressTimer = null; suppressClick = true; dragSel = true;
+    if(selected) toggleSel(cell.dataset.key, true); else startSelection(cell.dataset.key);
+  }, HOLD_MS);
+}
+function pressMove(x, y, e){
+  if(pressTimer && pressStart && Math.hypot(x-pressStart.x, y-pressStart.y) > 10){ clearTimeout(pressTimer); pressTimer = null; }
+  if(!dragSel) return;
+  if(e.cancelable) e.preventDefault();
+  const cell = dayAt(x, y); if(cell) toggleSel(cell.dataset.key, true);
+}
+function pressUp(){ clearTimeout(pressTimer); pressTimer = null; dragSel = false; }
+const grid2 = $('days2');
+grid2.addEventListener('touchstart', e => { const t = e.touches[0]; pressDown(t.clientX, t.clientY); }, {passive:true});
+grid2.addEventListener('touchmove', e => { const t = e.touches[0]; pressMove(t.clientX, t.clientY, e); }, {passive:false});
+grid2.addEventListener('touchend', pressUp);
+grid2.addEventListener('touchcancel', pressUp);
+grid2.addEventListener('mousedown', e => pressDown(e.clientX, e.clientY));
+grid2.addEventListener('mousemove', e => { if(e.buttons) pressMove(e.clientX, e.clientY, e); });
+window.addEventListener('mouseup', pressUp);
+grid2.addEventListener('contextmenu', e => e.preventDefault());
+// O toque que acaba de carregar sem largar não conta como toque normal
+grid2.addEventListener('click', e => { if(suppressClick){ suppressClick = false; e.stopPropagation(); } }, true);
+$('selCancel').onclick = endSelection;
+$('selAdd').onclick = () => { if(selected && selected.size) openShift(null); };
+$('selDel').onclick = () => {
+  if(!selected || !selected.size) return;
+  const withHours = [...selected].filter(k => (shifts[k]||[]).length);
+  if(!withHours.length){ alert('Nenhum dos dias selecionados tem horas.'); return; }
+  if(!confirm(`Apagar as horas de ${withHours.length} ${withHours.length===1?'dia':'dias'}?`)) return;
+  withHours.forEach(k => delete shifts[k]);
+  store.set('shifts', shifts);
+  endSelection();
+};
+
+/* Turnos de um dia (key = null: os dias selecionados) */
 function openShift(key, d){
   selDate = key;
-  $('shiftTitle').textContent = d.toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+  const multi = key === null;
+  $('shiftTitle').textContent = multi
+    ? `Adicionar a ${selected.size} ${selected.size===1?'dia':'dias'}`
+    : d.toLocaleDateString('pt-PT',{weekday:'long',day:'numeric',month:'long'});
+  $('shiftList').style.display = multi ? 'none' : '';
+  $('shiftMulti').style.display = multi ? 'block' : 'none';
   $('shiftStart').value = shiftDefault.start; $('shiftEnd').value = shiftDefault.end;
-  renderShifts(); updateHint();
+  if(!multi) renderShifts();
+  updateHint();
   $('shiftModal').classList.add('show');
 }
 function renderShifts(){
@@ -454,10 +617,14 @@ $('shiftEnd').oninput = updateHint;
 $('shiftAdd').onclick = () => {
   const start = $('shiftStart').value, end = $('shiftEnd').value;
   if(!start || !end) return;
-  (shifts[selDate] ||= []).push({start, end});
-  shifts[selDate].sort((a,b)=>a.start.localeCompare(b.start));
-  store.set('shifts',shifts); renderSave();
+  const keys = selDate === null ? [...selected] : [selDate];
+  keys.forEach(k => {
+    (shifts[k] ||= []).push({start, end});
+    shifts[k].sort((a,b)=>a.start.localeCompare(b.start));
+  });
+  store.set('shifts',shifts);
   $('shiftModal').classList.remove('show');
+  if(selDate === null) endSelection(); else renderSave();
 };
 $('shiftClose').onclick = () => $('shiftModal').classList.remove('show');
 $('shiftModal').onclick = e => { if(e.target===$('shiftModal')) $('shiftModal').classList.remove('show'); };
@@ -518,13 +685,13 @@ function exportRange(from, to){
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Horas');
     const wbout = XLSX.write(wb, {bookType:'xlsx', type:'base64'});
-    if(Aoi) Aoi.saveExcel(wbout, name + '.xlsx');
+    if(Aoi && Aoi.saveExcel) Aoi.saveExcel(wbout, name + '.xlsx');
     else XLSX.writeFile(wb, name + '.xlsx');
   } else {
     // Sem a biblioteca: CSV que o Excel abre normalmente
     const csv = '﻿' + rows.map(r => r.map(c => typeof c==='number' ? String(c).replace('.',',') : c).join(';')).join('\r\n');
     const base64 = btoa(unescape(encodeURIComponent(csv)));
-    if(Aoi) Aoi.saveExcel(base64, name + '.csv');
+    if(Aoi && Aoi.saveExcel) Aoi.saveExcel(base64, name + '.csv');
     else {
       const a = document.createElement('a');
       a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
@@ -539,24 +706,28 @@ const openMenu = v => { $('drawer').classList.toggle('show',v); $('overlay').cla
 $('menuBtn').onclick = () => openMenu(true);
 $('overlay').onclick = () => openMenu(false);
 
-const PAGES  = { save:'pageSave', gits:'pageGits', settings:'pageSettings' };
-const TITLES = { save:'Savearth', gits:'Gits', settings:'Definições' };
+const PAGES  = { save:'pageSave', gits:'pageGits', meals:'pageMeals', trello:'pageTrello', users:'pageUsers', settings:'pageSettings' };
+const TITLES = { save:'Savearth', gits:'Gits', meals:'Refeições', trello:'Trello', users:'Users', settings:'Definições' };
+const NAV    = { save:'goSave', gits:'goGits', meals:'goMeals', trello:'goTrello', users:'goUsers', settings:'goSettings' };
+const hasUsers = () => !!(Aoi && Aoi.users);
 let current = PAGES[home] ? home : 'save';
 function go(page){
+  if(selected && page !== 'save') selected = null;
   current = page;
   Object.entries(PAGES).forEach(([k,id]) => $(id).classList.toggle('active', k===page));
   $('title').textContent = TITLES[page];
-  $('goSave').classList.toggle('active', page==='save');
-  $('goGits').classList.toggle('active', page==='gits');
-  $('goSettings').classList.toggle('active', page==='settings');
+  Object.entries(NAV).forEach(([k,id]) => $(id).classList.toggle('active', k===page));
+  $('mealsClearBtn').style.display = page==='meals' ? 'flex' : 'none';
   openMenu(false);
   if(page==='save') renderSave();
   if(page==='gits') renderGits();
+  if(page==='meals') renderMeals();
+  if(page==='trello' && window.Trello) Trello.show();
+  if(page==='users') renderUsers();
   if(page==='settings') renderSettings();
 }
-$('goSave').onclick = () => go('save');
-$('goGits').onclick = () => go('gits');
-$('goSettings').onclick = () => go('settings');
+Object.entries(NAV).forEach(([k,id]) => $(id).onclick = () => go(k));
+$('goUsers').style.display = hasUsers() ? 'flex' : 'none';
 // Sai do Admin e volta ao Aoi (o Voltar do Android também sai, depois de fechar o que estiver aberto)
 const closeAdmin = () => { flushNow(); if(Aoi) Aoi.close(); else history.back(); };
 $('closeBtn').onclick = closeAdmin;
@@ -564,8 +735,10 @@ $('goAoi').onclick = closeAdmin;
 
 // Botão Voltar do Android: fecha modal, depois o menu, depois volta ao ecrã inicial; false = sair do Admin
 window.aoiBack = () => {
+  if(window.Trello && Trello.back()) return true;
   const open = document.querySelector('.modal.show');
   if(open){ open.classList.remove('show'); return true; }
+  if(selected){ endSelection(); return true; }
   if($('drawer').classList.contains('show')){ openMenu(false); return true; }
   const start = PAGES[home] ? home : 'save';
   if(current !== start){ go(start); return true; }
@@ -628,7 +801,80 @@ function drawRepos(){
   });
 }
 
+/* ---------- Refeições ---------- */
+let mview = new Date(); mview.setDate(1);
+function renderMeals(){
+  renderGrid($('daysM'), $('monthLabelM'), mview, () => [], key => {
+    // vazio → verde (em casa) → vermelho (fora) → vazio
+    if(meals[key] === undefined) meals[key] = true;
+    else if(meals[key] === true) meals[key] = false;
+    else delete meals[key];
+    store.set('meals', meals);
+    renderMeals();
+  }, key => meals[key] === true ? ' meal-yes' : meals[key] === false ? ' meal-no' : '');
+}
+$('prevM').onclick = () => { mview.setMonth(mview.getMonth()-1); renderMeals(); };
+$('nextM').onclick = () => { mview.setMonth(mview.getMonth()+1); renderMeals(); };
+$('todayM').onclick = () => { mview = new Date(); mview.setDate(1); renderMeals(); };
+$('mealsClearBtn').onclick = () => {
+  const n = Object.keys(meals).length;
+  if(!n){ alert('Não há nada marcado.'); return; }
+  if(!confirm(`Apagar as ${n} marcações das Refeições? Todos os dias ficam por marcar.`)) return;
+  meals = {}; store.set('meals', meals); renderMeals();
+};
+
+/* ---------- Users (só no site) ---------- */
+let usersTimer = null;
+async function renderUsers(){
+  if(!hasUsers()) return;
+  $('usersMsg').textContent = 'A carregar…'; $('usersMsg').classList.remove('err');
+  try{
+    const list = await Aoi.users.list($('usersSearch').value.trim());
+    $('usersMsg').textContent = `${list.length} ${list.length===1?'conta':'contas'}`;
+    $('usersList').innerHTML = '';
+    list.forEach(u => {
+      const row = document.createElement('div'); row.className = 'user-row';
+      const me = u.user_id === Aoi.userId();
+      row.innerHTML = `<div class="who"><b>${esc(u.username || '?')}${me?' (tu)':''}</b><small>Criada a ${new Date(u.created_at).toLocaleDateString('pt-PT')}</small></div>`
+        + `<label><input type="checkbox" ${u.is_admin?'checked':''} ${me?'disabled':''}> Admin</label>`
+        + (me || u.is_admin ? '' : '<button class="pill-btn">Palavra-passe</button>');
+      const box = row.querySelector('input');
+      box.onchange = async () => {
+        try{ await Aoi.users.setAdmin(u.user_id, box.checked); }
+        catch(e){ box.checked = !box.checked; alert(e.message); }
+      };
+      const pw = row.querySelector('button');
+      if(pw) pw.onclick = async () => {
+        const p = prompt(`Nova palavra-passe para ${u.username} (mínimo 6 caracteres). Sai da conta em todos os aparelhos.`);
+        if(p === null) return;
+        if(p.length < 6) return alert('A palavra-passe tem de ter pelo menos 6 caracteres.');
+        try{ await Aoi.users.setPassword(u.user_id, p); alert('Palavra-passe mudada.'); }
+        catch(e){ alert(e.message); }
+      };
+      $('usersList').appendChild(row);
+    });
+  }catch(e){
+    $('usersMsg').textContent = e.message; $('usersMsg').classList.add('err');
+  }
+}
+$('usersSearch').oninput = () => { clearTimeout(usersTimer); usersTimer = setTimeout(renderUsers, 350); };
+
 /* ---------- Definições ---------- */
+function renderTrelloSettings(){
+  const on = !!(window.Trello && Trello.hasLogin());
+  $('trStatus').textContent = on ? 'Sessão iniciada.' : 'Sem sessão: cola a API key e o token.';
+  $('trLogin').style.display = on ? 'none' : 'block';
+  $('trLogout').style.display = on ? 'block' : 'none';
+}
+$('trHelp').onclick = () => openUrl('https://trello.com/power-ups/admin');
+$('trSave').onclick = () => {
+  const k = $('trKey').value.trim(), t = $('trToken').value.trim();
+  if(!k || !t) return;
+  Trello.setLogin(k, t); $('trKey').value = ''; $('trToken').value = '';
+  renderTrelloSettings();
+  go('trello');
+};
+$('trLogout').onclick = () => { Trello.setLogin('', ''); renderTrelloSettings(); };
 function renderGhSettings(err){
   const on = hasGh();
   $('ghStatus').textContent = !Aoi ? 'Só disponível dentro da app.'
@@ -652,6 +898,7 @@ $('ghLogout').onclick = () => {
 
 function renderSettings(){
   renderGhSettings();
+  renderTrelloSettings();
   $('homeSave').classList.toggle('active', home==='save');
   $('homeGits').classList.toggle('active', home==='gits');
   $('setShiftStart').value = shiftDefault.start;
@@ -682,5 +929,6 @@ go(current);
 renderSync(Aoi ? 'A ler da cloud…' : 'Fora da app: sem cloud.');
 if(Aoi) Aoi.ready();
 </script>
+<script src="trello.js"></script>
 </body>
 </html>
