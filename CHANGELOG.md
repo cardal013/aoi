@@ -16,6 +16,7 @@ Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
 ## [Aoi v0.34.0] - 2026-10-28
 ### Added
+- Site (after the APK): each manga cover in *Library* shows how many chapters are left to read and a ▶ that continues on the next chapter on the source, like the app
 - Site: read your manga on the source's own site, like the WebView button in the app. Tap a manga in *Library*: *Continue: Chapter N* opens the next chapter on the source, *Open on <source>* opens the manga page, and the chapter list opens any chapter or marks it read (✓)
 - Site: back in the Aoi tab after a chapter, it asks if you read it to the end; *Yes* marks it read in the cloud (the app gets it on the next sync), *Yes, next chapter* also opens the next one
 - Site: *Home* and *Features* work again when you're logged in

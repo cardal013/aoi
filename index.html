@@ -1575,6 +1575,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       .eq('user_id', currentUser.id);
 
     if (error) { console.error(error); return; }
+    // Por ler e próximo capítulo de cada manga (função library_reading_state); sem ela fica sem número nem ▶
+    const reading = {};
+    const { data: readingRows, error: readingError } = await supabase.rpc('library_reading_state');
+    if (readingError) console.error('library_reading_state', readingError);
+    (readingRows || []).forEach(row => { reading[row.manga_source_id] = row; });
     state.library = data.map(entry => ({
       mangaId: entry.manga_id,
       title: entry.manga.title,
@@ -1582,7 +1587,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       status: STATUS_MAP[entry.status.toUpperCase()] || 'reading',
       sourceId: entry.source_id,
       webUrl: entry.manga_sources ? entry.manga_sources.web_url : null,
-      sourceName: entry.manga_sources && entry.manga_sources.extensions ? entry.manga_sources.extensions.name : 'the source'
+      sourceName: entry.manga_sources && entry.manga_sources.extensions ? entry.manga_sources.extensions.name : 'the source',
+      unread: reading[entry.source_id] ? reading[entry.source_id].unread : 0,
+      next: reading[entry.source_id] && reading[entry.source_id].next_web_url ? {
+        id: reading[entry.source_id].next_chapter_id,
+        name: reading[entry.source_id].next_chapter_name,
+        web_url: reading[entry.source_id].next_web_url
+      } : null
     }));
     renderLibrary();
     checkReadPending();
@@ -1868,7 +1879,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const cover = m.thumbnailUrl ?
       `<img src="${m.thumbnailUrl}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy" onerror="this.outerHTML='<div class=&quot;manga-cover&quot;>${BOOK_ICON.replace(/"/g, '&quot;')}</div>';">` :
       `<div class="manga-cover">${BOOK_ICON}</div>`;
-    return `<button type="button" class="manga-card" data-id="${m.mangaId}">${cover}<div class="title">${m.title}</div></button>`;
+    // Como na app: capítulos por ler no canto e ▶ para continuar no capítulo seguinte (na fonte)
+    const badge = m.unread > 0 ? `<div class="anime-badges"><span class="anime-badge accent">${m.unread}</span></div>` : '';
+    const play = m.next ? `<span class="anime-play" role="button" title="Continue: ${esc(chapterLabel(m.next))}" data-read-play="${m.mangaId}">${PLAY_ICON}</span>` : '';
+    return `<button type="button" class="manga-card" data-id="${m.mangaId}"><div class="cover-wrap">${cover}${badge}${play}</div><div class="title">${m.title}</div></button>`;
   }
   function renderLibrary(){
     const filtered = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(state.librarySearchQuery.toLowerCase())));
@@ -1925,7 +1939,16 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   }
   registerModal(statusScrim, () => closeModal(statusScrim));
   qs('closeStatusModal').onclick = () => closeModal(statusScrim);
-  qs('mangaGrid').onclick = (e) => { const card = e.target.closest('.manga-card'); if (card) openStatusModal(card.dataset.id); };
+  qs('mangaGrid').onclick = (e) => {
+    const play = e.target.closest('[data-read-play]');
+    if (play) {
+      const manga = state.library.find(m => m.mangaId === play.dataset.readPlay);
+      if (manga && manga.next) startRead(manga, manga.next);
+      return;
+    }
+    const card = e.target.closest('.manga-card');
+    if (card) openStatusModal(card.dataset.id);
+  };
   qs('statusOptions').onclick = async (e) => {
     const opt = e.target.closest('.status-option');
     if (!opt || !currentUser) return;
@@ -2058,7 +2081,20 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     }
     const cache = chapterCache[manga.sourceId];
     if (cache) chapterIds.forEach(id => read ? cache.read.add(id) : cache.read.delete(id));
+    refreshMangaReading(manga.sourceId);
     return true;
+  }
+
+  // Depois de marcar: o número e o ▶ da capa vêm de novo da função (mesma regra para tudo)
+  async function refreshMangaReading(sourceId){
+    const { data, error } = await supabase.rpc('library_reading_state');
+    if (error) { console.error('library_reading_state', error); return; }
+    const row = (data || []).find(r => r.manga_source_id === sourceId);
+    state.library.filter(m => m.sourceId === sourceId).forEach(m => {
+      m.unread = row ? row.unread : 0;
+      m.next = row && row.next_web_url ? { id: row.next_chapter_id, name: row.next_chapter_name, web_url: row.next_web_url } : null;
+    });
+    renderLibrary();
   }
 
   function readPending(){ try { return JSON.parse(readStore(READ_PENDING_KEY) || 'null'); } catch (_) { return null; } }
@@ -2071,8 +2107,17 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('readDoneText').textContent = `Did you read ${pending.chapterName} of ${pending.title} to the end?`;
     qs('readDoneNext').style.display = pending.next ? '' : 'none';
     if (!readDoneScrim.classList.contains('open')) openModal(readDoneScrim);
-    // Para o "next chapter" a seguir ao seguinte já haver lista
-    if (!chapterCache[pending.sourceId]) loadChapters(pending.sourceId);
+    // Começar pelo ▶ da capa não carrega a lista: o seguinte calcula-se quando ela chegar
+    if (!pending.next) {
+      loadChapters(pending.sourceId).then(cache => {
+        const next = nextChapterOf(cache, pending.chapterId);
+        const current = readPending();
+        if (!next || !next.web_url || !current || current.startedAt !== pending.startedAt) return;
+        current.next = { id: next.id, name: chapterLabel(next), web_url: next.web_url };
+        writeStore(READ_PENDING_KEY, JSON.stringify(current));
+        if (readDoneScrim.classList.contains('open')) qs('readDoneNext').style.display = '';
+      });
+    } else if (!chapterCache[pending.sourceId]) loadChapters(pending.sourceId);
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReadPending(); });
 
