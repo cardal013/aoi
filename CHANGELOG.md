@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.34.2] - 2026-10-28
+### Removed
+- *Support us* in *More* and the donation pop-up when opening the app (they came from Mihon and pointed to Mihon's donations)
+
 ## [Aoi v0.34.1] - 2026-10-28
 ### Fixed
 - The web links weren't sent when the account was opened before installing the extensions (fresh install): now the app sends the whole library again once all the sources are installed, and a missing link never erases one sent by another phone

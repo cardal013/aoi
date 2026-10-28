@@ -107,6 +107,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.34.2
+- No more *Support us* button or donation pop-up (they came from Mihon)
+
 ### 0.34.1
 - The web links for the site are sent again once all the library's extensions are installed (fresh installs sent them empty)
 
