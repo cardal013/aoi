@@ -44,6 +44,7 @@
     password_too_short: 'A palavra-passe tem de ter pelo menos 6 caracteres.',
     password_rejected: 'O Supabase recusou esta palavra-passe.',
     user_not_found: 'Esta conta já não existe.',
+    42501: 'Só um admin com sessão iniciada pode fazer isto.',
   };
   const userError = code => new Error(USER_ERRORS[code] || `Erro (${code})`);
   const rpcError = e => userError(Object.keys(USER_ERRORS).find(c => e.message.includes(c)) || e.code);
