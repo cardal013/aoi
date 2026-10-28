@@ -1746,6 +1746,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   // --- APP VIEWS ---
   function showAppView(view){
+    publicSite.style.display = 'none';
+    appSite.style.display = 'block';
     document.querySelectorAll('#appSite > section').forEach(s => s.classList.remove('active'));
     qs('app-view-' + view).classList.add('active');
     document.querySelectorAll('#appTabs [data-app-view]').forEach(b => b.classList.toggle('active', b.dataset.appView === view));
@@ -1754,6 +1756,16 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (view === 'anime' && currentUser) requestAnimeSync(false);
     if (view === 'admin' && !qs('adminFrame').src) qs('adminFrame').src = ADMIN_URL;
   }
+  // Com sessão, Home, Features e o logo mostram a página pública (o menu da conta e os separadores voltam à app)
+  document.querySelectorAll('a[href="#top"], a[href="#features"]').forEach(link => link.addEventListener('click', (e) => {
+    if (!currentUser) return;
+    e.preventDefault();
+    appSite.style.display = 'none';
+    publicSite.style.display = '';
+    const target = link.getAttribute('href') === '#features' ? document.getElementById('features') : null;
+    if (target) target.scrollIntoView({ behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }));
   qs('appTabs').onclick = (e) => { const btn = e.target.closest('button[data-app-view]'); if (btn) showAppView(btn.dataset.appView); };
   qs('menuProfileBtn').onclick = () => showAppView('profile');
   qs('menuLibraryBtn').onclick = () => showAppView('library');
