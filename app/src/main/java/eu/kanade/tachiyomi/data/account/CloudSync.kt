@@ -182,9 +182,13 @@ class CloudSync(
             showLocalOnly(result.localOnly)
         }
 
+        // Uma vez por utilizador (0.34.0): reenvia tudo para a cloud ficar com os links e todos os capítulos
+        val webUrlsSent = libraryPreferences.cloudWebUrlsSent(userId)
+        val wholeUpload = firstSync || (ok && !webUrlsSent.get())
+
         // No primeiro sync, enviar sem ter juntado o progresso da cloud podia fazer recuar capítulos lidos
         if (ok || !firstSync) {
-            val result = if (firstSync) {
+            val result = if (wholeUpload) {
                 repo.uploadWholeLibrary(
                     userId = userId,
                     localMangaList = mangaRepository.getFavorites(),
@@ -200,6 +204,7 @@ class CloudSync(
             }
             if (result.ok) {
                 // Só avança o marco se tudo correu bem; o que falhou volta a ir no próximo
+                if (wholeUpload) webUrlsSent.set(true)
                 uploadMarker.set(start)
                 mangaRepository.clearCloudSyncedBefore(start)
             } else {

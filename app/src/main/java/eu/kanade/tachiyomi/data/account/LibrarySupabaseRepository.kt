@@ -3,6 +3,9 @@ package eu.kanade.tachiyomi.data.account
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
+import eu.kanade.domain.chapter.model.toSChapter
+import eu.kanade.domain.manga.model.toSManga
+import eu.kanade.tachiyomi.source.online.HttpSource
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.exceptions.HttpRequestException
 import io.github.jan.supabase.exceptions.RestException
@@ -146,9 +149,30 @@ class LibrarySupabaseRepository(
         return ok
     }
 
+    // Links como os do botão WebView, para o site abrir o manga e os capítulos na fonte.
+    // Fontes que não são da web (local, stubs) ficam sem link
+    private suspend fun mangaWebUrl(manga: Manga): String? =
+        (sourceManager.get(manga.source) as? HttpSource)?.let { runCatching { it.getMangaUrl(manga.toSManga()) }.getOrNull() }
+
+    private suspend fun chapterWebUrl(manga: Manga, chapter: Chapter): String? =
+        (sourceManager.get(manga.source) as? HttpSource)?.let { runCatching { it.getChapterUrl(chapter.toSChapter()) }.getOrNull() }
+
+    private suspend fun chapterRemote(manga: Manga, chapter: Chapter, now: String) = ChapterUpsertRemote(
+        id = chapterRemoteId(manga.source, manga.url, chapter.url),
+        mangaSourceId = sourceRemoteId(manga.source, manga.url),
+        sourceChapterId = chapter.url,
+        name = chapter.name,
+        chapterNumber = chapter.chapterNumber,
+        chapterLabel = null,
+        scanlator = chapter.scanlator,
+        uploadedAt = if (chapter.dateUpload > 0) Instant.ofEpochMilli(chapter.dateUpload).toString() else now,
+        webUrl = chapterWebUrl(manga, chapter),
+    )
+
     /**
-     * Upload completo (primeiro sync, depois de juntar com a cloud): envia todos os favoritos locais
-     * e o progresso dos capítulos lidos ou começados. Não apaga nada da cloud.
+     * Upload completo (primeiro sync, depois de juntar com a cloud, ou para preencher os links):
+     * envia todos os favoritos locais, todos os capítulos (para o site saber os que faltam ler) e o
+     * progresso dos lidos ou começados. Não apaga nada da cloud.
      */
     suspend fun uploadWholeLibrary(
         userId: String,
@@ -176,8 +200,10 @@ class LibrarySupabaseRepository(
         var chaptersSent = 0
         localMangaList.forEach { manga ->
             try {
-                val chapters = getChapters.await(manga.id).filter { it.read || it.lastPageRead > 0 }
-                chaptersSent += uploadProgress(userId, chapters.map { manga to it }, ::fail)
+                val chapters = getChapters.await(manga.id)
+                val (started, unread) = chapters.partition { it.read || it.lastPageRead > 0 }
+                uploadChapterRows(manga, unread)
+                chaptersSent += uploadProgress(userId, started.map { manga to it }, ::fail)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -298,6 +324,14 @@ class LibrarySupabaseRepository(
         return sent
     }
 
+    /** Só as linhas dos capítulos (sem progresso), em lotes. */
+    private suspend fun uploadChapterRows(manga: Manga, chapters: List<Chapter>) {
+        val now = Instant.now().toString()
+        chapters.map { chapterRemote(manga, it, now) }.distinctBy { it.id }.chunked(UPSERT_BATCH_SIZE).forEach { batch ->
+            withRetry { supabase.postgrest["chapters"].upsert(batch) { onConflict = "id" } }
+        }
+    }
+
     /** Envia o progresso em lotes. Devolve quantos capítulos foram enviados. */
     private suspend fun uploadProgress(
         userId: String,
@@ -349,6 +383,7 @@ class LibrarySupabaseRepository(
                         mangaId = mangaRemoteId(it.source, it.url),
                         extensionId = it.source.toString(),
                         sourceMangaId = it.url,
+                        webUrl = mangaWebUrl(it),
                     )
                 },
             )
@@ -384,18 +419,7 @@ class LibrarySupabaseRepository(
 
     private suspend fun uploadProgressBatch(userId: String, items: List<Pair<Manga, Chapter>>) {
         val now = Instant.now().toString()
-        val remoteChapters = items.map { (manga, chapter) ->
-            ChapterUpsertRemote(
-                id = chapterRemoteId(manga.source, manga.url, chapter.url),
-                mangaSourceId = sourceRemoteId(manga.source, manga.url),
-                sourceChapterId = chapter.url,
-                name = chapter.name,
-                chapterNumber = chapter.chapterNumber,
-                chapterLabel = null,
-                scanlator = chapter.scanlator,
-                uploadedAt = if (chapter.dateUpload > 0) Instant.ofEpochMilli(chapter.dateUpload).toString() else now,
-            )
-        }.distinctBy { it.id }
+        val remoteChapters = items.map { (manga, chapter) -> chapterRemote(manga, chapter, now) }.distinctBy { it.id }
         val remoteProgress = items.map { (manga, chapter) ->
             ChapterProgressRemote(
                 userId = userId,
@@ -807,6 +831,7 @@ data class MangaSourceSyncRemote(
     @SerialName("manga_id") val mangaId: String,
     @SerialName("extension_id") val extensionId: String,
     @SerialName("source_manga_id") val sourceMangaId: String,
+    @SerialName("web_url") val webUrl: String?,
 )
 
 @Serializable
@@ -875,6 +900,7 @@ data class ChapterUpsertRemote(
     @SerialName("chapter_label") val chapterLabel: String?,
     val scanlator: String?,
     @SerialName("uploaded_at") val uploadedAt: String?,
+    @SerialName("web_url") val webUrl: String?,
 )
 
 @Serializable

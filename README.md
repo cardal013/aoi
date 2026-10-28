@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.34.0
+- Site: read your manga on the source's site (*Continue: Chapter N*, *Open on <source>*, chapter list with ✓) and mark chapters read when you come back; the app sends the web links and every chapter
+
 ### 0.33.1
 - Recommended anime extensions: 2Dhive, Anikoto and Lunar; on the site, *Watch* asks which of the three (or your own site) to open
 

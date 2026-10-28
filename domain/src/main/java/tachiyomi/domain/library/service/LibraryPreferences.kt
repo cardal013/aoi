@@ -265,6 +265,12 @@ class LibraryPreferences(
         false,
     )
 
+    // Já enviou a biblioteca toda com os links (web_url) e todos os capítulos, para o site
+    fun cloudWebUrlsSent(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
+        "cloud_web_urls_sent_$userId",
+        false,
+    )
+
     /** Instante (ms) do início do último import da cloud concluído com sucesso, por utilizador. */
     fun lastCloudDownloadSync(userId: String): Preference<Long> = preferenceStore.getLong(
         "last_cloud_download_sync_$userId",

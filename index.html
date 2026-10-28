@@ -633,6 +633,22 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .new-folder-bar .btn{ margin-left:auto; }
 .watch-done-actions{ display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; margin-top:20px; }
 .watch-site-field{ width:100%; margin-top:14px; }
+/* Ler na fonte (folha do manga) */
+.manga-read{ margin-top:20px; padding-top:18px; border-top:1px solid var(--border); }
+.manga-read-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+.manga-read-actions .btn{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.manga-read-hint{ color:var(--text-muted); font-size:13px; line-height:1.5; margin:10px 0 0; }
+.chapter-list-head{ display:flex; align-items:center; gap:10px; margin-top:18px; font-size:13px; font-weight:700; color:var(--text-muted); }
+.chapter-list{ display:flex; flex-direction:column; gap:5px; max-height:42vh; overflow:auto; margin-top:8px; }
+.chapter-row{ display:flex; gap:5px; }
+.chapter-open{ flex:1; min-width:0; text-align:left; padding:9px 12px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text); font-size:13.5px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.chapter-open:hover:not(:disabled){ border-color:var(--accent); }
+.chapter-open:disabled{ cursor:default; opacity:.6; }
+.chapter-row.read .chapter-open{ color:var(--text-faint); font-weight:500; }
+.chapter-row.next .chapter-open{ border-color:var(--accent); }
+.chapter-check{ flex-shrink:0; width:40px; border:1px solid var(--border); border-radius:var(--radius-m); background:var(--bg); color:var(--text-faint); font-weight:700; }
+.chapter-check:hover{ border-color:#1E9E6B; }
+.chapter-row.read .chapter-check{ color:#1E9E6B; border-color:#1E9E6B; }
 .watch-site-help{ color:var(--text-muted); font-size:13px; line-height:1.5; margin-top:10px; }
 .watch-pick-host{ margin-left:auto; color:var(--text-faint); font-family:var(--font-mono); font-size:12px; font-weight:400; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .watch-pick-row{ display:flex; gap:6px; }
@@ -1069,6 +1085,29 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </button>
     </div>
     <div class="status-options" id="statusOptions"></div>
+    <div class="manga-read" id="mangaRead"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — LESTE O CAPÍTULO ATÉ AO FIM? (depois de o abrir na fonte)
+============================================================ -->
+<div class="modal-scrim" id="readDoneScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="readDoneTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="readDoneTitle">Finished the chapter?</h3>
+        <p id="readDoneText"></p>
+      </div>
+      <button type="button" class="modal-close" id="closeReadDone" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="watch-done-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="readDoneNo">Not to the end</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="readDoneYes">Yes</button>
+      <button type="button" class="btn btn-primary btn-sm" id="readDoneNext">Yes, next chapter</button>
+    </div>
   </div>
 </div>
 
@@ -1532,7 +1571,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (!currentUser) return;
     const { data, error } = await supabase
       .from('user_library')
-      .select('*, manga(*)')
+      .select('*, manga(*), manga_sources(id, web_url, extensions(name))')
       .eq('user_id', currentUser.id);
 
     if (error) { console.error(error); return; }
@@ -1540,9 +1579,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       mangaId: entry.manga_id,
       title: entry.manga.title,
       thumbnailUrl: entry.manga.thumbnail_url,
-      status: STATUS_MAP[entry.status.toUpperCase()] || 'reading'
+      status: STATUS_MAP[entry.status.toUpperCase()] || 'reading',
+      sourceId: entry.source_id,
+      webUrl: entry.manga_sources ? entry.manga_sources.web_url : null,
+      sourceName: entry.manga_sources && entry.manga_sources.extensions ? entry.manga_sources.extensions.name : 'the source'
     }));
     renderLibrary();
+    checkReadPending();
   }
 
   function logIn(sessionUser){
@@ -1876,7 +1919,9 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     activeMangaId = id;
     qs('statusModalTitle').textContent = manga.title;
     qs('statusOptions').innerHTML = STATUSES.map(s => `<button type="button" class="status-option ${s===manga.status?'current':''}" data-status="${s}"><span class="dot" style="background:${STATUS_DOT_VAR[s]}"></span>${STATUS_LABEL[s]}</button>`).join('');
+    renderMangaRead(manga);
     openModal(statusScrim);
+    loadChapters(manga.sourceId).then(() => { if (activeMangaId === id) renderMangaRead(manga); });
   }
   registerModal(statusScrim, () => closeModal(statusScrim));
   qs('closeStatusModal').onclick = () => closeModal(statusScrim);
@@ -1889,6 +1934,170 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (error) { alert(error.message); return; }
     fetchLibrary();
     closeModal(statusScrim);
+  };
+
+  // --- LER NA FONTE ---
+  // O browser não corre as extensões, por isso, como o botão WebView da app, o site abre o manga e os capítulos
+  // no site da fonte (links web_url que a app envia desde a 0.34.0). O site da fonte não avisa o Aoi: ao
+  // voltar a este separador pergunta se o capítulo foi lido até ao fim e marca-o na cloud
+  // (user_chapter_progress e o último capítulo em user_library); a app recebe-o no sync seguinte.
+  // Só capítulos inteiros (não a página). A lista é a que a app enviou da última vez que atualizou o manga.
+  const READ_PENDING_KEY = 'aoi_read_pending';
+  // Voltar logo ao Aoi (abriu o capítulo errado, etc.) não pergunta
+  const READ_MIN_MS = 30 * 1000;
+  const CHAPTER_PAGE = 1000;
+  const chapterCache = {};
+
+  async function fetchAllRows(build){
+    let rows = [];
+    for (let from = 0; ; from += CHAPTER_PAGE) {
+      const { data, error } = await build().range(from, from + CHAPTER_PAGE - 1);
+      if (error) throw error;
+      rows = rows.concat(data);
+      if (data.length < CHAPTER_PAGE) return rows;
+    }
+  }
+
+  // Capítulos do manga por ordem de leitura e os lidos (guardados para o "next chapter")
+  async function loadChapters(sourceId){
+    if (!sourceId || !currentUser) return null;
+    try {
+      const [chapters, progress] = await Promise.all([
+        fetchAllRows(() => supabase.from('chapters').select('id, name, chapter_number, uploaded_at, web_url')
+          .eq('manga_source_id', sourceId).order('chapter_number', { ascending: true }).order('uploaded_at', { ascending: true }).order('id')),
+        fetchAllRows(() => supabase.from('user_chapter_progress').select('chapter_id, read')
+          .eq('user_id', currentUser.id).eq('manga_id', sourceId).order('chapter_id'))
+      ]);
+      chapterCache[sourceId] = { list: chapters, read: new Set(progress.filter(p => p.read).map(p => p.chapter_id)) };
+    } catch (err) {
+      console.error('chapters', err);
+      if (!chapterCache[sourceId]) chapterCache[sourceId] = { list: [], read: new Set(), error: true };
+    }
+    return chapterCache[sourceId];
+  }
+
+  // O seguinte ao último lido (como o "continuar" da app); sem nenhum lido, o primeiro
+  function nextChapterOf(cache, afterId){
+    if (!cache || !cache.list.length) return null;
+    let from = 0;
+    if (afterId) from = cache.list.findIndex(c => c.id === afterId) + 1;
+    else cache.list.forEach((c, index) => { if (cache.read.has(c.id)) from = index + 1; });
+    return cache.list.slice(from).find(c => !cache.read.has(c.id)) || null;
+  }
+
+  function chapterLabel(c){ return c.name || `Chapter ${c.chapter_number}`; }
+
+  function renderMangaRead(manga){
+    const box = qs('mangaRead');
+    const cache = chapterCache[manga.sourceId];
+    const next = nextChapterOf(cache);
+    let html = '<div class="manga-read-actions">';
+    if (next && next.web_url) html += `<button type="button" class="btn btn-primary btn-sm" data-read-open="${esc(next.id)}">Continue: ${esc(chapterLabel(next))}</button>`;
+    if (manga.webUrl) html += `<button type="button" class="btn btn-ghost btn-sm" data-read-source="1">Open on ${esc(manga.sourceName)}</button>`;
+    html += '</div>';
+    if (!manga.webUrl) html += '<p class="manga-read-hint">No link to the source yet: update Aoi on your phone (0.34.0 or newer) and it sends the links on the next sync.</p>';
+    if (!cache) html += '<p class="manga-read-hint">Loading chapters…</p>';
+    else if (cache.error) html += '<p class="manga-read-hint">Couldn\'t load the chapters.</p>';
+    else if (cache.list.length) {
+      const readCount = cache.list.filter(c => cache.read.has(c.id)).length;
+      html += `<div class="chapter-list-head">Chapters · ${readCount}/${cache.list.length} read</div><div class="chapter-list">`;
+      html += cache.list.slice().reverse().map(c => {
+        const read = cache.read.has(c.id);
+        const classes = ['chapter-row', read ? 'read' : '', next && next.id === c.id ? 'next' : ''].join(' ');
+        return `<div class="${classes}">
+          <button type="button" class="chapter-open" data-read-open="${esc(c.id)}" ${c.web_url ? '' : 'disabled'} title="${c.web_url ? 'Open on ' + esc(manga.sourceName) : 'No link yet'}">${esc(chapterLabel(c))}</button>
+          <button type="button" class="chapter-check" data-read-toggle="${esc(c.id)}" title="${read ? 'Mark as unread' : 'Mark as read'}" aria-label="${read ? 'Mark as unread' : 'Mark as read'}">✓</button>
+        </div>`;
+      }).join('') + '</div>';
+    }
+    box.innerHTML = html;
+  }
+
+  qs('mangaRead').onclick = (e) => {
+    const manga = state.library.find(m => m.mangaId === activeMangaId);
+    if (!manga) return;
+    const cache = chapterCache[manga.sourceId];
+    if (e.target.closest('[data-read-source]')) { window.open(manga.webUrl, '_blank', 'noopener'); return; }
+    const open = e.target.closest('[data-read-open]');
+    if (open && cache) {
+      const chapter = cache.list.find(c => c.id === open.dataset.readOpen);
+      if (chapter) startRead(manga, chapter);
+      return;
+    }
+    const toggle = e.target.closest('[data-read-toggle]');
+    if (toggle && cache) {
+      const id = toggle.dataset.readToggle;
+      setChaptersRead(manga, [id], !cache.read.has(id)).then(() => renderMangaRead(manga));
+    }
+  };
+
+  // Tem de correr dentro do clique (senão o browser bloqueia o separador novo)
+  function startRead(manga, chapter){
+    window.open(chapter.web_url, '_blank', 'noopener');
+    const next = nextChapterOf(chapterCache[manga.sourceId], chapter.id);
+    writeStore(READ_PENDING_KEY, JSON.stringify({
+      mangaId: manga.mangaId, sourceId: manga.sourceId, title: manga.title,
+      chapterId: chapter.id, chapterName: chapterLabel(chapter),
+      next: next && next.web_url ? { id: next.id, name: chapterLabel(next), web_url: next.web_url } : null,
+      startedAt: Date.now()
+    }));
+  }
+
+  // Marca ou desmarca na cloud (o mesmo que a app grava); lido passa a ser o último capítulo do manga
+  async function setChaptersRead(manga, chapterIds, read){
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('user_chapter_progress').upsert(chapterIds.map(id => ({
+      user_id: currentUser.id, chapter_id: id, manga_id: manga.sourceId, read: read, last_page_read: 0, updated_at: now
+    })), { onConflict: 'user_id,chapter_id' });
+    if (error) { console.error('chapter progress', error); alert("Couldn't save the change. Try again."); return false; }
+    if (read) {
+      const { error: libraryError } = await supabase.from('user_library')
+        .update({ last_chapter_id: chapterIds[chapterIds.length - 1], last_page: 0, last_read_at: now })
+        .eq('user_id', currentUser.id).eq('manga_id', manga.mangaId);
+      if (libraryError) console.error('library last chapter', libraryError);
+    }
+    const cache = chapterCache[manga.sourceId];
+    if (cache) chapterIds.forEach(id => read ? cache.read.add(id) : cache.read.delete(id));
+    return true;
+  }
+
+  function readPending(){ try { return JSON.parse(readStore(READ_PENDING_KEY) || 'null'); } catch (_) { return null; } }
+
+  var readDoneScrim = qs('readDoneScrim');
+  function checkReadPending(){
+    const pending = readPending();
+    if (!pending || !currentUser || Date.now() - pending.startedAt < READ_MIN_MS) return;
+    qs('readDoneTitle').textContent = `Finished ${pending.chapterName}?`;
+    qs('readDoneText').textContent = `Did you read ${pending.chapterName} of ${pending.title} to the end?`;
+    qs('readDoneNext').style.display = pending.next ? '' : 'none';
+    if (!readDoneScrim.classList.contains('open')) openModal(readDoneScrim);
+    // Para o "next chapter" a seguir ao seguinte já haver lista
+    if (!chapterCache[pending.sourceId]) loadChapters(pending.sourceId);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReadPending(); });
+
+  function closeReadDone(){ writeStore(READ_PENDING_KEY, null); closeModal(readDoneScrim); }
+  function afterReadSaved(){
+    renderLibrary();
+    const manga = state.library.find(m => m.mangaId === activeMangaId);
+    if (manga && statusScrim.classList.contains('open')) renderMangaRead(manga);
+  }
+  registerModal(readDoneScrim, closeReadDone);
+  qs('closeReadDone').onclick = closeReadDone;
+  qs('readDoneNo').onclick = closeReadDone;
+  qs('readDoneYes').onclick = () => {
+    const pending = readPending();
+    closeReadDone();
+    if (pending) setChaptersRead(pending, [pending.chapterId], true).then(afterReadSaved);
+  };
+  qs('readDoneNext').onclick = () => {
+    const pending = readPending();
+    closeReadDone();
+    if (!pending || !pending.next) return;
+    // O separador novo abre já (ainda dentro do clique); o capítulo vai para a cloud a seguir
+    const manga = state.library.find(m => m.mangaId === pending.mangaId) || { mangaId: pending.mangaId, sourceId: pending.sourceId, title: pending.title };
+    startRead(manga, pending.next);
+    setChaptersRead(pending, [pending.chapterId], true).then(afterReadSaved);
   };
 
   // --- ANIME ---
