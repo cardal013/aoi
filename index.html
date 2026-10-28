@@ -338,7 +338,7 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
    FEATURES
 ============================================================ */
 .feature-grid{
-  display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1px;
+  display:grid; grid-template-columns:repeat(3, 1fr); gap:1px;
   background:var(--border); border:1px solid var(--border); border-radius:var(--radius-l);
   overflow:hidden;
 }
@@ -355,6 +355,18 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .feature-icon svg{ width:19px; height:19px; stroke:var(--accent); fill:none; stroke-width:1.7; }
 .feature-card h3{ font-family:var(--font-body); font-size:17px; font-weight:700; margin-bottom:9px; }
 .feature-card p{ color:var(--text-muted); font-size:14.5px; line-height:1.65; }
+
+/* ============================================================
+   SCREENSHOTS
+============================================================ */
+.shots-label{ font-size:13px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.08em; margin:0 0 16px; }
+.shots-row{ display:flex; gap:18px; overflow-x:auto; padding-bottom:14px; scroll-snap-type:x mandatory; }
+.shots-row + .shots-label{ margin-top:44px; }
+.shots-row figure{ margin:0; flex-shrink:0; scroll-snap-align:start; }
+.shots-row img{ display:block; border:1px solid var(--border); background:var(--bg-elevated); }
+.shots-row figcaption{ color:var(--text-muted); font-size:13px; margin-top:10px; }
+.shots-phone img{ width:200px; aspect-ratio:9/20; object-fit:cover; border-radius:22px; }
+.shots-web img{ width:min(560px, 82vw); aspect-ratio:1280/860; object-fit:cover; border-radius:14px; }
 
 /* ============================================================
    EXTENSIONS
@@ -766,6 +778,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       <ul class="nav-links">
         <li><a href="#top">Home</a></li>
         <li><a href="#features">Features</a></li>
+        <li><a href="#screenshots">Screenshots</a></li>
       </ul>
     </nav>
 
@@ -804,6 +817,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 <div class="mobile-panel" id="mobilePanel">
   <a href="#top">Home</a>
   <a href="#features">Features</a>
+  <a href="#screenshots">Screenshots</a>
   <div class="mobile-cta" id="mobileAuthButtons">
     <button class="btn btn-ghost" id="openLoginModalMobile" style="flex:1" type="button">Login</button>
     <button class="btn btn-primary" id="openSignupModalMobile" style="flex:1" type="button">Create Account</button>
@@ -897,6 +911,41 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <h3>Accounts</h3>
           <p>Sign in and keep your library and reading status tied to your profile.</p>
         </article>
+        <article class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M10 9l5 2.5-5 2.5z"/></svg></div>
+          <h3>Anime with MyAnimeList</h3>
+          <p>Your MyAnimeList, with folders for seasons. Watch with anime extensions in the app, or on the site you pick here.</p>
+        </article>
+        <article class="feature-card">
+          <div class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
+          <h3>Keep reading on a computer</h3>
+          <p>Open the next chapter on the source's own site and mark it read: your phone picks it up on the next sync.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section id="screenshots">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Screenshots</span>
+        <h2>On your phone and on the web.</h2>
+        <p>The same library in the Android app and on this site.</p>
+      </div>
+      <p class="shots-label">App</p>
+      <div class="shots-row shots-phone">
+        <figure><img src="screenshots/app-read.jpg" alt="Read: the manga library with unread counts" loading="lazy"><figcaption>Read</figcaption></figure>
+        <figure><img src="screenshots/app-manga.jpg" alt="A manga with its chapters" loading="lazy"><figcaption>Manga</figcaption></figure>
+        <figure><img src="screenshots/app-watch.jpg" alt="Watch: the anime list with folders" loading="lazy"><figcaption>Watch</figcaption></figure>
+        <figure><img src="screenshots/app-more.jpg" alt="More menu" loading="lazy"><figcaption>More</figcaption></figure>
+        <figure><img src="screenshots/app-account.jpg" alt="Account screen" loading="lazy"><figcaption>Account</figcaption></figure>
+      </div>
+      <p class="shots-label">Website</p>
+      <div class="shots-row shots-web">
+        <figure><img src="screenshots/site-library.jpg" alt="Library on the website" loading="lazy"><figcaption>Library with unread counts and ▶</figcaption></figure>
+        <figure><img src="screenshots/site-manga.jpg" alt="A manga's chapters on the website" loading="lazy"><figcaption>Continue on the source</figcaption></figure>
+        <figure><img src="screenshots/site-anime.jpg" alt="Anime list on the website" loading="lazy"><figcaption>Anime with folders</figcaption></figure>
+        <figure><img src="screenshots/site-watch.jpg" alt="Picking the site to watch an episode" loading="lazy"><figcaption>Watch on the site you pick</figcaption></figure>
       </div>
     </div>
   </section>
@@ -1810,13 +1859,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (view === 'anime' && currentUser) requestAnimeSync(false);
     if (view === 'admin' && !qs('adminFrame').src) qs('adminFrame').src = ADMIN_URL;
   }
-  // Com sessão, Home, Features e o logo mostram a página pública (o menu da conta e os separadores voltam à app)
-  document.querySelectorAll('a[href="#top"], a[href="#features"]').forEach(link => link.addEventListener('click', (e) => {
+  // Com sessão, Home, Features, Screenshots e o logo mostram a página pública (o menu da conta e os separadores voltam à app)
+  document.querySelectorAll('a[href="#top"], a[href="#features"], a[href="#screenshots"]').forEach(link => link.addEventListener('click', (e) => {
     if (!currentUser) return;
     e.preventDefault();
     appSite.style.display = 'none';
     publicSite.style.display = '';
-    const target = link.getAttribute('href') === '#features' ? document.getElementById('features') : null;
+    const target = link.getAttribute('href') === '#top' ? null : document.querySelector(link.getAttribute('href'));
     if (target) target.scrollIntoView({ behavior: 'smooth' });
     else window.scrollTo({ top: 0, behavior: 'smooth' });
   }));

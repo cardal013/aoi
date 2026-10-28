@@ -21,14 +21,23 @@ A modern manga & manhwa reader for Android — clean, fast, and built around an 
 
 ## Screenshots
 
+### App
+
 <p align="center">
-  <table>
-    <tr>
-      <td><img src="screenshots/abas%20aoi.jpeg" alt="Aoi tabs" width="200"></td>
-      <td><img src="screenshots/Account.jpeg" alt="Account screen" width="200"></td>
-      <td><img src="screenshots/supabase.jpeg" alt="Supabase" width="200"></td>
-    </tr>
-  </table>
+  <img src="screenshots/app-read.jpg" alt="Read: the manga library with unread counts" width="160">
+  <img src="screenshots/app-manga.jpg" alt="A manga with its chapters" width="160">
+  <img src="screenshots/app-watch.jpg" alt="Watch: the anime list with folders" width="160">
+  <img src="screenshots/app-more.jpg" alt="More menu" width="160">
+  <img src="screenshots/app-account.jpg" alt="Account screen" width="160">
+</p>
+
+### Website
+
+<p align="center">
+  <img src="screenshots/site-library.jpg" alt="Library on the website, with unread counts and the ▶ to continue" width="400">
+  <img src="screenshots/site-manga.jpg" alt="A manga on the website: continue on the source and the chapter list" width="400">
+  <img src="screenshots/site-anime.jpg" alt="Anime list with folders on the website" width="400">
+  <img src="screenshots/site-watch.jpg" alt="Picking the site to watch an episode" width="400">
 </p>
 
 ## What is Aoi
@@ -46,6 +55,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |🔄|**Automatic sync**|Your library, reading status and progress sync on their own: changes go up a few seconds after you make them and the app pulls what changed in the cloud when it opens. Your anime list syncs the same way.|
 |📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
 |📺|**Anime list**|Keep the anime you watch, want to watch or finished in the *Watch* tab of the bottom bar. It uses your MyAnimeList anime list (never the manga list), with folders for seasons and your own order.|
+|💻|**Keep reading on a computer**|On the [website](https://aoi-mangas.vercel.app/), each manga shows how many chapters are left and a ▶ that opens the next one on the source's own site (like the app's WebView button). Back on Aoi it asks if you read it and marks it, and your phone gets it on the next sync.|
 |💾|**Backup**|*More → Backup* imports a backup file or exports your library to one.|
 
 ### Reading status categories
@@ -59,7 +69,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 
 ### Anime
 
-Open *Watch* in the bottom bar and tap *Connect MyAnimeList* once. At the top you pick *Plan to Watch* or *Completed*; tap **+** to search MyAnimeList and add one, or long-press results to add several at once (inside a folder, they go into that folder). Tapping an anime lets you change its status, count the episodes you've watched (the last one marks it *Completed*) or remove it; every change goes to MyAnimeList. Long-press an anime to put it in a folder, or long-press and move to drag it. The website has the same list.
+Open *Watch* in the bottom bar and tap *Connect MyAnimeList* once. At the top you pick *Plan to Watch* or *Completed*; tap **+** to search MyAnimeList and add one, or long-press results to add several at once (inside a folder, they go into that folder). Tapping an anime lets you change its status, count the episodes you've watched (the last one marks it *Completed*) or remove it; every change goes to MyAnimeList. Long-press an anime to put it in a folder, or long-press and move to drag it. The website has the same list: on a computer, ⋮ on a cover opens its menu and *New folder* makes a folder from the anime you pick. *Watch* on the website opens the episode on 2Dhive, Anikoto, Lunar or a site you add.
 
 ### How the sync works
 
