@@ -531,6 +531,9 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 #appSite .app-view-head h1{ font-size:clamp(26px,3.6vw,32px); }
 #appSite section{ display:none; padding:48px 0 90px; }
 #appSite section.active{ display:block; }
+/* Admin: a mesma página do Admin da app (app/src/main/assets/admin), com a sessão do site */
+#appSite section#app-view-admin{ padding:0; }
+#adminFrame{ display:block; width:100%; height:calc(100dvh - 130px); min-height:520px; border:0; background:#0f1115; }
 .app-tabs-bar{ position:sticky; top:64px; z-index:150; background:color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter:blur(14px) saturate(140%); border-bottom:1px solid var(--border); }
 .app-tabs{ display:flex; gap:4px; padding:12px 0; }
 .app-tabs button{ padding:9px 16px; border-radius:999px; font-size:14px; font-weight:700; color:var(--text-muted); background:transparent; border:1px solid transparent; }
@@ -724,6 +727,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
           <button type="button" id="menuProfileBtn">Profile</button>
           <button type="button" id="menuLibraryBtn">Library</button>
           <button type="button" id="menuAnimeBtn">Anime</button>
+          <button type="button" id="menuAdminBtn" style="display:none;">Admin</button>
           <hr>
           <button type="button" id="menuLogoutBtn" class="danger">Logout</button>
         </div>
@@ -750,6 +754,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <button type="button" id="mobileProfileBtn">Profile</button>
     <button type="button" id="mobileLibraryBtn">Library</button>
     <button type="button" id="mobileAnimeBtn">Anime</button>
+    <button type="button" id="mobileAdminBtn" style="display:none;">Admin</button>
     <button type="button" id="mobileLogoutBtn" class="danger">Logout</button>
   </div>
 </div>
@@ -877,6 +882,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     <div class="container app-tabs" id="appTabs">
       <button type="button" data-app-view="library" class="active">Library</button>
       <button type="button" data-app-view="anime">Anime</button>
+      <button type="button" data-app-view="admin" id="adminTab" style="display:none;">Admin</button>
     </div>
   </div>
 
@@ -952,6 +958,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <p id="animeEmptyText">Add an anime with the button above, or from the Anime tab in the app.</p>
       </div>
     </div>
+  </section>
+
+  <!-- ADMIN: só para contas admin (tabela admins). Savearth, Gits, Refeições, Trello, Users e Definições -->
+  <section id="app-view-admin">
+    <iframe id="adminFrame" title="Admin"></iframe>
   </section>
 
   <!-- PROFILE -->
@@ -1385,6 +1396,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     fetchLibrary();
     requestAnimeSync(true);
     handleMalLoginResult();
+    checkAdmin();
   }
 
   async function logOut(){
@@ -1397,6 +1409,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'none';
     publicSite.style.display = '';
     resetAnimeState();
+    setAdminVisible(false);
     qs('userMenu').classList.remove('open');
     window.scrollTo({ top:0 });
   }
@@ -1575,6 +1588,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     window.scrollTo({ top:0 });
     // Entrar na aba Anime vai buscar a lista ao MAL (no máximo 1 vez a cada 10 s)
     if (view === 'anime' && currentUser) requestAnimeSync(false);
+    if (view === 'admin' && !qs('adminFrame').src) qs('adminFrame').src = ADMIN_URL;
   }
   qs('appTabs').onclick = (e) => { const btn = e.target.closest('button[data-app-view]'); if (btn) showAppView(btn.dataset.appView); };
   qs('menuProfileBtn').onclick = () => showAppView('profile');
@@ -1583,6 +1597,23 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   qs('mobileLibraryBtn').onclick = () => showAppView('library');
   qs('menuAnimeBtn').onclick = () => showAppView('anime');
   qs('mobileAnimeBtn').onclick = () => showAppView('anime');
+  qs('menuAdminBtn').onclick = () => showAppView('admin');
+  qs('mobileAdminBtn').onclick = () => showAppView('admin');
+
+  // --- ADMIN ---
+  const ADMIN_URL = 'app/src/main/assets/admin/index.html';
+  function setAdminVisible(on){
+    ['adminTab', 'menuAdminBtn', 'mobileAdminBtn'].forEach(id => qs(id).style.display = on ? '' : 'none');
+    if (!on) qs('adminFrame').removeAttribute('src');
+  }
+  async function checkAdmin(){
+    const { data, error } = await supabase.rpc('is_admin');
+    setAdminVisible(!error && data === true);
+  }
+  // O "Voltar ao Aoi" do Admin volta à biblioteca
+  window.addEventListener('message', e => {
+    if (e.origin === location.origin && e.data && e.data.aoiAdmin === 'close') showAppView('library');
+  });
 
   // --- LIBRARY RENDERING ---
   function mangaCardHTML(m){
