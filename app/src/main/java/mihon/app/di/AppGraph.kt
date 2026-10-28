@@ -16,7 +16,6 @@ import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.tachiyomi.App
 import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
-import eu.kanade.tachiyomi.data.account.MealReminderJob
 import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.cache.ChapterCache
@@ -69,7 +68,6 @@ interface AppGraph : ViewModelGraph {
     fun inject(backupRestoreJob: BackupRestoreJob)
     fun inject(backupCreateJob: BackupCreateJob)
     fun inject(delayedTrackingUpdateJob: DelayedTrackingUpdateJob)
-    fun inject(mealReminderJob: MealReminderJob)
     fun inject(downloadJob: DownloadJob)
     fun inject(notificationReceiver: NotificationReceiver)
     fun inject(notificationReceiver: SecureActivityDelegateImpl)

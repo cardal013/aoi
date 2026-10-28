@@ -22,7 +22,6 @@ import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.Info
 import mihon.icons.materialsymbols.rounded.Person
 import mihon.icons.materialsymbols.rounded.QueryStats
-import mihon.icons.materialsymbols.rounded.Restaurant
 import mihon.icons.materialsymbols.rounded.Security
 import mihon.icons.materialsymbols.rounded.Settings
 import mihon.icons.materialsymbols.rounded.Storage
@@ -50,7 +49,6 @@ fun MoreScreen(
     onClickAccount: () -> Unit,
     isAdmin: Boolean,
     onClickAdmin: () -> Unit,
-    onClickMeals: () -> Unit,
     onClickSupport: () -> Unit,
     onClickAbout: () -> Unit,
 ) {
@@ -95,13 +93,6 @@ fun MoreScreen(
                         title = stringResource(MR.strings.more_admin),
                         icon = MaterialSymbols.Rounded.Security,
                         onPreferenceClick = onClickAdmin,
-                    )
-                }
-                item {
-                    TextPreferenceWidget(
-                        title = stringResource(MR.strings.more_meals),
-                        icon = MaterialSymbols.Rounded.Restaurant,
-                        onPreferenceClick = onClickMeals,
                     )
                 }
             }

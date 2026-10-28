@@ -31,7 +31,6 @@ import eu.kanade.tachiyomi.core.security.PrivacyPreferences
 import eu.kanade.tachiyomi.crash.CrashActivity
 import eu.kanade.tachiyomi.crash.GlobalExceptionHandler
 import eu.kanade.tachiyomi.data.account.CloudSync
-import eu.kanade.tachiyomi.data.account.MealReminder
 import eu.kanade.tachiyomi.data.cache.CoverCache
 import eu.kanade.tachiyomi.data.coil.BufferedSourceFetcher
 import eu.kanade.tachiyomi.data.coil.ImageDecoder
@@ -48,6 +47,7 @@ import eu.kanade.tachiyomi.util.system.animatorDurationScale
 import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isDebugBuildType
 import eu.kanade.tachiyomi.util.system.notify
+import eu.kanade.tachiyomi.util.system.workManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -102,7 +102,6 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
     @Inject private lateinit var cloudSync: CloudSync
 
-    @Inject private lateinit var mealReminder: MealReminder
 
     private val disableIncognitoReceiver = DisableIncognitoReceiver()
 
@@ -194,7 +193,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         // Os outros processos (ex.: o do ecrã de crash) não sincronizam
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P || getProcessName() == packageName) {
             cloudSync.start(scope)
-            mealReminder.start(scope)
+            // O lembrete das Refeições saiu na 0.28.0: tira o agendamento que tenha ficado
+            workManager.cancelUniqueWork("MealReminder")
         }
     }
 
