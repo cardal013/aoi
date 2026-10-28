@@ -67,7 +67,15 @@ class AnimePlayerActivity : ComponentActivity() {
     private var current: Video? = null
     private var marked = false
 
-    private val episodeUrl by lazy { intent.getStringExtra(EXTRA_EPISODE_URL)!! }
+    private val queueUrls by lazy { intent.getStringArrayExtra(EXTRA_QUEUE_URLS).orEmpty().toList() }
+    private val queueNames by lazy { intent.getStringArrayExtra(EXTRA_QUEUE_NAMES).orEmpty().toList() }
+    private val queueNumbers by lazy { intent.getFloatArrayExtra(EXTRA_QUEUE_NUMBERS)?.toList().orEmpty() }
+
+    // O episódio que está a dar; quando acaba passa ao seguinte da fila
+    private var queueIndex = -1
+    private val episodeUrl get() = if (queueIndex < 0) intent.getStringExtra(EXTRA_EPISODE_URL)!! else queueUrls[queueIndex]
+    private val episodeName get() = if (queueIndex < 0) intent.getStringExtra(EXTRA_EPISODE_NAME).orEmpty() else queueNames[queueIndex]
+    private val episodeNumber get() = if (queueIndex < 0) intent.getFloatExtra(EXTRA_EPISODE_NUMBER, -1f) else queueNumbers[queueIndex]
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -153,7 +161,7 @@ class AnimePlayerActivity : ComponentActivity() {
         try {
             val episode = SEpisode.create().apply {
                 url = episodeUrl
-                name = intent.getStringExtra(EXTRA_EPISODE_NAME).orEmpty()
+                name = episodeName
             }
             videos = withIOContext { AnimeVideos.load(source, episode) }
         } catch (e: CancellationException) {
@@ -194,7 +202,10 @@ class AnimePlayerActivity : ComponentActivity() {
                         }
 
                         override fun onPlaybackStateChanged(state: Int) {
-                            if (state == Player.STATE_ENDED) checkProgress(ended = true)
+                            if (state == Player.STATE_ENDED) {
+                                checkProgress(ended = true)
+                                playNext()
+                            }
                         }
                     },
                 )
@@ -202,6 +213,23 @@ class AnimePlayerActivity : ComponentActivity() {
                 p.prepare()
                 p.play()
             }
+    }
+
+    /** Acabou o episódio: passa ao seguinte da fila, do princípio (ou fecha se não houver). */
+    private fun playNext() {
+        if (queueIndex + 1 >= queueUrls.size) {
+            finish()
+            return
+        }
+        queueIndex++
+        marked = false
+        videos = emptyList()
+        current = null
+        player?.release()
+        player = null
+        qualityButton.visibility = Button.GONE
+        message.setText(eu.kanade.tachiyomi.R.string.anime_player_loading)
+        lifecycleScope.launch { load() }
     }
 
     private fun chooseVideo() {
@@ -223,7 +251,7 @@ class AnimePlayerActivity : ComponentActivity() {
         if (!marked && (ended || p.currentPosition >= duration * WATCHED_AT)) {
             marked = true
             val malId = intent.getLongExtra(EXTRA_MAL_ID, 0)
-            val number = intent.getFloatExtra(EXTRA_EPISODE_NUMBER, -1f)
+            val number = episodeNumber
             if (malId > 0 && number > 0) lifecycleScope.launch { withIOContext { progress.markWatched(malId, number) } }
         }
     }
@@ -246,15 +274,22 @@ class AnimePlayerActivity : ComponentActivity() {
         private const val EXTRA_EPISODE_NAME = "episode_name"
         private const val EXTRA_EPISODE_NUMBER = "episode_number"
         private const val EXTRA_MAL_ID = "mal_id"
+        private const val EXTRA_QUEUE_URLS = "queue_urls"
+        private const val EXTRA_QUEUE_NAMES = "queue_names"
+        private const val EXTRA_QUEUE_NUMBERS = "queue_numbers"
         private const val SEEK_MS = 10_000L
         private const val WATCHED_AT = 0.85
 
-        fun intent(context: Context, sourceId: Long, malId: Long, episode: SEpisode): Intent =
+        /** [next] são os episódios que vêm a seguir, pela ordem: tocam sozinhos quando o anterior acaba. */
+        fun intent(context: Context, sourceId: Long, malId: Long, episode: SEpisode, next: List<SEpisode> = emptyList()): Intent =
             Intent(context, AnimePlayerActivity::class.java)
                 .putExtra(EXTRA_SOURCE_ID, sourceId)
                 .putExtra(EXTRA_EPISODE_URL, episode.url)
                 .putExtra(EXTRA_EPISODE_NAME, episode.name)
                 .putExtra(EXTRA_EPISODE_NUMBER, episode.episode_number)
                 .putExtra(EXTRA_MAL_ID, malId)
+                .putExtra(EXTRA_QUEUE_URLS, next.map { it.url }.toTypedArray())
+                .putExtra(EXTRA_QUEUE_NAMES, next.map { it.name }.toTypedArray())
+                .putExtra(EXTRA_QUEUE_NUMBERS, next.map { it.episode_number }.toFloatArray())
     }
 }

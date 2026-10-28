@@ -106,6 +106,15 @@ class AnimeExtensions(
         }
         ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_EXPORTED)
         reloadInstalled()
+        // Os repositórios de origem entram uma vez; se se tirar um, não volta
+        if (!prefs.getBoolean(KEY_DEFAULTS, false)) {
+            prefs.edit {
+                putStringSet(KEY_REPOS, repos().toSet() + DEFAULT_REPOS)
+                putBoolean(KEY_DEFAULTS, true)
+            }
+            _state.update { it.copy(repos = repos()) }
+        }
+        refreshAvailable()
     }
 
     val sources: List<AnimeSource> get() = _state.value.installed.flatMap { it.sources }
@@ -299,6 +308,11 @@ class AnimeExtensions(
         const val KEY_REPOS = "repos"
         const val KEY_TRUSTED = "trusted"
         const val KEY_REQUESTED = "requested"
+        const val KEY_DEFAULTS = "defaults_v1"
+        val DEFAULT_REPOS = setOf(
+            "https://raw.githubusercontent.com/yuzono/anime-repo/repo",
+            "https://raw.githubusercontent.com/salmanbappi/extensions-repo/main",
+        )
 
         @Suppress("DEPRECATION")
         val PACKAGE_FLAGS = PackageManager.GET_CONFIGURATIONS or

@@ -14,6 +14,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.31.0] - 2026-10-28
+### Added
+- Two anime extension repositories come preset (added once; removing one keeps it removed)
+- *Watch episodes* opens the player straight away on the next episode once the anime is matched
+- The player goes on to the next episode by itself when one ends (up to 50 in a row)
+
 ## [Aoi v0.30.0] - 2026-10-28
 ### Improved
 - *Watch episodes* now does the work by itself: it searches the anime in all your installed extensions (title and English title, "2nd Season" = "Season 2") and, when a result matches, opens its episodes straight away. Only when nothing matches well does it show the results to pick from (with the source of each one). *Change source* searches all extensions again

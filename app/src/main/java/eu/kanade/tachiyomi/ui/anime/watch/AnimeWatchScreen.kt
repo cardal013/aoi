@@ -99,7 +99,17 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
 
         val play: (SEpisode) -> Unit = play@{ episode ->
             val sourceId = viewModel.linkedSource()?.id ?: return@play
-            context.startActivity(AnimePlayerActivity.intent(context, sourceId, malId, episode))
+            val next = state.episodes.dropWhile { it.url != episode.url }.drop(1).take(MAX_QUEUE)
+            context.startActivity(AnimePlayerActivity.intent(context, sourceId, malId, episode, next))
+        }
+
+        // Carregar em Watch é para ver: com o anime ligado e os episódios carregados, abre logo o seguinte
+        val next = state.nextEpisode
+        LaunchedEffect(next?.url, state.choosing) {
+            if (next != null && !state.choosing && !viewModel.autoPlayed) {
+                viewModel.autoPlayed = true
+                play(next)
+            }
         }
 
         Scaffold(
@@ -321,6 +331,11 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
                 }
             }
         }
+    }
+
+    private companion object {
+        // Episódios seguintes passados ao player para continuar sozinho
+        const val MAX_QUEUE = 50
     }
 
     private fun episodeLabel(number: Float): String =

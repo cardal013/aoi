@@ -90,6 +90,9 @@ class AnimeWatchViewModel(
     private var searchJob: Job? = null
     private var autoSearched = false
 
+    /** O player abre sozinho uma vez por cada vez que se entra no ecrã. */
+    var autoPlayed = false
+
     fun init(malId: Long) {
         if (this.malId == malId) return
         this.malId = malId
