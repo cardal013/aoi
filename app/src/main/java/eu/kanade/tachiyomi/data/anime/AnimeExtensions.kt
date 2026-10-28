@@ -95,7 +95,23 @@ class AnimeExtensions(
     private val _state = MutableStateFlow(State(repos = repos()))
     val state: StateFlow<State> = _state.asStateFlow()
 
+    // Chamadas a correr por pacote ([guard]); gravado no disco para se saber, depois de a app morrer, quem estava a correr
+    private val inUse = mutableMapOf<String, Int>()
+
+    /**
+     * Pacotes que estavam a correr da última vez que a app fechou sem aviso (provavelmente rebentaram com ela).
+     * Ficam fora da procura automática até se desinstalarem ou se carregar em Keep.
+     */
+    private val _crashed = MutableStateFlow(
+        prefs.getStringSet(KEY_CRASHED, emptySet()).orEmpty() + prefs.getStringSet(KEY_IN_USE, emptySet()).orEmpty(),
+    )
+    val crashed: StateFlow<Set<String>> = _crashed.asStateFlow()
+
     init {
+        prefs.edit(commit = true) {
+            putStringSet(KEY_CRASHED, _crashed.value)
+            remove(KEY_IN_USE)
+        }
         val filter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REPLACED)
@@ -138,7 +154,48 @@ class AnimeExtensions(
                     untrusted = results.filterIsInstance<Untrusted>(),
                 )
             }
+            // Uma que rebentou e já foi desinstalada deixa de contar
+            val present = _state.value.let { st -> st.installed.map { it.pkg } + st.untrusted.map { it.pkg } }.toSet()
+            setCrashed(_crashed.value intersect present)
         }
+    }
+
+    // ---------- Extensões que rebentam com a app ----------
+
+    fun pkgOf(source: AnimeSource): String? = _state.value.installed.find { ext -> ext.sources.any { it.id == source.id } }?.pkg
+
+    fun isCrashed(source: AnimeSource): Boolean = pkgOf(source) in _crashed.value
+
+    fun nameOf(pkg: String, st: State = _state.value): String =
+        st.installed.find { it.pkg == pkg }?.name ?: st.untrusted.find { it.pkg == pkg }?.name ?: pkg
+
+    /** "Keep": volta a usar a extensão como as outras. */
+    fun keep(pkg: String) = setCrashed(_crashed.value - pkg)
+
+    private fun setCrashed(pkgs: Set<String>) {
+        if (pkgs == _crashed.value) return
+        _crashed.value = pkgs
+        prefs.edit { putStringSet(KEY_CRASHED, pkgs) }
+    }
+
+    /**
+     * Corre código da extensão de [source]. Enquanto corre, o pacote fica gravado no disco (commit, para estar
+     * lá mesmo que a extensão mate a app, por exemplo num erro dentro do OkHttp que ninguém consegue apanhar).
+     */
+    suspend fun <T> guard(source: AnimeSource, block: suspend () -> T): T {
+        val pkg = pkgOf(source) ?: return block()
+        markInUse(pkg, 1)
+        try {
+            return block()
+        } finally {
+            markInUse(pkg, -1)
+        }
+    }
+
+    private fun markInUse(pkg: String, delta: Int) = synchronized(inUse) {
+        val count = (inUse[pkg] ?: 0) + delta
+        if (count > 0) inUse[pkg] = count else inUse.remove(pkg)
+        prefs.edit(commit = true) { putStringSet(KEY_IN_USE, inUse.keys.toSet()) }
     }
 
     private fun load(pkgInfo: PackageInfo): Any? {
@@ -340,6 +397,8 @@ class AnimeExtensions(
         const val KEY_TRUSTED = "trusted"
         const val KEY_REQUESTED = "requested"
         const val KEY_DEFAULTS = "defaults_v1"
+        const val KEY_IN_USE = "in_use"
+        const val KEY_CRASHED = "crashed"
         val DEFAULT_REPOS = setOf(
             "https://raw.githubusercontent.com/yuzono/anime-repo/repo",
             "https://raw.githubusercontent.com/salmanbappi/extensions-repo/main",

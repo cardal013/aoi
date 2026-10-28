@@ -195,6 +195,11 @@
     <string name="anime_ext_defaults_install">Install</string>
     <string name="anime_ext_defaults_later">Not now</string>
     <string name="anime_ext_defaults_installing">Installing %1$d of %2$d: %3$s</string>
+    <string name="anime_ext_crashed_title">Aoi closed while %1$s was running</string>
+    <string name="anime_ext_crashed_text">If this extension made the app crash, uninstall it. Until you choose, Aoi doesn\'t use it by itself.</string>
+    <string name="anime_ext_crashed_keep">Keep</string>
+    <string name="anime_watch_source_crashed">This anime\'s extension closed Aoi the last time it was used. Uninstall it above, pick another source or try it anyway.</string>
+    <string name="anime_watch_try_anyway">Try anyway</string>
 
     <!-- Aoi: separadores Read e Watch -->
     <string name="label_read">Read</string>

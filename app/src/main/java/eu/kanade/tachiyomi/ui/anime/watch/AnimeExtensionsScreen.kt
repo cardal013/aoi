@@ -15,6 +15,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -79,7 +81,7 @@ class AnimeExtensionsScreen : Screen() {
                 )
             },
         ) { padding ->
-            AnimeExtensionsList(extensions, padding)
+            AnimeExtensionsList(extensions, padding, header = { CrashedExtensions(extensions) })
         }
     }
 }
@@ -247,6 +249,42 @@ fun AnimeExtensionsList(
             ExtensionRow(name = ext.name, detail = "${ext.lang} · ${ext.versionName}", iconUrl = ext.iconUrl) {
                 Button(onClick = { scope.launch { installOrToast(extensions, ext, context) } }) {
                     Text(stringResource(MR.strings.anime_ext_install))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Extensões que estavam a correr quando a app fechou sem aviso: um cartão por cada uma, com Uninstall e Keep.
+ * Não mostra nada se não houver nenhuma.
+ */
+@Composable
+fun CrashedExtensions(extensions: AnimeExtensions) {
+    val crashed by extensions.crashed.collectAsState()
+    val state by extensions.state.collectAsState()
+    crashed.sorted().forEach { pkg ->
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 6.dp),
+        ) {
+            Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp)) {
+                Text(
+                    stringResource(MR.strings.anime_ext_crashed_title, extensions.nameOf(pkg, state)),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Text(
+                    stringResource(MR.strings.anime_ext_crashed_text),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+                Row(Modifier.align(Alignment.End)) {
+                    TextButton(onClick = { extensions.keep(pkg) }) { Text(stringResource(MR.strings.anime_ext_crashed_keep)) }
+                    TextButton(onClick = { extensions.uninstall(pkg) }) { Text(stringResource(MR.strings.anime_ext_uninstall)) }
                 }
             }
         }

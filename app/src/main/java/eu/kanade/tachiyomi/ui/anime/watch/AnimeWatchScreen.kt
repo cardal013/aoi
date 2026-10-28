@@ -66,9 +66,13 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.EmptyScreenAction
 
-/** Ver e transferir os episódios de um anime da lista do MAL ([malId]). */
+/**
+ * Ver e transferir os episódios de um anime da lista do MAL ([malId]). Com [autoPlay] (botão ▶ da capa) abre
+ * logo o episódio seguinte; pelo Watch episodes da folha mostra só os episódios e as extensões, para se poder
+ * desinstalar uma que esteja a fechar a app.
+ */
 @OptIn(UnstableApi::class)
-class AnimeWatchScreen(private val malId: Long) : Screen() {
+class AnimeWatchScreen(private val malId: Long, private val autoPlay: Boolean = false) : Screen() {
 
     @Composable
     override fun Content() {
@@ -103,10 +107,10 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
             context.startActivity(AnimePlayerActivity.intent(context, sourceId, malId, episode, next))
         }
 
-        // Carregar em Watch é para ver: com o anime ligado e os episódios carregados, abre logo o seguinte
+        // O ▶ da capa é para ver: com o anime ligado e os episódios carregados, abre logo o seguinte
         val next = state.nextEpisode
         LaunchedEffect(next?.url, state.choosing) {
-            if (next != null && !state.choosing && !viewModel.autoPlayed) {
+            if (autoPlay && next != null && !state.choosing && !viewModel.autoPlayed) {
                 viewModel.autoPlayed = true
                 play(next)
             }
@@ -147,29 +151,46 @@ class AnimeWatchScreen(private val malId: Long) : Screen() {
                 )
             },
         ) { padding ->
-            Box(modifier = Modifier.fillMaxSize().padding(padding)) {
-                when {
-                    !state.ready -> CircularProgressIndicator(Modifier.align(Alignment.Center))
-                    // Ainda sem extensões: pôr o repositório e instalar aqui mesmo; depois procura sozinho
-                    sources.isEmpty() && state.link == null -> AnimeExtensionsList(
-                        extensions = context.appGraph.animeExtensions,
-                        header = {
-                            Text(
-                                stringResource(MR.strings.anime_watch_no_extensions),
-                                style = MaterialTheme.typography.bodyMedium,
-                                modifier = Modifier.padding(16.dp),
-                            )
-                        },
-                    )
-                    state.choosing -> ChooseSource(viewModel, state, sources)
-                    else -> Episodes(
-                        state = state,
-                        downloads = downloads,
-                        onPlay = play,
-                        onDownload = viewModel::download,
-                        onDelete = viewModel::deleteDownload,
-                        onRetry = viewModel::loadEpisodes,
-                    )
+            Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+                // Uma extensão que fechou a app: desinstala-se daqui sem precisar de a voltar a usar
+                CrashedExtensions(context.appGraph.animeExtensions)
+                Box(modifier = Modifier.fillMaxSize()) {
+                    when {
+                        !state.ready -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                        // Ainda sem extensões: pôr o repositório e instalar aqui mesmo; depois procura sozinho
+                        sources.isEmpty() && state.link == null -> AnimeExtensionsList(
+                            extensions = context.appGraph.animeExtensions,
+                            header = {
+                                Text(
+                                    stringResource(MR.strings.anime_watch_no_extensions),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(16.dp),
+                                )
+                            },
+                        )
+                        state.choosing -> ChooseSource(viewModel, state, sources)
+                        state.sourceCrashed -> EmptyScreen(
+                            stringRes = MR.strings.anime_watch_source_crashed,
+                            actions = listOf(
+                                EmptyScreenAction(
+                                    MR.strings.anime_watch_change_source,
+                                    MaterialSymbols.Rounded.Sync,
+                                    viewModel::startChoosing,
+                                ),
+                                EmptyScreenAction(MR.strings.anime_watch_try_anyway, MaterialSymbols.Rounded.Refresh) {
+                                    viewModel.loadEpisodes(force = true)
+                                },
+                            ),
+                        )
+                        else -> Episodes(
+                            state = state,
+                            downloads = downloads,
+                            onPlay = play,
+                            onDownload = viewModel::download,
+                            onDelete = viewModel::deleteDownload,
+                            onRetry = { viewModel.loadEpisodes() },
+                        )
+                    }
                 }
             }
         }

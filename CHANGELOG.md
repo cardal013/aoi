@@ -14,6 +14,13 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.32.1] - 2026-10-28
+### Changed
+- *Watch episodes* (in the anime's sheet) no longer starts playing by itself: it shows the episodes and the extensions. Only the ▶ on the cover goes straight to the next episode
+### Fixed
+- A broken anime extension (made for another version) no longer closes the app: its errors are caught
+- If an extension still closes the app, Aoi remembers it: next time *Watch* shows "Aoi closed while X was running" with *Uninstall* and *Keep*, and stops using that extension by itself until you choose
+
 ## [Aoi v0.32.0] - 2026-10-28
 ### Changed
 - Bottom bar: *Library* is now *Read* (manga only) and *History* gave its place to *Watch* (your anime list, folders included). History is in *More*

@@ -130,7 +130,7 @@ class AnimeFolderScreen(private val folderId: String) : Screen() {
                     AnimeGridItem(
                         anime = anime,
                         showStatus = true,
-                        onContinue = { navigator.push(AnimeWatchScreen(anime.malId)) }
+                        onContinue = { navigator.push(AnimeWatchScreen(anime.malId, autoPlay = true)) }
                             .takeIf { anime.status != AnimeStatus.COMPLETED },
                     )
                 }

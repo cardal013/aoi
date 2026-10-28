@@ -31,7 +31,7 @@ object AnimeVideos {
                 }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 logcat(LogPriority.WARN, e) { "Anime: servidor ${hoster.hosterName} falhou" }
                 emptyList()
             }

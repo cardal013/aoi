@@ -140,7 +140,7 @@ fun AnimeListPage(
                         onReordered = { orderedKeys, movedKey -> onTabReordered(tab, orderedKeys, movedKey) },
                     ) { item ->
                         val onContinue = AnimeShelf.animeToContinue(item)?.let { anime ->
-                            { navigator.push(AnimeWatchScreen(anime.malId)) }
+                            { navigator.push(AnimeWatchScreen(anime.malId, autoPlay = true)) }
                         }
                         when (item) {
                             is AnimeShelf.LooseAnime -> AnimeGridItem(

@@ -73,6 +73,8 @@ class AnimeWatchViewModel(
         val episodes: List<SEpisode> = emptyList(),
         val episodesLoading: Boolean = false,
         val episodesError: Boolean = false,
+        // a fonte ligada fechou a app da última vez: os episódios só carregam se se pedir
+        val sourceCrashed: Boolean = false,
         val message: String? = null,
     ) {
         /** O episódio a seguir ao último visto (ou o primeiro). */
@@ -156,7 +158,8 @@ class AnimeWatchViewModel(
         val st = _state.value
         val titles = listOfNotNull(st.anime?.title, st.anime?.titleEnglish).filter { it.isNotBlank() }.distinct()
         val queries = if (auto) titles else listOf(st.query.trim()).filter { it.isNotEmpty() }
-        val sources = st.source?.let { listOf(it) } ?: extensions.sources
+        // Em "All" ficam de fora as que fecharam a app; escolhida à mão, usa-se na mesma
+        val sources = st.source?.let { listOf(it) } ?: extensions.sources.filterNot { extensions.isCrashed(it) }
         if (queries.isEmpty() || sources.isEmpty()) return
         val scoreTitles = (titles + queries).distinct()
         searchJob?.cancel()
@@ -184,11 +187,14 @@ class AnimeWatchViewModel(
 
     private suspend fun searchOne(source: AnimeSource, query: String, titles: List<String>): List<Result>? {
         return try {
-            source.getSearchAnime(1, query, source.getFilterList()).animes
-                .map { Result(source, it, AnimeMatch.score(titles, it.title)) }
+            extensions.guard(source) {
+                source.getSearchAnime(1, query, source.getFilterList()).animes
+                    .map { Result(source, it, AnimeMatch.score(titles, it.title)) }
+            }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            // Throwable: uma extensão feita para outra versão da API dá NoSuchMethodError e afins, que não são Exception
             logcat(LogPriority.WARN, e) { "Anime: pesquisa em ${source.name} falhou" }
             null
         }
@@ -205,7 +211,8 @@ class AnimeWatchViewModel(
 
     // ---------- Episódios ----------
 
-    fun loadEpisodes() {
+    /** Com [force] carrega mesmo que a fonte tenha fechado a app da última vez (botão "Try anyway"). */
+    fun loadEpisodes(force: Boolean = false) {
         val link = _state.value.link ?: return
         viewModelScope.launchIO {
             val source = linkedSource()
@@ -213,17 +220,21 @@ class AnimeWatchViewModel(
                 _state.update { it.copy(episodesError = true) }
                 return@launchIO
             }
-            _state.update { it.copy(episodesLoading = true, episodesError = false) }
+            if (!force && extensions.isCrashed(source)) {
+                _state.update { it.copy(sourceCrashed = true) }
+                return@launchIO
+            }
+            _state.update { it.copy(episodesLoading = true, episodesError = false, sourceCrashed = false) }
             try {
                 val anime = SAnime.create().apply {
                     url = link.animeUrl
                     title = link.title.orEmpty()
                 }
-                val episodes = source.getEpisodeList(anime).sortedBy { it.episode_number }
+                val episodes = extensions.guard(source) { source.getEpisodeList(anime) }.sortedBy { it.episode_number }
                 _state.update { it.copy(episodes = episodes, episodesLoading = false) }
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 logcat(LogPriority.WARN, e) { "Anime: episódios de ${source.name} falharam" }
                 _state.update { it.copy(episodesLoading = false, episodesError = true) }
             }
@@ -236,15 +247,17 @@ class AnimeWatchViewModel(
         val anime = _state.value.anime
         viewModelScope.launchIO {
             try {
-                val video = AnimeVideos.load(source, episode).firstOrNull() ?: error("sem vídeos")
-                val headers = AnimeVideos.headers(source, video)
+                val (video, headers) = extensions.guard(source) {
+                    val video = AnimeVideos.load(source, episode).firstOrNull() ?: error("sem vídeos")
+                    video to AnimeVideos.headers(source, video)
+                }
                 downloads.saveHeaders(video.videoUrl, headers)
                 video.subtitleTracks.forEach { downloads.saveHeaders(it.url, headers) }
                 val info = AnimeDownloads.Info(malId, anime?.title.orEmpty(), episode.name, episode.episode_number)
                 downloads.start(episode.url, AnimeVideos.mediaItem(episode.url, video), info)
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 logcat(LogPriority.WARN, e) { "Anime: download de ${episode.name} falhou" }
                 _state.update { it.copy(message = "download_failed") }
             }

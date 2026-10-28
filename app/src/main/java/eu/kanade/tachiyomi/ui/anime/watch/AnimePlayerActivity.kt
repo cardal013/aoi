@@ -163,10 +163,10 @@ class AnimePlayerActivity : ComponentActivity() {
                 url = episodeUrl
                 name = episodeName
             }
-            videos = withIOContext { AnimeVideos.load(source, episode) }
+            videos = withIOContext { extensions.guard(source) { AnimeVideos.load(source, episode) } }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
             logcat(LogPriority.WARN, e) { "Anime: não deu para obter os vídeos" }
         }
         if (videos.isEmpty()) {
@@ -180,7 +180,13 @@ class AnimePlayerActivity : ComponentActivity() {
     private fun playVideo(video: Video) {
         val source = extensions.source(intent.getLongExtra(EXTRA_SOURCE_ID, 0)) ?: return
         current = video
-        val headers = AnimeVideos.headers(source, video)
+        // Os cabeçalhos da fonte são código da extensão: se rebentar, tenta sem eles
+        val headers = try {
+            AnimeVideos.headers(source, video)
+        } catch (e: Throwable) {
+            logcat(LogPriority.WARN, e) { "Anime: cabeçalhos de ${source.name} falharam" }
+            emptyMap()
+        }
         downloads.saveHeaders(video.videoUrl, headers)
         video.subtitleTracks.forEach { downloads.saveHeaders(it.url, headers) }
         play(AnimeVideos.mediaItem(episodeUrl, video))

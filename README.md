@@ -97,6 +97,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.32.1
+- A broken anime extension no longer closes the app; if one does, *Watch* offers to uninstall it. *Watch episodes* shows the episodes, the ▶ on the cover plays
+
 ### 0.32.0
 - Bottom bar: *Read* (manga) and *Watch* (anime list and folders) in place of *Library* and *History* (History is in *More*)
 - ▶ on anime and folder covers opens the next episode; search bar in *Anime extensions*; offer to install recommended extensions when none is installed
