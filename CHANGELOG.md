@@ -14,6 +14,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.36.0] - 2026-10-29
+### Added
+- Manga with MyAnimeList: the status (Reading, Completed, Dropped, Plan to Read) and the chapters read stay in sync with your MyAnimeList manga list. Turn it on in the site (*Library → MyAnimeList*): first it only compares and shows what would change. On the first sync Aoi wins on the status and the higher chapter count stays; chapters never go back. On Hold counts as Plan to Read. MyAnimeList never adds or removes manga from your library. The app makes a backup before the first changes reach the phone
+- Site: *Add manga* searches MyAnimeList, like the anime: pick the manga and the extension it's read from. It shows up in the library right away; MangaDex and manga already in the cloud are linked at once, the others by your phone on its next sync
+- The app tells the site which extensions are installed, so the site only offers those
+### Removed
+- The site's add-manga requests to the phone (replaced by the above)
+
 ## [Aoi v0.35.0] - 2026-10-29
 ### Added
 - Add manga from the site: type a title (or paste a link to the manga's page), pick a source and a status, and the app adds it the next time it syncs. It searches the extensions installed on your phone; with more than one match you pick the right one on the site. If the source isn't installed on the phone, the site tells you to install it (the request goes through as soon as it is) or to search the sources you have

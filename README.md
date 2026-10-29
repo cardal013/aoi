@@ -107,6 +107,10 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.36.0
+- Manga status and chapters read in sync with MyAnimeList (turn it on in the site: *Library → MyAnimeList*; it compares first)
+- Site: *Add manga* searches MyAnimeList and lets you pick the extension; MangaDex links at once, other extensions through your phone
+
 ### 0.35.0
 - Add manga from the site: your phone searches its extensions and adds it on the next sync (pick the right one on the site when there's more than one)
 - Site: theme color in *Profile*, with the app's theme colors

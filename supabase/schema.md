@@ -115,14 +115,15 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 |-|-|
 | `id` smallint PK (sempre 1), `days_before` smallint (1 a 7), `remind_at` time (default 19:00), `updated_by`, `updated_at` (trigger) | select, insert, update para qualquer admin: as definições do lembrete são comuns |
 
-### library_requests (desde 29/10/2026, [`20261029_library_requests.sql`](migrations/20261029_library_requests.sql))
-Pedidos do site para acrescentar mangas à biblioteca. O site cria; a app (`LibraryRequests`, no sync automático) pesquisa nas extensões instaladas e acrescenta.
+### library_requests (desde 29/10/2026, [`20261029_library_requests.sql`](migrations/20261029_library_requests.sql); colunas do MAL em [`20261029_mal_manga.sql`](migrations/20261029_mal_manga.sql))
+Mangas acrescentados pelo site ainda por ligar à extensão (aparecem na biblioteca do site "a ligar"). O site cria com o manga do MAL e a extensão escolhida; liga logo pela ação `manga_bind` da função `mal` se der (MangaDex, mangas já na cloud, ou opção escolhida em `CHOOSE`); senão a app (`LibraryRequests`, no sync automático) procura na extensão e acrescenta. Os `ADDED` o site apaga.
 
 | Coluna | Tipo |
 |-|-|
 | id | uuid PK default `gen_random_uuid()` |
 | user_id | uuid not null default `auth.uid()` (FK auth.users) |
-| query | text not null (título ou link da página do manga, 1 a 500 caracteres) |
+| query | text not null (título inglês do MAL, ou o principal) |
+| title, mal_id, cover_url, media_type | o manga do MAL (title = título principal, às vezes em romaji) |
 | source_id | text (`manga.source` da app como texto, os IDs não cabem num número de JS; null = todas as fontes do telemóvel) |
 | reading_status | text not null default `PLAN_TO_READ` (`READING`, `COMPLETED`, `DROPPED`, `PLAN_TO_READ`) |
 | state | text not null default `PENDING` |
@@ -133,6 +134,18 @@ Pedidos do site para acrescentar mangas à biblioteca. O site cria; a app (`Libr
 | created_at, updated_at | timestamptz (`updated_at` pelo trigger) |
 
 Estados: `PENDING` (o site pediu) → `SEARCHING` (um telemóvel ficou com ele; mais de 10 min = a app morreu e volta a ser tratado) → `ADDED`, `NOT_FOUND`, `FAILED`, `CHOOSE` (várias opções; o site escolhe → `CHOSEN` → `ADDED`) ou `MISSING_EXTENSION` (a fonte pedida ou escolhida não está instalada; volta a ser tratado quando for). `CANCELLED` é do site. RLS com uma política `ALL` própria, sem acesso para `anon`.
+
+### Mangas com o MAL (desde 29/10/2026, [`20261029_mal_manga.sql`](migrations/20261029_mal_manga.sql))
+Só o estado e os capítulos lidos andam entre o Aoi e o MAL; o MAL nunca cria nem apaga mangas do Aoi. A lógica está em `supabase/functions/mal/manga_list.ts`.
+
+| Tabela | Colunas | Acesso |
+|-|-|-|
+| user_devices | `user_id`, `device_id` (PK juntos), `device_name`, `sources` jsonb (`[{id, name, lang, base_url}]`), `updated_at` | `ALL` próprio. A app substitui a linha quando a lista de fontes muda |
+| user_mal_manga | `user_id`, `mal_id` (PK), ficha (`title`, `title_english`, `cover_url`, `media_type`, `num_chapters`), `mal_status` (o do MAL: reading, completed, on_hold, dropped, plan_to_read), `chapters_read`, `mal_updated_at` | select próprio; só a função escreve. Cópia da lista de mangas do MAL |
+| user_manga_mal | `user_id`, `manga_id` (PK, FK manga), `mal_id`, `link_state` (`PENDING`, `LINKED`, `CONFIRM`, `NOT_FOUND`, `IGNORED`), `candidates` jsonb, `synced_status`, `synced_chapters`, `synced_at` | `ALL` próprio. Ligação manga do Aoi ↔ MAL e o último estado sincronizado (diz de que lado foi a mudança). `PENDING` com `mal_id` = pista do tracker do Mihon |
+| user_mal_manga_sync | `user_id` PK, `state` (`OFF`, `PREVIEW`, `ON`), `preview` jsonb (relatório da comparação), `confirmed_at`, `last_sync_at` | `ALL` próprio |
+
+Funções: `aoi_library_mal_state(p_user)` (estado e capítulo lido mais alto de cada manga da biblioteca, `security invoker`) e `aoi_mark_read_up_to(p_user, p_source_id, p_chapter)` (marca como lidos até esse número, nunca desmarca; só `service_role`).
 
 ## RLS e permissões
 
