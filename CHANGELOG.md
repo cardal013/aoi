@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.34.4] - 2026-10-29
+### Fixed
+- *Watch*: swiping from *Completed* back to *Plan to Watch* (and the other way) works every time. It failed while the grid was still scrolling or stretching at the end of the list, and a short, slow swipe bounced back
+
 ## [Aoi v0.34.3] - 2026-10-29
 ### Fixed
 - *Update library*, *Update category* and pull-to-refresh now check every manga for new chapters. Before, they silently skipped the ones with unread chapters, not started, completed or "outside the release period" (Mihon's defaults), so new chapters only showed up after refreshing each manga by hand

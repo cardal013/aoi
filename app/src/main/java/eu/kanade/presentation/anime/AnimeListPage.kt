@@ -5,6 +5,8 @@ import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.tachiyomi.ui.anime.watch.AnimeWatchScreen
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +19,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerDefaults
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -47,6 +51,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,7 +74,9 @@ import tachiyomi.domain.anime.model.AnimeTabMode
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.Badge
 import tachiyomi.presentation.core.components.BadgeGroup
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import tachiyomi.presentation.core.components.material.PullRefresh
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
@@ -145,7 +153,13 @@ fun AnimeListPage(
                 enabled = true,
                 onRefresh = onRefresh,
             ) {
-                HorizontalPager(state = pagerState, key = { statuses[it] }) { page ->
+                HorizontalPager(
+                    state = pagerState,
+                    modifier = Modifier.swipeBetweenPages(pagerState, scope),
+                    key = { statuses[it] },
+                    // Um deslizar curto e lento também muda de separador (com 0.5 voltava para trás)
+                    flingBehavior = PagerDefaults.flingBehavior(pagerState, snapPositionalThreshold = 0.2f),
+                ) { page ->
                     val tab = statuses[page]
                     val tabItems = state.itemsFor(tab)
                     val visibleItems = remember(tabItems, query) { tabItems.filter { itemMatchesQuery(it, query) } }
@@ -201,6 +215,45 @@ fun AnimeListPage(
         )
     }
 }
+
+/**
+ * Deslizar na horizontal muda de separador mesmo quando o pager não fica com o gesto: com a grelha ainda
+ * a deslizar (ou a esticar no fim da lista), o toque seguinte é logo dela e o pager não mexe.
+ * Só vê os toques (não os consome) e ignora o arrastar das capas, que começa depois de carregar sem largar.
+ */
+private fun Modifier.swipeBetweenPages(pagerState: PagerState, scope: CoroutineScope): Modifier =
+    pointerInput(pagerState) {
+        val minDistance = 48.dp.toPx()
+        val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val startPage = pagerState.currentPage
+            var pagerMoved = pagerState.isScrollInProgress
+            var afterLongPress = false
+            var movedPastSlop = false
+            var position = down.position
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.changes.size > 1) return@awaitEachGesture
+                val change = event.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                position = change.position
+                pagerMoved = pagerMoved || pagerState.isScrollInProgress
+                if (!movedPastSlop && (position - down.position).getDistance() > viewConfiguration.touchSlop) {
+                    movedPastSlop = true
+                    afterLongPress = change.uptimeMillis - down.uptimeMillis >= longPressTimeout
+                }
+                if (!change.pressed) break
+            }
+            val dx = position.x - down.position.x
+            val dy = position.y - down.position.y
+            val horizontalSwipe = abs(dx) > minDistance && abs(dx) > 2 * abs(dy)
+            if (pagerMoved || afterLongPress || !horizontalSwipe) return@awaitEachGesture
+            val target = (startPage + if (dx > 0) -1 else 1).coerceIn(0, pagerState.pageCount - 1)
+            if (target != startPage) {
+                scope.launch { pagerState.animateScrollToPage(target) }
+            }
+        }
+    }
 
 /** A grelha de um separador (Plan to Watch ou Completed), com os animes soltos e as pastas. */
 @Composable

@@ -107,6 +107,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.34.4
+- *Watch*: swiping between *Plan to Watch* and *Completed* works every time (it sometimes only worked with the buttons)
+
 ### 0.34.3
 - *Update library* (and the automatic update) checks every manga again: new chapters no longer need a refresh one by one
 
