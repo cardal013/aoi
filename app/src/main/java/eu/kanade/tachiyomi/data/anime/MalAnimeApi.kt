@@ -18,6 +18,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonObjectBuilder
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
@@ -135,6 +136,17 @@ class MalAnimeApi(
             val summary = callFunction("sync")
             logcat(LogPriority.INFO) { "MAL: sync no servidor | $summary" }
         }
+    }
+
+    /**
+     * Pede ao servidor o sync dos mangas com o MAL (só estado e capítulos lidos; ver manga_list.ts da função).
+     * Devolve o estado do sync (OFF, PREVIEW, ON) e se ficou trabalho para o pedido seguinte.
+     */
+    suspend fun syncManga(): Pair<String, Boolean> = withIOContext {
+        val summary = callFunction("manga_sync")
+        logcat(LogPriority.INFO) { "MAL: mangas no servidor | $summary" }
+        val state = summary["state"]?.jsonPrimitive?.content ?: "OFF"
+        state to (summary["more"]?.jsonPrimitive?.booleanOrNull == true)
     }
 
     /** Envia um anime acrescentado ou mudado (estado e episódios, mais a ficha para a cópia). */

@@ -7,6 +7,7 @@ import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
 import eu.kanade.tachiyomi.BuildConfig
+import eu.kanade.tachiyomi.data.anime.MalAnimeApi
 import eu.kanade.tachiyomi.data.anime.MalAnimeSync
 import eu.kanade.tachiyomi.util.system.toast
 import io.github.jan.supabase.auth.auth
@@ -59,6 +60,7 @@ class CloudSync(
     private val libraryPreferences: LibraryPreferences,
     private val malAnimeSync: MalAnimeSync,
     private val libraryRequests: LibraryRequests,
+    private val mangaMalSync: MangaMalSync,
 ) {
 
     private val mutex = Mutex()
@@ -67,6 +69,7 @@ class CloudSync(
 
     private var scope: CoroutineScope? = null
     private var lastAutoSync = 0L
+    private var malMangaSyncOff = false
 
     @OptIn(FlowPreview::class)
     fun start(scope: CoroutineScope) {
@@ -168,6 +171,8 @@ class CloudSync(
 
         var ok = true
         if (doImport) {
+            // O import pode trazer as primeiras alterações do MAL nos mangas: antes, um backup
+            backupBeforeMalMangaSync(userId)
             val since = if (firstSync) 0L else downloadMarker.get()
             // Uma vez por utilizador: volta a ler todo o progresso, que as versões antigas perdiam
             val progressRecovered = libraryPreferences.cloudProgressRecovered(userId)
@@ -220,12 +225,15 @@ class CloudSync(
         }
 
         if (requested.isNotEmpty()) {
-            libraryRequests.finish(requested, uploaded = ok)
+            libraryRequests.finish(userId, requested, uploaded = ok)
             val titles = requested.filterNot { it.alreadyInLibrary }.map { it.title }
             if (titles.isNotEmpty()) {
                 withUIContext { context.toast(context.stringResource(MR.strings.library_request_added, titles.joinToString())) }
             }
         }
+
+        // Mangas com o MAL: depois do upload, para o servidor já ter o que mudou neste telemóvel
+        if (ok) syncMangaWithMal(userId, mode)
 
         mutableState.update {
             it.copy(
@@ -233,6 +241,39 @@ class CloudSync(
                 progress = null,
                 lastSyncAt = if (ok) start else it.lastSyncAt,
             )
+        }
+    }
+
+    private suspend fun backupBeforeMalMangaSync(userId: String) {
+        try {
+            mangaMalSync.backupBeforeFirstSync(userId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: falhou o backup antes do sync dos mangas com o MAL" }
+        }
+    }
+
+    /**
+     * Fontes instaladas e ligações do tracker (no sync automático) e o sync dos mangas com o MAL no servidor.
+     * Com o sync dos mangas desligado, o upload a seguir a cada alteração não volta a perguntar ao servidor.
+     */
+    private suspend fun syncMangaWithMal(userId: String, mode: Mode) {
+        if (mode == Mode.UPLOAD && malMangaSyncOff) return
+        try {
+            if (mode == Mode.AUTO) {
+                mangaMalSync.uploadDevice(userId)
+                if (!malMangaSyncOff) mangaMalSync.uploadTrackerLinks(userId)
+            }
+            malMangaSyncOff = !mangaMalSync.syncWithMal()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: MalAnimeApi.FunctionException) {
+            // Sem MAL ligado não há sync dos mangas
+            malMangaSyncOff = true
+            logcat(LogPriority.WARN) { "Sync: mangas com o MAL parados (${e.errorCode})" }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: falhou o sync dos mangas com o MAL" }
         }
     }
 

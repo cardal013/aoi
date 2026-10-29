@@ -617,6 +617,22 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-add-status{ display:flex; gap:6px; margin-left:auto; }
 .anime-add-status button{ padding:6px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; }
 .anime-add-status button.active{ border-color:var(--accent); background:var(--accent); color:var(--on-accent); }
+.source-select{ padding:6px 10px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; max-width:100%; }
+.manga-card.pending .manga-cover{ opacity:.5; }
+.panel-section{ margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
+.panel-section h4{ font-size:14px; margin-bottom:8px; }
+.panel-text{ color:var(--text-muted); font-size:13px; margin:0 0 8px; }
+.panel-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; align-items:center; }
+.panel-actions .btn{ padding:7px 13px; font-size:12.5px; }
+.count-chips{ display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+.count-chip{ padding:4px 10px; border-radius:999px; border:1px solid var(--border-strong); font-size:12px; font-weight:600; }
+.change-row{ display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:7px 0; border-bottom:1px solid var(--border); }
+.change-row .t{ font-weight:700; flex:1; min-width:0; overflow-wrap:anywhere; }
+.change-row .d{ color:var(--text-muted); text-align:right; }
+.link-fix{ padding:10px 0; border-bottom:1px solid var(--border); }
+.link-fix .t{ font-weight:700; font-size:13.5px; margin-bottom:6px; }
+.link-fix .anime-results{ max-height:none; margin-top:6px; }
+.link-fix input{ width:100%; margin-top:6px; padding:8px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; }
 .anime-toolbar{ flex-wrap:wrap; }
 .anime-disconnect{ margin-left:auto; }
 .anime-folder-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
@@ -1014,6 +1030,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button class="icon-btn" id="searchToggle" type="button" aria-label="Search library">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
+        <button class="btn btn-ghost btn-sm" id="openMalManga" type="button">MyAnimeList</button>
+        <button class="btn btn-primary btn-sm" id="openMangaAdd" type="button">Add manga</button>
       </div>
     </div>
     <div class="lib-toolbar">
@@ -1244,6 +1262,72 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </div>
       <button type="button" class="btn btn-primary btn-sm" id="animeAddConfirm">Add</button>
     </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — ADD MANGA (pesquisa no MyAnimeList e escolha da extensão)
+============================================================ -->
+<div class="modal-scrim" id="mangaAddScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mangaAddTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="mangaAddTitle">Add manga</h3>
+        <p>Search MyAnimeList · tap or hold to pick one or more</p>
+      </div>
+      <button type="button" class="modal-close" id="closeMangaAdd" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <input type="search" class="anime-query" id="mangaQuery" placeholder="Solo Leveling, One Piece…" autocomplete="off">
+    <div class="anime-results" id="mangaResults"></div>
+    <div class="anime-add-bar" id="mangaAddBar" style="display:none;">
+      <span id="mangaAddCount">1 selected</span>
+      <select class="source-select" id="mangaAddSource" aria-label="Extension"></select>
+      <div class="anime-add-status" id="mangaAddStatus">
+        <button type="button" data-status="READING">Reading</button>
+        <button type="button" data-status="COMPLETED">Completed</button>
+        <button type="button" data-status="DROPPED">Dropped</button>
+        <button type="button" data-status="PLAN_TO_READ">Plan to Read</button>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="mangaAddConfirm">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — MANGA A LIGAR À EXTENSÃO (acrescentado pelo site)
+============================================================ -->
+<div class="modal-scrim" id="pendingScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="pendingTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="pendingTitle">Manga</h3>
+        <p id="pendingSub"></p>
+      </div>
+      <button type="button" class="modal-close" id="closePending" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="pendingBody"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — MANGAS COM O MYANIMELIST (estado e capítulos lidos em sync)
+============================================================ -->
+<div class="modal-scrim" id="malMangaScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="malMangaTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="malMangaTitle">MyAnimeList</h3>
+        <p>Your manga status and chapters read, in sync with MyAnimeList</p>
+      </div>
+      <button type="button" class="modal-close" id="closeMalManga" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="malMangaBody"></div>
   </div>
 </div>
 
@@ -1575,6 +1659,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   var currentUser = null;
   var state = {
     library: [],
+    pending: [],              // library_requests: acrescentados pelo site ainda por ligar à extensão
     libraryFilter: "reading",
     librarySearchOpen: false,
     librarySearchQuery: ""
@@ -1728,6 +1813,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     }));
     renderLibrary();
     checkReadPending();
+    fetchPending();
   }
 
   function logIn(sessionUser){
@@ -1758,6 +1844,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'none';
     publicSite.style.display = '';
     resetAnimeState();
+    resetMangaExtras();
     setAdminVisible(false);
     qs('userMenu').classList.remove('open');
     window.scrollTo({ top:0 });
@@ -2016,9 +2103,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     return `<button type="button" class="manga-card" data-id="${m.mangaId}"><div class="cover-wrap">${cover}${badge}${play}</div><div class="title">${m.title}</div></button>`;
   }
   function renderLibrary(){
-    const filtered = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(state.librarySearchQuery.toLowerCase())));
-    qs('mangaGrid').innerHTML = filtered.map(mangaCardHTML).join('');
-    qs('libraryEmpty').style.display = filtered.length ? 'none' : 'block';
+    const query = state.librarySearchQuery.toLowerCase();
+    const filtered = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(query)));
+    // Os acrescentados pelo site que ainda estão a ligar à extensão aparecem primeiro, meio apagados
+    const pending = state.pending.filter(r => (STATUS_MAP[r.reading_status] || 'planned') === state.libraryFilter &&
+      (r.title || r.query).toLowerCase().includes(query));
+    qs('mangaGrid').innerHTML = pending.map(pendingCardHTML).join('') + filtered.map(mangaCardHTML).join('');
+    qs('libraryEmpty').style.display = filtered.length || pending.length ? 'none' : 'block';
   }
   qs('libraryTabs').onclick = (e) => {
     const btn = e.target.closest('button[data-status]');
@@ -2072,6 +2163,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   registerModal(statusScrim, () => closeModal(statusScrim));
   qs('closeStatusModal').onclick = () => closeModal(statusScrim);
   qs('mangaGrid').onclick = (e) => {
+    const pendingCard = e.target.closest('[data-request]');
+    if (pendingCard) {
+      openPending(pendingCard.dataset.request);
+      return;
+    }
     const play = e.target.closest('[data-read-play]');
     if (play) {
       const manga = state.library.find(m => m.mangaId === play.dataset.readPlay);
@@ -3794,6 +3890,539 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (!row || !currentUser) return;
     toggleAnimeResult(Number(row.dataset.id));
   };
+
+  // ---------- Mangas: acrescentar pelo MAL e sync com o MAL ----------
+  // Acrescentar: escolhe-se o manga no MAL e a extensão. O manga fica logo na biblioteca "a ligar"
+  // (library_requests) até se saber o URL dele na extensão: a MangaDex (pela API, que tem o id do MAL) e os
+  // mangas que já estão na cloud ligam-se já (ação manga_bind); os outros procura-os o telemóvel no sync seguinte.
+  // Com o sync com o MAL ligado, entra também na lista do MAL (manga_add).
+  // Sync com o MAL (painel MyAnimeList): só estado e capítulos lidos; ver supabase/functions/mal/manga_list.ts.
+
+  const MANGA_STATUS_LABEL = { READING:'Reading', COMPLETED:'Completed', DROPPED:'Dropped', PLAN_TO_READ:'Plan to Read' };
+  const MAL_MANGA_STATUS_LABEL = { reading:'Reading', completed:'Completed', on_hold:'On Hold', dropped:'Dropped', plan_to_read:'Plan to Read' };
+  const PENDING_POLL_MS = 60000;
+  const MANGA_SYNC_MAX_CALLS = 20;
+  var mangaAddScrim = qs('mangaAddScrim');
+  var pendingScrim = qs('pendingScrim');
+  var malMangaScrim = qs('malMangaScrim');
+  var mangaResults = [];
+  var mangaSearchTimer = null;
+  var mangaSearchSeq = 0;
+  var mangaAdd = { selected: new Map(), status: 'PLAN_TO_READ' };
+  var deviceSources = null;    // [{ id, name, lang, devices: [nomes] }] das extensões dos telemóveis
+  var linkedMalIds = new Set();
+  var pendingPollTimer = null;
+  var activePendingId = null;
+  var malManga = { settings: null, attention: [], onMalOnly: [], busy: false, progress: '', findingFor: null, findResults: [] };
+  registerModal(mangaAddScrim, () => closeModal(mangaAddScrim));
+  registerModal(pendingScrim, () => closeModal(pendingScrim));
+  registerModal(malMangaScrim, () => closeModal(malMangaScrim));
+  qs('closeMangaAdd').onclick = () => closeModal(mangaAddScrim);
+  qs('closePending').onclick = () => closeModal(pendingScrim);
+  qs('closeMalManga').onclick = () => closeModal(malMangaScrim);
+
+  function mangaInfo(m){
+    const chapters = m.num_chapters ? m.num_chapters + ' ch' : null;
+    return [mediaTypeLabel(m.media_type), m.start_year, chapters].filter(Boolean).join(' · ');
+  }
+  function coverHTML(url){
+    return url ? `<img src="${esc(url)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;noimg&quot;></span>'">` : '<span class="noimg"></span>';
+  }
+  function malErrorText(err){
+    if (err.code === 'mal_not_connected') return 'Connect MyAnimeList first (in the Anime tab).';
+    if (err.code === 'mal_unavailable') return "MyAnimeList isn't answering. Try again in a bit.";
+    return "Something went wrong. Try again.";
+  }
+
+  // As extensões instaladas nos telemóveis (user_devices). Sem nenhum telemóvel a mandar a lista (app antiga),
+  // ficam as fontes que a cloud conhece
+  async function loadDeviceSources(){
+    if (deviceSources) return deviceSources;
+    const { data, error } = await supabase.from('user_devices').select('device_name, sources');
+    if (error) console.error('user_devices', error);
+    const byId = new Map();
+    (data || []).forEach(device => (device.sources || []).forEach(s => {
+      const entry = byId.get(s.id) || { id: s.id, name: s.name, lang: s.lang, devices: [] };
+      entry.devices.push(device.device_name || 'phone');
+      byId.set(s.id, entry);
+    }));
+    if (!byId.size) {
+      const { data: known } = await supabase.from('extensions').select('id, name');
+      (known || []).forEach(s => byId.set(s.id, { id: s.id, name: s.name, lang: null, devices: [] }));
+    }
+    deviceSources = Array.from(byId.values()).sort((a, b) => a.name.localeCompare(b.name));
+    return deviceSources;
+  }
+  // "MangaDex (en)"; com mais de um telemóvel diz também em quais está
+  function sourceLabel(s){
+    const lang = s.lang && s.lang !== 'all' ? ` (${s.lang})` : '';
+    const deviceCount = new Set((deviceSources || []).flatMap(x => x.devices)).size;
+    const where = deviceCount > 1 && s.devices.length ? ` · ${s.devices.join(', ')}` : '';
+    return s.name + lang + where;
+  }
+  function sourceName(id){
+    const source = (deviceSources || []).find(s => s.id === id);
+    return source ? source.name : 'that extension';
+  }
+  function sourceOptionsHTML(selectedId){
+    return (deviceSources || []).map(s => `<option value="${esc(s.id)}" ${s.id === selectedId ? 'selected' : ''}>${esc(sourceLabel(s))}</option>`).join('');
+  }
+
+  // ----- Acrescentar -----
+  qs('openMangaAdd').onclick = async () => {
+    mangaAdd.selected = new Map();
+    mangaAdd.status = REV_STATUS_MAP[state.libraryFilter] || 'PLAN_TO_READ';
+    qs('mangaQuery').value = '';
+    mangaResults = [];
+    renderMangaResults(`Type at least ${MIN_QUERY_LENGTH} letters.`);
+    renderMangaAddBar();
+    openModal(mangaAddScrim);
+    qs('mangaQuery').focus();
+    await Promise.all([loadDeviceSources(), loadLinkedMalIds()]);
+    renderMangaAddBar();
+  };
+  async function loadLinkedMalIds(){
+    try {
+      const rows = await fetchAllRows(() => supabase.from('user_manga_mal').select('mal_id')
+        .eq('user_id', currentUser.id).eq('link_state', 'LINKED').order('manga_id'));
+      linkedMalIds = new Set(rows.map(r => r.mal_id));
+    } catch (err) { console.error('user_manga_mal', err); }
+  }
+  function renderMangaAddBar(){
+    const count = mangaAdd.selected.size;
+    qs('mangaAddBar').style.display = count ? 'flex' : 'none';
+    qs('mangaAddCount').textContent = `${count} selected`;
+    qs('mangaAddConfirm').textContent = `Add ${count}`;
+    const select = qs('mangaAddSource');
+    const current = select.value || readStore('aoi_last_manga_source');
+    select.innerHTML = deviceSources && deviceSources.length ? sourceOptionsHTML(current) : '<option value="">No extensions yet</option>';
+    qs('mangaAddStatus').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.status === mangaAdd.status));
+  }
+  qs('mangaAddStatus').onclick = (e) => {
+    const btn = e.target.closest('button[data-status]');
+    if (!btn) return;
+    mangaAdd.status = btn.dataset.status;
+    renderMangaAddBar();
+  };
+  qs('mangaAddSource').onchange = (e) => writeStore('aoi_last_manga_source', e.target.value);
+  qs('mangaQuery').oninput = (e) => {
+    clearTimeout(mangaSearchTimer);
+    const query = e.target.value.trim();
+    if (query.length < MIN_QUERY_LENGTH) {
+      mangaResults = [];
+      renderMangaResults(`Type at least ${MIN_QUERY_LENGTH} letters.`);
+      return;
+    }
+    mangaSearchTimer = setTimeout(() => searchMalManga(query), SEARCH_DEBOUNCE_MS);
+  };
+  async function searchMalManga(query){
+    const seq = ++mangaSearchSeq;
+    renderMangaResults('Searching…');
+    try {
+      const response = await callMal('manga_search', { q: query });
+      if (seq !== mangaSearchSeq) return;
+      mangaResults = response.results || [];
+      renderMangaResults(mangaResults.length ? null : 'No results.');
+    } catch (err) {
+      if (seq !== mangaSearchSeq) return;
+      console.error('manga search', err);
+      mangaResults = [];
+      renderMangaResults(err.status === 400 ? "MyAnimeList didn't accept this search. Try more letters." : "Couldn't reach MyAnimeList. Try again.");
+    }
+  }
+  function renderMangaResults(hint){
+    if (hint) { qs('mangaResults').innerHTML = `<div class="hint">${esc(hint)}</div>`; return; }
+    const pendingIds = new Set(state.pending.map(r => r.mal_id));
+    qs('mangaResults').innerHTML = mangaResults.map(r => {
+      const tag = linkedMalIds.has(r.mal_id) ? '<div class="in">In your library</div>'
+        : pendingIds.has(r.mal_id) ? '<div class="in">Being added</div>' : '';
+      const selected = mangaAdd.selected.has(r.mal_id);
+      return `<button type="button" class="anime-result ${selected ? 'selected' : ''}" data-id="${r.mal_id}">${coverHTML(r.cover_url)}<div><div class="t">${esc(r.title)}</div><div class="m">${esc([r.title_english && r.title_english !== r.title ? r.title_english : null, mangaInfo(r)].filter(Boolean).join(' · '))}</div>${tag}</div>${selected ? '<span class="check">✓</span>' : ''}</button>`;
+    }).join('');
+  }
+  qs('mangaResults').onclick = (e) => {
+    const row = e.target.closest('.anime-result');
+    if (!row) return;
+    const malId = Number(row.dataset.id);
+    const result = mangaResults.find(r => r.mal_id === malId);
+    if (!result) return;
+    if (mangaAdd.selected.has(malId)) mangaAdd.selected.delete(malId);
+    else mangaAdd.selected.set(malId, result);
+    renderMangaResults(null);
+    renderMangaAddBar();
+  };
+
+  qs('mangaAddConfirm').onclick = async () => {
+    const picked = Array.from(mangaAdd.selected.values());
+    const sourceId = qs('mangaAddSource').value;
+    if (!picked.length || !currentUser) return;
+    if (!sourceId) { alert('Pick the extension it should be read from.'); return; }
+    qs('mangaAddConfirm').disabled = true;
+    let failed = 0;
+    for (const manga of picked) {
+      try {
+        await addManga(manga, sourceId, mangaAdd.status);
+      } catch (err) {
+        console.error('add manga', err);
+        failed += 1;
+      }
+    }
+    qs('mangaAddConfirm').disabled = false;
+    if (failed) alert("Couldn't add some of them. Try again.");
+    mangaAdd.selected = new Map();
+    renderMangaAddBar();
+    await fetchLibrary();
+    renderMangaResults(null);
+  };
+
+  async function addManga(manga, sourceId, status){
+    const { data: request, error } = await supabase.from('library_requests').insert({
+      query: manga.title_english || manga.title,
+      title: manga.title,
+      mal_id: manga.mal_id,
+      cover_url: manga.cover_url,
+      media_type: manga.media_type,
+      source_id: sourceId,
+      reading_status: status
+    }).select('id, query, title, mal_id, cover_url, source_id, reading_status').single();
+    if (error) throw error;
+    // Também na lista do MAL (só com o sync ligado; um manga que já lá esteja não perde os capítulos)
+    callMal('manga_add', { mal_id: manga.mal_id, status: status }).catch(err => console.error('manga_add', err));
+    await bindNow(request, sourceId, manga.title_english);
+  }
+
+  // Liga já à extensão, sem o telemóvel, se der: MangaDex (o id vem da API dela) ou um manga dessa extensão que
+  // já está na cloud com o mesmo título. Devolve true se ligou.
+  async function bindNow(request, sourceId, englishTitle){
+    const titles = [englishTitle, request.title, request.query].filter(Boolean);
+    try {
+      if (/^mangadex/i.test(sourceName(sourceId))) {
+        const found = await callMal('mangadex_find', { mal_id: request.mal_id, titles: titles });
+        if (found && found.id) {
+          await callMal('manga_bind', {
+            request_id: request.id, source_id: sourceId, source_name: sourceName(sourceId),
+            url: '/manga/' + found.id, title: found.title || request.title, thumbnail_url: found.cover_url || request.cover_url
+          });
+          return true;
+        }
+      }
+      const { data } = await supabase.from('manga_sources').select('source_manga_id, manga!inner(title, thumbnail_url)')
+        .eq('extension_id', sourceId).in('manga.title', titles).limit(2);
+      if (data && data.length === 1) {
+        await callMal('manga_bind', {
+          request_id: request.id, source_id: sourceId, source_name: sourceName(sourceId),
+          url: data[0].source_manga_id, title: data[0].manga.title, thumbnail_url: data[0].manga.thumbnail_url
+        });
+        return true;
+      }
+    } catch (err) {
+      console.error('bind', err);
+    }
+    return false;
+  }
+
+  // ----- A ligar à extensão -----
+  async function fetchPending(){
+    if (!currentUser) return;
+    const { data, error } = await supabase.from('library_requests')
+      .select('id, query, title, mal_id, cover_url, media_type, source_id, reading_status, state, candidates, message')
+      .eq('user_id', currentUser.id).neq('state', 'CANCELLED').order('created_at');
+    if (error) { console.error('library_requests', error); return; }
+    // Os já ligados estão na biblioteca: o pedido sai
+    const added = data.filter(r => r.state === 'ADDED').map(r => r.id);
+    if (added.length) supabase.from('library_requests').delete().in('id', added).then(({ error: e }) => e && console.error(e));
+    state.pending = data.filter(r => r.state !== 'ADDED');
+    if (state.pending.length) await loadDeviceSources();
+    renderLibrary();
+    if (activePendingId && pendingScrim.classList.contains('open')) renderPending();
+    clearTimeout(pendingPollTimer);
+    if (state.pending.some(r => ['PENDING', 'SEARCHING', 'CHOSEN'].includes(r.state))) {
+      pendingPollTimer = setTimeout(fetchLibrary, PENDING_POLL_MS);
+    }
+  }
+  function pendingBadge(r){
+    switch (r.state) {
+      case 'CHOOSE': return 'Pick one';
+      case 'NOT_FOUND': return 'Not found';
+      case 'MISSING_EXTENSION': return 'Install';
+      case 'FAILED': return 'Error';
+      default: return 'Linking…';
+    }
+  }
+  function pendingCardHTML(r){
+    const cover = r.cover_url ? `<img src="${esc(r.cover_url)}" class="manga-cover" alt="" style="object-fit:cover;" loading="lazy">` : `<div class="manga-cover">${BOOK_ICON}</div>`;
+    return `<button type="button" class="manga-card pending" data-request="${r.id}"><div class="cover-wrap">${cover}<div class="anime-badges"><span class="anime-badge accent">${pendingBadge(r)}</span></div></div><div class="title">${esc(r.title || r.query)}</div></button>`;
+  }
+  function openPending(id){
+    activePendingId = id;
+    renderPending();
+    openModal(pendingScrim);
+  }
+  function renderPending(){
+    const r = state.pending.find(x => x.id === activePendingId);
+    if (!r) { closeModal(pendingScrim); return; }
+    qs('pendingTitle').textContent = r.title || r.query;
+    qs('pendingSub').textContent = `${sourceName(r.source_id)} · ${MANGA_STATUS_LABEL[r.reading_status] || ''}`;
+    const text = {
+      PENDING: `Your phone looks for it in ${sourceName(r.source_id)} the next time the Aoi app syncs (when you open it).`,
+      SEARCHING: `Your phone is looking for it in ${sourceName(r.source_id)}…`,
+      CHOSEN: 'Adding it…',
+      CHOOSE: `More than one match in ${sourceName(r.source_id)}. Pick the right one:`,
+      NOT_FOUND: `Not found in ${sourceName(r.source_id)}. Try another extension:`,
+      MISSING_EXTENSION: `${r.message || sourceName(r.source_id)} isn't installed on your phone. Install it in the app (Browse → Extensions), or pick another one:`,
+      FAILED: `Something went wrong on your phone${r.message ? `: ${r.message}` : ''}. Try again or pick another extension:`
+    }[r.state] || r.state;
+    const candidates = r.state === 'CHOOSE' ? `<div class="anime-results">${(r.candidates || []).map((c, i) =>
+      `<button type="button" class="anime-result" data-candidate="${i}">${coverHTML(c.thumbnail_url)}<div><div class="t">${esc(c.title)}</div><div class="m">${esc(c.source_name)}</div></div></button>`).join('')}</div>` : '';
+    const retry = ['NOT_FOUND', 'MISSING_EXTENSION', 'FAILED', 'CHOOSE'].includes(r.state)
+      ? `<div class="panel-actions"><select class="source-select" id="pendingSource">${sourceOptionsHTML(r.source_id)}</select><button type="button" class="btn btn-primary btn-sm" data-pending-action="retry">Try this one</button></div>` : '';
+    qs('pendingBody').innerHTML = `<p class="panel-text">${esc(text)}</p>${candidates}${retry}
+      <div class="panel-actions"><button type="button" class="btn btn-danger btn-sm" data-pending-action="remove">Remove</button></div>`;
+  }
+  qs('pendingBody').onclick = async (e) => {
+    const r = state.pending.find(x => x.id === activePendingId);
+    if (!r) return;
+    const candidate = e.target.closest('[data-candidate]');
+    if (candidate) {
+      const c = r.candidates[Number(candidate.dataset.candidate)];
+      try {
+        await callMal('manga_bind', { request_id: r.id, source_id: c.source_id, source_name: c.source_name, url: c.url, title: c.title, thumbnail_url: c.thumbnail_url });
+      } catch (err) { console.error('bind', err); alert("Couldn't add it. Try again."); return; }
+      closeModal(pendingScrim);
+      fetchLibrary();
+      return;
+    }
+    const action = e.target.closest('[data-pending-action]');
+    if (!action) return;
+    if (action.dataset.pendingAction === 'remove') {
+      if (!confirm(`Remove "${r.title || r.query}"?`)) return;
+      const { error } = await supabase.from('library_requests').delete().eq('id', r.id);
+      if (error) { alert(error.message); return; }
+      closeModal(pendingScrim);
+      fetchLibrary();
+      return;
+    }
+    const sourceId = qs('pendingSource').value;
+    const { error } = await supabase.from('library_requests')
+      .update({ source_id: sourceId, state: 'PENDING', candidates: [], choice: null, message: null }).eq('id', r.id);
+    if (error) { alert(error.message); return; }
+    await bindNow(Object.assign({}, r, { source_id: sourceId }), sourceId, r.query);
+    fetchLibrary();
+  };
+
+  // ----- Sync com o MAL -----
+  qs('openMalManga').onclick = async () => {
+    malManga.findingFor = null;
+    openModal(malMangaScrim);
+    renderMalManga();
+    await loadDeviceSources();
+    await loadMalManga();
+  };
+  async function loadMalManga(){
+    const { data, error } = await supabase.from('user_mal_manga_sync')
+      .select('state, preview, last_sync_at, confirmed_at').eq('user_id', currentUser.id).maybeSingle();
+    if (error) console.error('user_mal_manga_sync', error);
+    malManga.settings = data || { state: 'OFF' };
+    if (malManga.settings.state !== 'OFF') {
+      try {
+        const [links, malList] = await Promise.all([
+          fetchAllRows(() => supabase.from('user_manga_mal').select('manga_id, mal_id, link_state, candidates')
+            .eq('user_id', currentUser.id).order('manga_id')),
+          fetchAllRows(() => supabase.from('user_mal_manga').select('mal_id, title, title_english, cover_url, media_type, num_chapters, mal_status, chapters_read')
+            .eq('user_id', currentUser.id).order('mal_id'))
+        ]);
+        const inLibrary = new Set(state.library.map(m => m.mangaId));
+        malManga.attention = links.filter(l => inLibrary.has(l.manga_id) && ['CONFIRM', 'NOT_FOUND'].includes(l.link_state));
+        const linked = new Set(links.filter(l => l.link_state === 'LINKED').map(l => l.mal_id));
+        const adding = new Set(state.pending.map(r => r.mal_id));
+        malManga.onMalOnly = malList.filter(m => !linked.has(m.mal_id) && !adding.has(m.mal_id));
+      } catch (err) { console.error('mal manga', err); }
+    }
+    renderMalManga();
+  }
+
+  function libraryTitle(mangaId){
+    const manga = state.library.find(m => m.mangaId === mangaId);
+    return manga ? manga.title : 'A manga';
+  }
+  function statusChapters(s){
+    return s ? `${MANGA_STATUS_LABEL[s.status] || s.status} · ch. ${s.chapters}` : 'not on MyAnimeList';
+  }
+  function renderMalManga(){
+    const s = malManga.settings;
+    const body = qs('malMangaBody');
+    if (!s) { body.innerHTML = '<p class="panel-text">Loading…</p>'; return; }
+    const busy = malManga.busy ? ' disabled' : '';
+    const progress = malManga.progress ? `<p class="panel-text">${esc(malManga.progress)}</p>` : '';
+    const last = s.last_sync_at ? `Last sync ${new Date(s.last_sync_at).toLocaleString()}.` : '';
+    let html = '';
+    if (s.state === 'OFF') {
+      html = `<p class="panel-text">Keep the status (Reading, Completed, Dropped, Plan to Read) and the chapters you read in sync with your MyAnimeList manga list. First it only compares and shows you what would change; nothing is written anywhere until you say so. MyAnimeList never adds or removes manga from your library.</p>
+        <div class="panel-actions"><button type="button" class="btn btn-primary btn-sm" data-mal-action="preview"${busy}>Compare with MyAnimeList</button></div>`;
+    } else if (s.state === 'PREVIEW') {
+      html = `<p class="panel-text">Comparing only: nothing was changed yet. On the first sync Aoi wins on the status and the higher chapter count stays (chapters never go back). Before the first changes reach your phone, the app makes a backup there. ${esc(last)}</p>
+        ${previewHTML(s.preview)}
+        <div class="panel-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-mal-action="start"${busy}>Start syncing</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-mal-action="sync"${busy}>Compare again</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-mal-action="off"${busy}>Turn off</button>
+        </div>`;
+    } else {
+      html = `<p class="panel-text">In sync: what you change in Aoi goes to MyAnimeList and the other way round. The app syncs on its own; ${esc(last)}</p>
+        <div class="panel-actions">
+          <button type="button" class="btn btn-primary btn-sm" data-mal-action="sync"${busy}>Sync now</button>
+          <button type="button" class="btn btn-ghost btn-sm" data-mal-action="off"${busy}>Turn off</button>
+        </div>`;
+    }
+    html += progress;
+    if (s.state !== 'OFF') html += attentionHTML() + onMalOnlyHTML();
+    body.innerHTML = html;
+  }
+  function previewHTML(preview){
+    if (!preview) return '<p class="panel-text">Still comparing…</p>';
+    const links = preview.links || {};
+    const chips = [
+      `${links.LINKED || 0} linked`, `${links.CONFIRM || 0} to confirm`, `${links.NOT_FOUND || 0} not found`,
+      links.PENDING ? `${links.PENDING} still searching` : null, `${preview.unchanged || 0} already equal`,
+      `${preview.on_mal_only || 0} only on MyAnimeList`
+    ].filter(Boolean).map(t => `<span class="count-chip">${esc(t)}</span>`).join('');
+    const changes = (preview.changes || []).slice(0, 300).map(c => {
+      const where = c.removed_on_mal ? 'removed on MyAnimeList: stops syncing' :
+        [c.mal_changes ? 'MAL' : null, c.aoi_changes ? 'Aoi' : null].filter(Boolean).join(' + ') + ' → ' + statusChapters(c.after);
+      return `<div class="change-row"><span class="t">${esc(c.title)}</span><span class="d">Aoi: ${esc(statusChapters(c.aoi))}<br>MAL: ${esc(statusChapters(c.mal))}<br>${esc(where)}</span></div>`;
+    }).join('');
+    return `<div class="panel-section"><h4>What would change (${(preview.changes || []).length})</h4><div class="count-chips">${chips}</div>${changes || '<p class="panel-text">Nothing: they already match.</p>'}</div>`;
+  }
+  function attentionHTML(){
+    if (!malManga.attention.length) return '';
+    const rows = malManga.attention.map(l => {
+      const options = l.link_state === 'CONFIRM'
+        ? `<div class="anime-results">${(l.candidates || []).map(c => `<button type="button" class="anime-result" data-link="${l.manga_id}" data-mal="${c.mal_id}">${coverHTML(c.cover_url)}<div><div class="t">${esc(c.title)}</div><div class="m">${esc([c.title_english, mangaInfo(c)].filter(Boolean).join(' · '))}</div></div></button>`).join('')}</div>`
+        : '<p class="panel-text">Not found on MyAnimeList by its title.</p>';
+      const finding = malManga.findingFor === l.manga_id
+        ? `<input type="search" id="malFindInput" placeholder="Search MyAnimeList…" autocomplete="off"><div class="anime-results">${malManga.findResults.map(c => `<button type="button" class="anime-result" data-link="${l.manga_id}" data-mal="${c.mal_id}">${coverHTML(c.cover_url)}<div><div class="t">${esc(c.title)}</div><div class="m">${esc(mangaInfo(c))}</div></div></button>`).join('')}</div>` : '';
+      return `<div class="link-fix"><div class="t">${esc(libraryTitle(l.manga_id))}</div>${options}${finding}
+        <div class="panel-actions"><button type="button" class="btn btn-ghost btn-sm" data-find="${l.manga_id}">Search MyAnimeList</button><button type="button" class="btn btn-ghost btn-sm" data-ignore="${l.manga_id}">Don't sync this one</button></div></div>`;
+    }).join('');
+    return `<div class="panel-section"><h4>Which one is it on MyAnimeList? (${malManga.attention.length})</h4>${rows}</div>`;
+  }
+  function onMalOnlyHTML(){
+    if (!malManga.onMalOnly.length) return '';
+    const rows = malManga.onMalOnly.slice(0, 300).map(m =>
+      `<button type="button" class="anime-result" data-add-mal="${m.mal_id}">${coverHTML(m.cover_url)}<div><div class="t">${esc(m.title)}</div><div class="m">${esc(`${MAL_MANGA_STATUS_LABEL[m.mal_status] || m.mal_status} · ch. ${m.chapters_read}`)}</div><div class="in">Add to Aoi</div></div></button>`).join('');
+    return `<div class="panel-section"><h4>On MyAnimeList, not in Aoi (${malManga.onMalOnly.length})</h4><p class="panel-text">They're not added on their own (Aoi needs to know the extension). Tap one to add it.</p><div class="anime-results">${rows}</div></div>`;
+  }
+
+  async function runMangaSync(){
+    malManga.busy = true;
+    malManga.progress = 'Syncing with MyAnimeList…';
+    renderMalManga();
+    try {
+      for (let call = 1; call <= MANGA_SYNC_MAX_CALLS; call++) {
+        const result = await callMal('manga_sync');
+        const links = result.links || {};
+        malManga.progress = `Linked ${links.LINKED || 0}, to confirm ${links.CONFIRM || 0}, not found ${links.NOT_FOUND || 0}` +
+          (links.PENDING ? `, still searching ${links.PENDING}` : '') + (result.more ? '… (continuing)' : '.');
+        renderMalManga();
+        if (!result.more) break;
+      }
+    } catch (err) {
+      console.error('manga_sync', err);
+      malManga.progress = malErrorText(err);
+    }
+    malManga.busy = false;
+    await fetchLibrary();
+    await loadMalManga();
+  }
+  async function setMangaSyncState(next){
+    const values = { user_id: currentUser.id, state: next };
+    if (next === 'ON') values.confirmed_at = new Date().toISOString();
+    const { error } = await supabase.from('user_mal_manga_sync').upsert(values, { onConflict: 'user_id' });
+    if (error) { alert(error.message); return false; }
+    malManga.settings = Object.assign({}, malManga.settings, { state: next });
+    return true;
+  }
+  async function linkManga(mangaId, values){
+    const { error } = await supabase.from('user_manga_mal').update(values).eq('user_id', currentUser.id).eq('manga_id', mangaId);
+    if (error) { alert(error.message); return; }
+    malManga.attention = malManga.attention.filter(l => l.manga_id !== mangaId);
+    malManga.findingFor = null;
+    renderMalManga();
+  }
+  qs('malMangaBody').onclick = async (e) => {
+    const action = e.target.closest('[data-mal-action]');
+    if (action) {
+      switch (action.dataset.malAction) {
+        case 'preview': if (await setMangaSyncState('PREVIEW')) runMangaSync(); break;
+        case 'start':
+          if (!confirm('Start syncing with MyAnimeList? MyAnimeList gets the changes in the list right away; your phone gets them on its next sync, after a backup.')) return;
+          if (await setMangaSyncState('ON')) runMangaSync();
+          break;
+        case 'sync': runMangaSync(); break;
+        case 'off':
+          if (await setMangaSyncState('OFF')) renderMalManga();
+          break;
+      }
+      return;
+    }
+    const pick = e.target.closest('[data-link]');
+    if (pick) { linkManga(pick.dataset.link, { mal_id: Number(pick.dataset.mal), link_state: 'LINKED', candidates: [] }); return; }
+    const ignore = e.target.closest('[data-ignore]');
+    if (ignore) { linkManga(ignore.dataset.ignore, { link_state: 'IGNORED' }); return; }
+    const find = e.target.closest('[data-find]');
+    if (find) {
+      malManga.findingFor = find.dataset.find;
+      malManga.findResults = [];
+      renderMalManga();
+      const input = qs('malFindInput');
+      input.value = libraryTitle(find.dataset.find);
+      input.focus();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      return;
+    }
+    const addMal = e.target.closest('[data-add-mal]');
+    if (addMal) {
+      const m = malManga.onMalOnly.find(x => x.mal_id === Number(addMal.dataset.addMal));
+      if (!m) return;
+      closeModal(malMangaScrim);
+      await qs('openMangaAdd').onclick();
+      mangaAdd.status = aoiStatusFromMal(m.mal_status);
+      mangaResults = [m];
+      mangaAdd.selected = new Map([[m.mal_id, m]]);
+      qs('mangaQuery').value = m.title;
+      renderMangaResults(null);
+      renderMangaAddBar();
+    }
+  };
+  var malFindTimer = null;
+  qs('malMangaBody').addEventListener('input', (e) => {
+    if (e.target.id !== 'malFindInput') return;
+    clearTimeout(malFindTimer);
+    const query = e.target.value.trim();
+    if (query.length < MIN_QUERY_LENGTH) return;
+    malFindTimer = setTimeout(async () => {
+      try {
+        const response = await callMal('manga_search', { q: query });
+        malManga.findResults = (response.results || []).slice(0, 8);
+      } catch (err) { console.error('manga search', err); malManga.findResults = []; }
+      const value = qs('malFindInput') ? qs('malFindInput').value : query;
+      renderMalManga();
+      const input = qs('malFindInput');
+      if (input) { input.value = value; input.focus(); }
+    }, SEARCH_DEBOUNCE_MS);
+  });
+  // On Hold (e qualquer outro) conta como Plan to Read, como no sync
+  function aoiStatusFromMal(malStatus){
+    return { reading: 'READING', completed: 'COMPLETED', dropped: 'DROPPED' }[malStatus] || 'PLAN_TO_READ';
+  }
+
+  function resetMangaExtras(){
+    clearTimeout(pendingPollTimer);
+    state.pending = [];
+    deviceSources = null;
+    linkedMalIds = new Set();
+    malManga = { settings: null, attention: [], onMalOnly: [], busy: false, progress: '', findingFor: null, findResults: [] };
+  }
 
   // Sai da conta: esquece a lista desta conta
   function resetAnimeState(){

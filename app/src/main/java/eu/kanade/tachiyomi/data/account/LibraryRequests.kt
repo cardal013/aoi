@@ -36,7 +36,6 @@ import tachiyomi.domain.manga.model.Manga
 import tachiyomi.domain.manga.model.MangaUpdate
 import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.source.service.SourceManager
-import java.net.URI
 import java.time.Instant
 import java.time.OffsetDateTime
 import kotlin.time.Clock
@@ -44,10 +43,12 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Pedidos do site para acrescentar mangas à biblioteca (tabela `library_requests`). O browser não corre as
- * extensões, por isso o site só escreve o pedido; a app pesquisa nas fontes instaladas e acrescenta.
- * Um resultado claro entra logo; com vários fica CHOOSE com as opções e o site escolhe (CHOSEN).
- * Fonte que não está instalada neste telemóvel: MISSING_EXTENSION, que volta a ser tratado quando for instalada.
+ * Mangas acrescentados pelo site (tabela `library_requests`): o site escolhe o manga no MAL e a extensão, e o
+ * manga aparece logo lá "a ligar". O URL do manga na extensão só a extensão sabe, por isso é o telemóvel que o
+ * procura (pelo título do MAL e pelo inglês) e o acrescenta. A MangaDex e os mangas que já estão na cloud o
+ * site liga sozinho (ação manga_bind da função `mal`).
+ * Um resultado claro entra logo; com vários fica CHOOSE com as opções e o site escolhe (e liga, sem o telemóvel).
+ * Extensão que não está instalada neste telemóvel: MISSING_EXTENSION, que volta a ser tratado quando for instalada.
  */
 @Inject
 @SingleIn(AppScope::class)
@@ -95,12 +96,20 @@ class LibraryRequests(
         }
     }
 
-    /** Dá os pedidos por acrescentados; sem [uploaded] o manga ainda não está na cloud e fica sem manga_id. */
-    suspend fun finish(added: List<Added>, uploaded: Boolean) = withIOContext {
+    /**
+     * Dá os pedidos por acrescentados e liga os mangas ao MAL. Sem [uploaded] o manga ainda não está na cloud:
+     * fica sem manga_id e sem a ligação (o sync dos mangas procura-a depois pelo título).
+     */
+    suspend fun finish(userId: String, added: List<Added>, uploaded: Boolean) = withIOContext {
         added.forEach {
             val message = if (it.alreadyInLibrary) ALREADY_IN_LIBRARY else null
             try {
                 update(it.requestId, ADDED, message = message, mangaId = it.mangaId.takeIf { uploaded })
+                if (uploaded && it.malId != null) {
+                    supabase.postgrest["user_manga_mal"].upsert(
+                        MalLinkRemote(userId = userId, mangaId = it.mangaId, malId = it.malId),
+                    ) { onConflict = "user_id,manga_id" }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -162,43 +171,36 @@ class LibraryRequests(
             update(request.id, MISSING_EXTENSION)
             return null
         }
-        val results = search(sources, request.query)
-        if (results.isEmpty()) {
+        // O título do MAL (às vezes em romaji) e o inglês: as fontes costumam ter um dos dois
+        val names = listOfNotNull(request.title, request.query).map(String::trim).filter(String::isNotEmpty).distinct()
+        val found = mutableListOf<Found>()
+        for (name in names) {
+            val results = searchAll(sources, name)
+            val picked = pickRequestCandidate(names, results.map { it.candidate })
+            if (picked != null) {
+                val pick = results.first { it.candidate == picked }
+                return add(request, pick.source, pick.manga, status)
+            }
+            found += results
+        }
+        val candidates = found.map { it.candidate }.distinctBy { it.sourceId to it.url }
+        if (candidates.isEmpty()) {
             update(request.id, NOT_FOUND)
             return null
         }
-        val picked = pickRequestCandidate(results.searched, results.found.map { it.candidate })
-        if (picked != null) {
-            val found = results.found.first { it.candidate == picked }
-            return add(request, found.source, found.manga, status)
-        }
-        val candidates = sortCandidates(results.searched, results.found.map { it.candidate })
-        update(request.id, CHOOSE, candidates = candidates)
+        update(request.id, CHOOSE, candidates = sortCandidates(names, candidates))
         return null
     }
 
-    /** As fontes onde procurar, ou null se o site pediu uma que não está instalada. */
+    /** As fontes onde procurar: a escolhida no site (null se não está instalada) ou, sem nenhuma, todas. */
     private suspend fun sourcesFor(request: LibraryRequestRow): List<Source>? {
         request.sourceId?.let { id ->
             return id.toLongOrNull()?.let { sourceManager.get(it) }?.let(::listOf)
         }
         val enabledLanguages = sourcePreferences.enabledLanguages.get()
         val disabledSources = sourcePreferences.disabledSources.get()
-        val sources = sourceManager.getOnlineSources()
+        return sourceManager.getOnlineSources()
             .filter { it.lang in enabledLanguages && "${it.id}" !in disabledSources }
-        // Um link do site da fonte: só essa fonte
-        val host = hostOf(request.query) ?: return sources
-        return sources.filter { hostOf(it.baseUrl) == host }.ifEmpty { sources }
-    }
-
-    private suspend fun search(sources: List<Source>, query: String): SearchResults {
-        // Muitas extensões aceitam o link na pesquisa; se não der, procura pelo nome que vem no link
-        val queries = listOfNotNull(query.trim(), titleFromLink(query)).distinct()
-        for (text in queries) {
-            val found = searchAll(sources, text)
-            if (found.isNotEmpty()) return SearchResults(text, found)
-        }
-        return SearchResults(query, emptyList())
     }
 
     private suspend fun searchAll(sources: List<Source>, query: String): List<Found> = coroutineScope {
@@ -244,6 +246,7 @@ class LibraryRequests(
         val added = Added(
             requestId = request.id,
             mangaId = mangaRemoteId(manga.source, manga.url),
+            malId = request.malId,
             title = manga.title,
             alreadyInLibrary = manga.favorite,
         )
@@ -286,19 +289,25 @@ class LibraryRequests(
     data class Added(
         val requestId: String,
         val mangaId: String,
+        val malId: Long?,
         val title: String,
         val alreadyInLibrary: Boolean,
     )
 
     private class Found(val source: Source, val manga: Manga, val candidate: RequestCandidate)
 
-    private class SearchResults(val searched: String, val found: List<Found>) {
-        fun isEmpty() = found.isEmpty()
-    }
+    @Serializable
+    private data class MalLinkRemote(
+        @SerialName("user_id") val userId: String,
+        @SerialName("manga_id") val mangaId: String,
+        @SerialName("mal_id") val malId: Long,
+        @SerialName("link_state") val linkState: String = "LINKED",
+    )
 
     private companion object {
         const val TABLE = "library_requests"
-        val REQUEST_COLUMNS = arrayOf("id", "query", "source_id", "reading_status", "state", "choice", "updated_at")
+        val REQUEST_COLUMNS =
+            arrayOf("id", "query", "title", "mal_id", "source_id", "reading_status", "state", "choice", "updated_at")
 
         const val PENDING = "PENDING"
         const val SEARCHING = "SEARCHING"
@@ -323,6 +332,8 @@ class LibraryRequests(
 data class LibraryRequestRow(
     val id: String,
     val query: String,
+    val title: String? = null,
+    @SerialName("mal_id") val malId: Long? = null,
     @SerialName("source_id") val sourceId: String? = null,
     @SerialName("reading_status") val readingStatus: String,
     val state: String,
@@ -346,37 +357,23 @@ data class RequestIdRow(val id: String)
 internal fun normalizeTitle(title: String): String = title.lowercase().filter { it.isLetterOrDigit() }
 
 /**
- * O resultado a acrescentar sem perguntar: o único que veio, ou o único com o título igual ao pedido.
- * Null = o site escolhe (o mesmo título em duas fontes também pergunta, para escolher a fonte).
+ * O resultado a acrescentar sem perguntar: o único com o título igual a um dos [names] do manga, ou o único que
+ * veio se o título for parecido (um contém o outro). Null = o site escolhe.
  */
-internal fun pickRequestCandidate(query: String, candidates: List<RequestCandidate>): RequestCandidate? {
-    candidates.singleOrNull()?.let { return it }
-    val wanted = normalizeTitle(query)
-    return candidates.filter { normalizeTitle(it.title) == wanted }.singleOrNull()
+internal fun pickRequestCandidate(names: List<String>, candidates: List<RequestCandidate>): RequestCandidate? {
+    val wanted = names.map(::normalizeTitle).filter(String::isNotEmpty).toSet()
+    candidates.filter { normalizeTitle(it.title) in wanted }.singleOrNull()?.let { return it }
+    val only = candidates.singleOrNull() ?: return null
+    val title = normalizeTitle(only.title)
+    return only.takeIf { title.isNotEmpty() && wanted.any { it.contains(title) || title.contains(it) } }
 }
 
-/** As opções para o site: primeiro as de título igual ao pedido, depois pela ordem das fontes. */
-internal fun sortCandidates(query: String, candidates: List<RequestCandidate>): List<RequestCandidate> {
-    val wanted = normalizeTitle(query)
+/** As opções para o site: primeiro as de título igual, depois pela ordem das pesquisas. */
+internal fun sortCandidates(names: List<String>, candidates: List<RequestCandidate>): List<RequestCandidate> {
+    val wanted = names.map(::normalizeTitle).toSet()
     return candidates
-        .sortedBy { normalizeTitle(it.title) != wanted }
+        .sortedBy { normalizeTitle(it.title) !in wanted }
         .take(MAX_CANDIDATES)
 }
 
 private const val MAX_CANDIDATES = 40
-
-internal fun hostOf(text: String): String? {
-    val trimmed = text.trim()
-    if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://")) return null
-    return runCatching { URI(trimmed).host }.getOrNull()?.lowercase()?.removePrefix("www.")
-}
-
-/** "https://site/manga/solo-leveling-123/" → "solo leveling" (o nome que costuma vir no fim do link). */
-internal fun titleFromLink(text: String): String? {
-    if (hostOf(text) == null) return null
-    val path = runCatching { URI(text.trim()).path }.getOrNull() ?: return null
-    val slug = path.trimEnd('/').substringAfterLast('/')
-    val words = slug.split('-', '_', '+', ' ')
-        .filter { it.isNotBlank() && !it.all(Char::isDigit) }
-    return words.joinToString(" ").takeIf { it.length >= 2 }
-}

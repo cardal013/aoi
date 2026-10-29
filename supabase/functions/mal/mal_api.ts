@@ -1,4 +1,4 @@
-// Ligação à API do MyAnimeList (só animes; os mangas do MAL nunca entram no Aoi).
+// Ligação à API do MyAnimeList (lista de animes; dos mangas só estado e capítulos, ver manga_list.ts).
 // Trata dos pedidos HTTP ao MAL, do token de cada conta (tabela mal_tokens, só service role)
 // e da renovação do token quando está quase a expirar ou o MAL o recusa.
 // Documentação: https://myanimelist.net/apiconfig/references/api/v2 e .../authorization

@@ -275,6 +275,21 @@ class LibraryPreferences(
         0L,
     )
 
+    /** Id deste telemóvel na tabela user_devices (gerado na primeira vez). */
+    val cloudDeviceId: Preference<String> = preferenceStore.getString("aoi_cloud_device_id", "")
+
+    /** Lista das fontes instaladas enviada da última vez para user_devices, por utilizador (só envia se mudar). */
+    fun cloudDeviceSourcesSent(userId: String): Preference<String> = preferenceStore.getString(
+        "aoi_cloud_device_sources_$userId",
+        "",
+    )
+
+    /** Se já se fez o backup automático antes do primeiro sync dos mangas com o MAL, por utilizador. */
+    fun malMangaBackupDone(userId: String): Preference<Boolean> = preferenceStore.getBoolean(
+        "aoi_mal_manga_backup_done_$userId",
+        false,
+    )
+
     // endregion
 
     enum class ChapterSwipeAction {

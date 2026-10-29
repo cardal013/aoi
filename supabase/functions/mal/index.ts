@@ -1,4 +1,4 @@
-// Edge function `mal`: tudo o que o Aoi faz com o MyAnimeList (só a lista de animes).
+// Edge function `mal`: tudo o que o Aoi faz com o MyAnimeList (lista de animes; dos mangas só estado e capítulos).
 // A app e o site não falam diretamente com o MAL (CORS e client_secret): falam com esta função.
 //
 // Rotas:
@@ -11,6 +11,11 @@
 //     sync         -> reenvia o pendente, lê a lista do MAL e atualiza a cópia user_mal_anime
 //     update       -> acrescenta ou muda um anime (mal_id, status, episodes_watched, ficha)
 //     remove       -> tira um anime (mal_id)
+//     manga_search -> { results } (q: texto a pesquisar)
+//     manga_sync   -> liga os mangas da biblioteca ao MAL, compara (PREVIEW) ou sincroniza (ON)
+//     manga_add    -> com o sync ligado, põe no MAL um manga acrescentado pelo site (mal_id, status)
+//     manga_bind   -> cria na cloud um manga acrescentado pelo site, já com a extensão (ver manga_list.ts)
+//     mangadex_find -> { id } da MangaDex de um manga do MAL (mal_id, titles)
 //
 // Deploy com --no-verify-jwt (o callback chega sem JWT). As ações POST validam o JWT no código.
 // Secrets: MAL_CLIENT_ID e MAL_CLIENT_SECRET.
@@ -19,6 +24,7 @@ import { corsHeaders, errorResponse, HttpError, jsonResponse, readJsonBody } fro
 import { createServiceClient, getCallerUser } from "../_shared/supabase.ts"
 import { disconnect, getConnectionStatus, handleCallback, startLogin } from "./oauth.ts"
 import { removeEntry, searchAnime, syncList, updateEntry } from "./anime_list.ts"
+import { addMangaToMal, bindManga, findOnMangaDex, searchManga, syncManga } from "./manga_list.ts"
 
 /** Corre a ação pedida pela app ou pelo site, já com a conta validada. */
 async function runAction(req: Request): Promise<unknown> {
@@ -41,6 +47,16 @@ async function runAction(req: Request): Promise<unknown> {
       return await updateEntry(service, caller.id, body)
     case "remove":
       return await removeEntry(service, caller.id, body)
+    case "manga_search":
+      return await searchManga(body.q)
+    case "manga_sync":
+      return await syncManga(service, caller.id)
+    case "manga_add":
+      return await addMangaToMal(service, caller.id, body)
+    case "manga_bind":
+      return await bindManga(service, caller.id, body)
+    case "mangadex_find":
+      return await findOnMangaDex(body)
     default:
       throw new HttpError(400, "unknown_action")
   }
