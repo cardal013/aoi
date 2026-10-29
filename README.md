@@ -56,6 +56,7 @@ Aoi is built on top of [Mihon](https://github.com/mihonapp/mihon), adding a dedi
 |📌|**Plan to Read by default**|New manga added to your library start in *Plan to Read*.|
 |📺|**Anime list**|Keep the anime you watch, want to watch or finished in the *Watch* tab of the bottom bar. It uses your MyAnimeList anime list (never the manga list), with folders for seasons and your own order.|
 |💻|**Keep reading on a computer**|On the [website](https://aoi-mangas.vercel.app/), each manga shows how many chapters are left and a ▶ that opens the next one on the source's own site (like the app's WebView button). Back on Aoi it asks if you read it and marks it, and your phone gets it on the next sync.|
+|🧩|**Chrome extension**|On a computer, the [Aoi extension](#chrome-extension) shows your progress in a corner of the manga site and marks chapters as read by itself (when you reach the last page or click *Next*).|
 |💾|**Backup**|*More → Backup* imports a backup file or exports your library to one.|
 
 ### Reading status categories
@@ -81,6 +82,16 @@ Open *Watch* in the bottom bar and tap *Connect MyAnimeList* once. At the top yo
 - Read progress for chapters that aren't on the device yet (a manga that just came from the cloud) is kept and applied as soon as the chapters load.
 - Nothing in the app wipes the cloud: there is no full resync.
 
+### Chrome extension
+
+The extension shows a small Aoi pill on the chapter pages of the manga in your library (MangaFire, Webtoons, …). Click it to see the chapter, the page you're on and how many are left, mark it read or go to the next chapter. It marks the chapter as read by itself when you reach the last page, and your phone gets it on the next sync. Drag it wherever you like. On sites or manga outside your library it stays hidden.
+
+1. Download [`aoi-extension.zip`](https://aoi-mangas.vercel.app/aoi-extension.zip) and unzip it.
+2. Open `chrome://extensions` and turn on *Developer mode*.
+3. Click *Load unpacked* and pick the `aoi-extension` folder.
+4. Open the [website](https://aoi-mangas.vercel.app/) and sign in: the extension connects to your account by itself.
+
+Chrome only (also Edge, Brave and Opera). Without the extension, the website asks *Read up to* when you come back, so several chapters read in a row are marked at once. Code in [`extension/`](extension).
 
 ## Installation
 
@@ -106,6 +117,10 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
    The debug build installs next to the release one (`com.cardal.aoi.dev`).
 
 ## Changelog
+
+### Chrome extension 1.0.0
+- Aoi on the manga sites: a pill in the corner, chapter and page, *Mark read*, *Next*, marks as read at the last page
+- Site: opening a chapter on a computer offers the extension; without it, *Read up to* marks several chapters at once
 
 ### 0.36.0
 - Manga status and chapters read in sync with MyAnimeList (turn it on in the site: *Library → MyAnimeList*; it compares first)

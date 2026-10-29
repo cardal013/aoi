@@ -14,6 +14,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi Chrome extension 1.0.0] - 2026-10-29
+### Added
+- Chrome extension (`extension/`, download from the site): on the chapter pages of the manga in your library it shows a pill in the corner (*Ch. 47 · 13 left*); click it for the chapter, the page, *Mark read* and *Next*. It marks the chapter as read when you reach the last page or click *Next*. It can be dragged anywhere and stays hidden outside your library. It connects to your account through the site with its own token, not the site's session
+- Site: opening a chapter on a computer in Chrome asks to install the extension (with *Open chapter without it* and *Don't ask again*); with the extension, the site no longer asks if you read the chapter. *Profile* shows if it's installed and connected
+- Site: *Read up to* in the question after reading on the source, to mark several chapters read in a row at once
+
 ## [Aoi v0.36.0] - 2026-10-29
 ### Added
 - Manga with MyAnimeList: the status (Reading, Completed, Dropped, Plan to Read) and the chapters read stay in sync with your MyAnimeList manga list. Turn it on in the site (*Library → MyAnimeList*): first it only compares and shows what would change. On the first sync Aoi wins on the status and the higher chapter count stays; chapters never go back. On Hold counts as Plan to Read. MyAnimeList never adds or removes manga from your library. The app makes a backup before the first changes reach the phone

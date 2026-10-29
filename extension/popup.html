@@ -1,0 +1,30 @@
+<!doctype html>
+<!-- Popup do ícone da extensão: diz se está ligada à conta do Aoi e deixa abrir o site ou desligar. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<style>
+  :root { --blue: #0253D2; --card: #ffffff; --text: #1c1c1a; --muted: #6b6a65; --border: #d8d6cf; }
+  @media (prefers-color-scheme: dark) {
+    :root { --card: #242422; --text: #eeeeea; --muted: #a3a29c; --border: #3a3a37; }
+  }
+  body { margin: 0; width: 260px; padding: 14px; background: var(--card); color: var(--text);
+    font: 13px/1.5 system-ui, sans-serif; }
+  .head { display: flex; align-items: center; gap: 8px; font-weight: 500; margin-bottom: 8px; }
+  .logo { width: 22px; height: 22px; border-radius: 6px; }
+  p { margin: 0 0 10px; color: var(--muted); }
+  button { width: 100%; padding: 7px 0; margin-top: 6px; border-radius: 6px; font: inherit; cursor: pointer;
+    background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+  <div class="head"><img class="logo" src="icons/icon-32.png" alt=""> Aoi <span id="version"></span></div>
+  <p id="statusText">Loading…</p>
+  <button type="button" class="primary" id="openSite">Open Aoi</button>
+  <button type="button" class="hidden" id="disconnect">Disconnect</button>
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

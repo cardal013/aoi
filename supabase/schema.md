@@ -147,6 +147,13 @@ Só o estado e os capítulos lidos andam entre o Aoi e o MAL; o MAL nunca cria n
 
 Funções: `aoi_library_mal_state(p_user)` (estado e capítulo lido mais alto de cada manga da biblioteca, `security invoker`) e `aoi_mark_read_up_to(p_user, p_source_id, p_chapter)` (marca como lidos até esse número, nunca desmarca; só `service_role`).
 
+### Extensão do Chrome (desde 29/10/2026, [`20261029_chrome_extension.sql`](migrations/20261029_chrome_extension.sql))
+| Tabela | Colunas | Acesso |
+|-|-|-|
+| extension_tokens | `token_hash` text PK (SHA-256 do token), `user_id` (FK auth.users), `created_at`, `last_used_at` | nenhum pela API (RLS sem políticas); só as funções abaixo. Até 5 por conta (um por browser) |
+
+Funções (`security definer`; a extensão chama como `anon`, só com o token): `aoi_ext_create_token()` (só `authenticated`: o site cria o token e passa-o à extensão), `aoi_ext_revoke(token)`, `aoi_ext_hosts(token)` (sites das fontes da biblioteca), `aoi_ext_chapter_state(token, url, chapter_id)` (capítulo da biblioteca pelo link normalizado com `aoi_norm_url`, e sem o `?...` se só der um; lido, por ler, seguinte) e `aoi_ext_set_read(token, chapter_id, read)` (igual ao site: `user_chapter_progress` + último capítulo em `user_library`). `aoi_ext_user(token)` é interna.
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.

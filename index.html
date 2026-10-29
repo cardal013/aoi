@@ -667,6 +667,12 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .manga-read-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 .manga-read-actions .btn{ max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .manga-read-hint{ color:var(--text-muted); font-size:13px; line-height:1.5; margin:10px 0 0; }
+/* Extensão do Chrome (janela de instalar) e "Read up to" na pergunta ao voltar da fonte */
+.extension-steps{ margin:14px 0 0; padding-left:20px; color:var(--text-muted); font-size:14px; line-height:1.7; }
+.extension-steps b{ color:var(--text); }
+.extension-steps .mono{ font-family:var(--font-mono); color:var(--text); }
+.read-up-to{ display:flex; align-items:center; gap:10px; margin-top:16px; font-size:14px; color:var(--text-muted); }
+.read-up-to select{ flex:1; min-width:0; }
 .chapter-list-head{ display:flex; align-items:center; gap:10px; margin-top:18px; font-size:13px; font-weight:700; color:var(--text-muted); }
 .chapter-list{ display:flex; flex-direction:column; gap:5px; max-height:42vh; overflow:auto; margin-top:8px; }
 .chapter-row{ display:flex; gap:5px; }
@@ -1143,6 +1149,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </div>
       <div class="kv-row">
         <div>
+          <div class="k">Chrome extension</div>
+          <div class="v" id="profileExtension">Not installed</div>
+        </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="openExtension">Install</button>
+      </div>
+      <div class="kv-row">
+        <div>
           <div class="k">Theme color</div>
           <div class="v" id="profileAccentName">Default</div>
           <div class="accent-swatches" id="accentSwatches" role="radiogroup" aria-label="Theme color"></div>
@@ -1189,10 +1202,41 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
+    <label class="read-up-to" id="readDoneUpToRow" style="display:none">Read up to
+      <select class="source-select" id="readDoneUpTo"></select>
+    </label>
     <div class="watch-done-actions">
       <button type="button" class="btn btn-ghost btn-sm" id="readDoneNo">Not to the end</button>
       <button type="button" class="btn btn-ghost btn-sm" id="readDoneYes">Yes</button>
       <button type="button" class="btn btn-primary btn-sm" id="readDoneNext">Yes, next chapter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL — EXTENSÃO DO CHROME (instalar ou atualizar)
+============================================================ -->
+<div class="modal-scrim" id="extensionScrim">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="extensionTitle">
+    <div class="modal-head">
+      <div>
+        <h3 id="extensionTitle">Read with the Aoi extension</h3>
+        <p id="extensionText">With the Aoi extension for Chrome, the manga site shows your progress in a corner and marks chapters as read by itself, so you don't have to come back here and say what you read. Your phone gets it on the next sync.</p>
+      </div>
+      <button type="button" class="modal-close" id="closeExtension" aria-label="Close">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <ol class="extension-steps">
+      <li><a href="aoi-extension.zip" download>Download the extension</a> and unzip it.</li>
+      <li>Open <span class="mono">chrome://extensions</span> in a new tab and turn on <b>Developer mode</b> (top right).</li>
+      <li id="extensionStepLoad">Click <b>Load unpacked</b> and pick the unzipped <span class="mono">aoi-extension</span> folder.</li>
+      <li>Come back here and reload the page. The extension connects to your account by itself.</li>
+    </ol>
+    <div class="watch-done-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="extensionNever">Don't ask again</button>
+      <button type="button" class="btn btn-ghost btn-sm" id="extensionSkip">Open chapter without it</button>
+      <a class="btn btn-primary btn-sm" href="aoi-extension.zip" download>Download</a>
     </div>
   </div>
 </div>
@@ -1832,9 +1876,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     requestAnimeSync(true);
     handleMalLoginResult();
     checkAdmin();
+    helloExtension();
   }
 
   async function logOut(){
+    // A extensão deixa de marcar nesta conta (apaga o token dela)
+    if (installedExtensionVersion()) postToExtension({ type: 'aoi-ext-disconnect' });
+    extensionConnectTriedFor = null;
     await supabase.auth.signOut();
     currentUser = null;
     authButtons.style.display = '';
@@ -2171,7 +2219,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const play = e.target.closest('[data-read-play]');
     if (play) {
       const manga = state.library.find(m => m.mangaId === play.dataset.readPlay);
-      if (manga && manga.next) startRead(manga, manga.next);
+      if (manga && manga.next) openChapter(manga, manga.next);
       return;
     }
     const card = e.target.closest('.manga-card');
@@ -2351,7 +2399,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     const open = e.target.closest('[data-read-open]');
     if (open && cache) {
       const chapter = cache.list.find(c => c.id === open.dataset.readOpen);
-      if (chapter) startRead(manga, chapter);
+      if (chapter) openChapter(manga, chapter);
       return;
     }
     const toggle = e.target.closest('[data-read-toggle]');
@@ -2417,9 +2465,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('readDoneText').textContent = `Did you read ${pending.chapterName} of ${pending.title} to the end?`;
     qs('readDoneNext').style.display = pending.next ? '' : 'none';
     if (!readDoneScrim.classList.contains('open')) openModal(readDoneScrim);
+    fillReadUpTo(pending);
     // Começar pelo ▶ da capa não carrega a lista: o seguinte calcula-se quando ela chegar
     if (!pending.next) {
       loadChapters(pending.sourceId).then(cache => {
+        fillReadUpTo(pending);
         const next = nextChapterOf(cache, pending.chapterId);
         const current = readPending();
         if (!next || !next.web_url || !current || current.startedAt !== pending.startedAt) return;
@@ -2427,9 +2477,44 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         writeStore(READ_PENDING_KEY, JSON.stringify(current));
         if (readDoneScrim.classList.contains('open')) qs('readDoneNext').style.display = '';
       });
-    } else if (!chapterCache[pending.sourceId]) loadChapters(pending.sourceId);
+    } else if (!chapterCache[pending.sourceId]) loadChapters(pending.sourceId).then(() => fillReadUpTo(pending));
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) checkReadPending(); });
+
+  // "Read up to": para quem leu vários capítulos seguidos na fonte. Lista do capítulo aberto até ao último;
+  // por defeito o aberto. Sem capítulos depois dele (ou sem a lista), a linha fica escondida.
+  function fillReadUpTo(pending){
+    const row = qs('readDoneUpToRow');
+    const select = qs('readDoneUpTo');
+    const cache = chapterCache[pending.sourceId];
+    const startIndex = cache ? cache.list.findIndex(c => c.id === pending.chapterId) : -1;
+    const hasLaterChapters = startIndex >= 0 && startIndex < cache.list.length - 1;
+    if (!hasLaterChapters) {
+      row.style.display = 'none';
+      select.innerHTML = '';
+      select.dataset.pending = '';
+      return;
+    }
+    // Já preenchida para esta leitura: não apagar o que a pessoa escolheu
+    if (select.dataset.pending === String(pending.startedAt)) return;
+    const options = cache.list.slice(startIndex).map(c => `<option value="${esc(c.id)}">${esc(chapterLabel(c))}</option>`);
+    select.innerHTML = options.join('');
+    select.dataset.pending = String(pending.startedAt);
+    row.style.display = '';
+  }
+
+  // Capítulos a marcar: do aberto até ao escolhido em "Read up to" (pela ordem de leitura)
+  function chaptersReadUpTo(pending){
+    const cache = chapterCache[pending.sourceId];
+    const chosenId = qs('readDoneUpTo').value;
+    if (!cache || !chosenId) return [pending.chapterId];
+    const ids = cache.list.map(c => c.id);
+    const fromIndex = ids.indexOf(pending.chapterId);
+    const toIndex = ids.indexOf(chosenId);
+    const rangeIsValid = fromIndex >= 0 && toIndex >= fromIndex;
+    if (!rangeIsValid) return [pending.chapterId];
+    return ids.slice(fromIndex, toIndex + 1);
+  }
 
   function closeReadDone(){ writeStore(READ_PENDING_KEY, null); closeModal(readDoneScrim); }
   function afterReadSaved(){
@@ -2442,18 +2527,185 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   qs('readDoneNo').onclick = closeReadDone;
   qs('readDoneYes').onclick = () => {
     const pending = readPending();
+    if (!pending) { closeReadDone(); return; }
+    const chapterIds = chaptersReadUpTo(pending);
     closeReadDone();
-    if (pending) setChaptersRead(pending, [pending.chapterId], true).then(afterReadSaved);
+    setChaptersRead(pending, chapterIds, true).then(afterReadSaved);
   };
   qs('readDoneNext').onclick = () => {
     const pending = readPending();
+    if (!pending) { closeReadDone(); return; }
+    const chapterIds = chaptersReadUpTo(pending);
+    const lastReadId = chapterIds[chapterIds.length - 1];
+    // O seguinte ao último escolhido (se só leu o aberto, o que já estava calculado)
+    let next = pending.next;
+    if (lastReadId !== pending.chapterId) next = nextChapterOf(chapterCache[pending.sourceId], lastReadId);
     closeReadDone();
-    if (!pending || !pending.next) return;
-    // O separador novo abre já (ainda dentro do clique); o capítulo vai para a cloud a seguir
-    const manga = state.library.find(m => m.mangaId === pending.mangaId) || { mangaId: pending.mangaId, sourceId: pending.sourceId, title: pending.title };
-    startRead(manga, pending.next);
-    setChaptersRead(pending, [pending.chapterId], true).then(afterReadSaved);
+    // O separador novo abre já (ainda dentro do clique); os capítulos vão para a cloud a seguir
+    if (next && next.web_url) {
+      const manga = state.library.find(m => m.mangaId === pending.mangaId) || { mangaId: pending.mangaId, sourceId: pending.sourceId, title: pending.title };
+      startRead(manga, next);
+    }
+    setChaptersRead(pending, chapterIds, true).then(afterReadSaved);
   };
+
+  // --- EXTENSÃO DO CHROME ---
+  // A extensão (pasta extension/ do repo; o zip é o /aoi-extension.zip) mostra um overlay nas páginas dos
+  // capítulos das fontes e marca os lidos sozinha. Aqui o site:
+  //  - sabe se ela está instalada pela marca data-aoi-extension que ela põe nesta página;
+  //  - dá-lhe um token próprio (aoi_ext_create_token). Não se partilha a sessão do site: o refresh token do
+  //    Supabase roda e, partilhado, um dos dois acabava deslogado;
+  //  - ao abrir um capítulo no Chrome do PC sem ela, pede para a instalar. Com ela ligada, abre o capítulo e
+  //    já não pergunta ao voltar (quem marca é ela).
+  // A conversa com a extensão é por window.postMessage (extension/site-bridge.js do outro lado).
+  const EXTENSION_LATEST_VERSION = '1.0.0';
+  const EXTENSION_PROMPT_OFF_KEY = 'aoi_ext_prompt_off';
+  const EXTENSION_UPDATE_SEEN_KEY = 'aoi_ext_update_seen';
+  // Estado que a extensão mandou da última vez: { version, connected, userId, username }
+  let extensionStatus = null;
+  // Conta para a qual já se tentou ligar a extensão nesta página (evita criar tokens em ciclo se falhar)
+  let extensionConnectTriedFor = null;
+  // Capítulo à espera de abrir enquanto a janela da extensão está aberta ("Open chapter without it")
+  let extensionPendingRead = null;
+
+  // Versão da extensão instalada neste browser, ou null
+  function installedExtensionVersion(){
+    return document.documentElement.dataset.aoiExtension || null;
+  }
+
+  // Chrome (ou Edge, Brave, Opera) num computador: os únicos onde a extensão se instala
+  function isDesktopChrome(){
+    const userAgent = navigator.userAgent;
+    const isPhoneOrTablet = /Android|iPhone|iPad|iPod/i.test(userAgent);
+    const isChromium = /Chrome\//.test(userAgent);
+    return isChromium && !isPhoneOrTablet;
+  }
+
+  // true se a versão instalada ("1.0.0") for mais antiga do que a mais recente
+  function isOlderVersion(installed, latest){
+    const installedParts = installed.split('.').map(Number);
+    const latestParts = latest.split('.').map(Number);
+    for (let index = 0; index < latestParts.length; index++) {
+      const installedPart = installedParts[index] || 0;
+      if (installedPart !== latestParts[index]) {
+        return installedPart < latestParts[index];
+      }
+    }
+    return false;
+  }
+
+  function postToExtension(message){
+    window.postMessage(Object.assign({ source: 'aoi-site' }, message), window.location.origin);
+  }
+
+  // Pergunta à extensão como está (a resposta chega como aoi-ext-status). Chamado ao entrar na conta.
+  function helloExtension(){
+    if (installedExtensionVersion()) {
+      postToExtension({ type: 'aoi-ext-hello' });
+    }
+  }
+
+  // Se a extensão não estiver ligada a esta conta, cria-lhe um token e manda-lho (uma vez por conta e página)
+  async function ensureExtensionConnected(){
+    if (!currentUser || !extensionStatus) return;
+    const connectedToThisAccount = extensionStatus.connected && extensionStatus.userId === currentUser.id;
+    const alreadyTried = extensionConnectTriedFor === currentUser.id;
+    if (connectedToThisAccount || alreadyTried) return;
+
+    extensionConnectTriedFor = currentUser.id;
+    const { data: token, error } = await supabase.rpc('aoi_ext_create_token');
+    if (error || !token) {
+      console.error('aoi_ext_create_token', error);
+      return;
+    }
+    const username = currentUser.user_metadata?.username || currentUser.email.replace('usr_', '').split('@')[0];
+    postToExtension({ type: 'aoi-ext-connect', token: token, userId: currentUser.id, username: username });
+  }
+
+  window.addEventListener('message', (event) => {
+    const comesFromThisPage = event.source === window && event.origin === window.location.origin;
+    const isExtensionStatus = event.data && event.data.source === 'aoi-extension' && event.data.type === 'aoi-ext-status';
+    if (!comesFromThisPage || !isExtensionStatus) return;
+    extensionStatus = event.data.status;
+    renderProfileExtension();
+    ensureExtensionConnected();
+  });
+
+  // Linha "Chrome extension" do Profile
+  function renderProfileExtension(){
+    const version = installedExtensionVersion();
+    const text = qs('profileExtension');
+    const button = qs('openExtension');
+    if (!version) {
+      text.textContent = 'Not installed. Marks chapters as read on the manga sites.';
+      button.textContent = 'Install';
+      return;
+    }
+    const isConnected = extensionStatus && extensionStatus.connected && currentUser && extensionStatus.userId === currentUser.id;
+    const needsUpdate = isOlderVersion(version, EXTENSION_LATEST_VERSION);
+    let state = isConnected ? 'connected' : 'not connected';
+    if (needsUpdate) state += ` · v${EXTENSION_LATEST_VERSION} available`;
+    text.textContent = `Installed (v${version}) · ${state}`;
+    button.textContent = needsUpdate ? 'Update' : 'Reinstall';
+  }
+
+  // Abre a janela da extensão. mode: 'install' (ao abrir um capítulo), 'update' ou 'profile' (botão do Profile)
+  var extensionScrim = qs('extensionScrim');
+  function showExtensionModal(mode, manga, chapter){
+    extensionPendingRead = chapter ? { manga: manga, chapter: chapter } : null;
+    const isUpdate = mode === 'update' || (mode === 'profile' && installedExtensionVersion() && isOlderVersion(installedExtensionVersion(), EXTENSION_LATEST_VERSION));
+    qs('extensionTitle').textContent = isUpdate ? 'Update the Aoi extension' : 'Read with the Aoi extension';
+    qs('extensionText').textContent = isUpdate
+      ? `There's a new version of the extension (v${EXTENSION_LATEST_VERSION}). Download it and put the new folder in place of the old one.`
+      : "With the Aoi extension for Chrome, the manga site shows your progress in a corner and marks chapters as read by itself, so you don't have to come back here and say what you read. Your phone gets it on the next sync.";
+    qs('extensionStepLoad').innerHTML = isUpdate
+      ? 'Click the reload arrow on <b>Aoi</b> (or remove it and click <b>Load unpacked</b> again with the new folder).'
+      : 'Click <b>Load unpacked</b> and pick the unzipped <span class="mono">aoi-extension</span> folder.';
+    qs('extensionSkip').style.display = chapter ? '' : 'none';
+    qs('extensionNever').style.display = mode === 'install' ? '' : 'none';
+    openModal(extensionScrim);
+  }
+  function closeExtensionModal(){ extensionPendingRead = null; closeModal(extensionScrim); }
+  registerModal(extensionScrim, closeExtensionModal);
+  qs('closeExtension').onclick = closeExtensionModal;
+  qs('openExtension').onclick = () => showExtensionModal('profile', null, null);
+  qs('extensionNever').onclick = () => {
+    writeStore(EXTENSION_PROMPT_OFF_KEY, '1');
+    const pendingRead = extensionPendingRead;
+    closeExtensionModal();
+    if (pendingRead) startRead(pendingRead.manga, pendingRead.chapter);
+  };
+  // Tem de abrir o capítulo dentro do clique (senão o browser bloqueia o separador novo)
+  qs('extensionSkip').onclick = () => {
+    const pendingRead = extensionPendingRead;
+    closeExtensionModal();
+    if (pendingRead) startRead(pendingRead.manga, pendingRead.chapter);
+  };
+
+  // Abrir um capítulo na fonte (Continue, ▶ das capas, lista de capítulos): decide entre a extensão, pedir para
+  // a instalar, ou o caminho de sempre (abrir e perguntar ao voltar). Corre dentro do clique.
+  function openChapter(manga, chapter){
+    const version = installedExtensionVersion();
+    const extensionIsConnected = Boolean(version && extensionStatus && extensionStatus.connected);
+
+    if (extensionIsConnected) {
+      const updateNotSeen = isOlderVersion(version, EXTENSION_LATEST_VERSION) && readStore(EXTENSION_UPDATE_SEEN_KEY) !== EXTENSION_LATEST_VERSION;
+      if (updateNotSeen) {
+        writeStore(EXTENSION_UPDATE_SEEN_KEY, EXTENSION_LATEST_VERSION);
+        showExtensionModal('update', manga, chapter);
+        return;
+      }
+      window.open(chapter.web_url, '_blank', 'noopener');
+      return;
+    }
+
+    const shouldAskToInstall = !version && isDesktopChrome() && readStore(EXTENSION_PROMPT_OFF_KEY) !== '1';
+    if (shouldAskToInstall) {
+      showExtensionModal('install', manga, chapter);
+      return;
+    }
+    startRead(manga, chapter);
+  }
 
   // --- ANIME ---
   // Lista de animes do MyAnimeList, igual à app (v0.23.0). O MAL manda: mudar estado, episódios, acrescentar e
@@ -4443,6 +4695,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     qs('profileAvatar').textContent = initials(username);
     qs('profileName').textContent = username;
     qs('profileUsername').textContent = username;
+    renderProfileExtension();
   }
 
   // --- CHANGE PASSWORD ---
