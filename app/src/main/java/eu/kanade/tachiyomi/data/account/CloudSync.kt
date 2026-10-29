@@ -28,6 +28,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.pluralStringResource
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
@@ -57,6 +58,7 @@ class CloudSync(
     private val updateChapter: UpdateChapter,
     private val libraryPreferences: LibraryPreferences,
     private val malAnimeSync: MalAnimeSync,
+    private val libraryRequests: LibraryRequests,
 ) {
 
     private val mutex = Mutex()
@@ -182,6 +184,9 @@ class CloudSync(
             showLocalOnly(result.localOnly)
         }
 
+        // Pedidos do site para acrescentar mangas: entram antes do upload, para irem já para a cloud
+        val requested = if (mode == Mode.AUTO) processLibraryRequests(userId) else emptyList()
+
         // Uma vez por utilizador (0.34.0): reenvia tudo para a cloud ficar com os links e todos os capítulos
         val webUrlsSent = libraryPreferences.cloudWebUrlsSent(userId)
         val wholeUpload = firstSync || (ok && !webUrlsSent.get())
@@ -214,6 +219,14 @@ class CloudSync(
             }
         }
 
+        if (requested.isNotEmpty()) {
+            libraryRequests.finish(requested, uploaded = ok)
+            val titles = requested.filterNot { it.alreadyInLibrary }.map { it.title }
+            if (titles.isNotEmpty()) {
+                withUIContext { context.toast(context.stringResource(MR.strings.library_request_added, titles.joinToString())) }
+            }
+        }
+
         mutableState.update {
             it.copy(
                 running = false,
@@ -222,6 +235,16 @@ class CloudSync(
             )
         }
     }
+
+    private suspend fun processLibraryRequests(userId: String): List<LibraryRequests.Added> =
+        try {
+            libraryRequests.process(userId)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e) { "Sync: falhou a leitura dos pedidos do site" }
+            emptyList()
+        }
 
     private suspend fun showLocalOnly(mangas: List<Manga>) {
         val before = state.value.localOnly.map { it.id }.toSet()

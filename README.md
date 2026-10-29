@@ -107,6 +107,10 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.35.0
+- Add manga from the site: your phone searches its extensions and adds it on the next sync (pick the right one on the site when there's more than one)
+- Site: theme color in *Profile*, with the app's theme colors
+
 ### 0.34.4
 - *Watch*: swiping between *Plan to Watch* and *Completed* works every time (it sometimes only worked with the buttons)
 

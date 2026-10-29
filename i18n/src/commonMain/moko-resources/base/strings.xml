@@ -243,6 +243,7 @@
     <string name="anime_mal_disconnect">Disconnect MyAnimeList</string>
     <string name="anime_mal_disconnect_confirm">Disconnect the MyAnimeList account %1$s? Your list stays on MyAnimeList.</string>
     <string name="anime_mal_disconnect_failed">Couldn\'t disconnect MyAnimeList. Try again.</string>
+    <string name="library_request_added">Added from the site: %1$s</string>
     <string name="anime_mode_recent">Recent</string>
     <string name="anime_mode_manual">Manual</string>
     <string name="anime_folder_create">Create folder</string>

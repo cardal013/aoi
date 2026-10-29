@@ -14,6 +14,11 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.35.0] - 2026-10-29
+### Added
+- Add manga from the site: type a title (or paste a link to the manga's page), pick a source and a status, and the app adds it the next time it syncs. It searches the extensions installed on your phone; with more than one match you pick the right one on the site. If the source isn't installed on the phone, the site tells you to install it (the request goes through as soon as it is) or to search the sources you have
+- Site: pick the theme color in *Profile*, with the same colors as the app themes
+
 ## [Aoi v0.34.4] - 2026-10-29
 ### Fixed
 - *Watch*: swiping from *Completed* back to *Plan to Watch* (and the other way) works every time. It failed while the grid was still scrolling or stretching at the end of the list, and a short, slow swipe bounced back

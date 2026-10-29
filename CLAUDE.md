@@ -1,6 +1,6 @@
 # Aoi
 
-Leitor de manga/manhwa para Android, fork do Mihon, com contas e biblioteca na cloud (Supabase). Acrescenta ao Mihon: login por username, estados de leitura (A ler, Concluído, Abandonado, Planeado), sync de progresso e favoritos, animes com o MyAnimeList, tutorial na primeira instalação, Admin (Savearth, Gits, Refeições, Trello, Definições; a mesma página na app e no site), widget do tempo do IPMA e um site (`index.html`, Vercel). `applicationId com.cardal.aoi`, versão 0.34.4.
+Leitor de manga/manhwa para Android, fork do Mihon, com contas e biblioteca na cloud (Supabase). Acrescenta ao Mihon: login por username, estados de leitura (A ler, Concluído, Abandonado, Planeado), sync de progresso e favoritos, animes com o MyAnimeList, tutorial na primeira instalação, Admin (Savearth, Gits, Refeições, Trello, Definições; a mesma página na app e no site), widget do tempo do IPMA e um site (`index.html`, Vercel). `applicationId com.cardal.aoi`, versão 0.35.0.
 
 ## Compilar e correr
 - Criar `ignorance/local.properties` (gitignored) com `SUPABASE_URL` e `SUPABASE_ANON_KEY`; sem isto não há cloud
@@ -9,7 +9,7 @@ Leitor de manga/manhwa para Android, fork do Mihon, com contas e biblioteca na c
 - Testes: `.\gradlew.bat testDebugUnitTest`
 
 ## Estrutura
-Código do Aoi: `app/.../tachiyomi/data/account/` (cliente Supabase, conta, sync) · `ui/tutorial/` (tutorial) · `app/src/main/assets/admin/` (página do Admin: `index.html`, `trello.js`, `web.js` = ponte do site; a app usa `ui/more/admin/AdminScreen.kt`; dados na `admin_data`, Refeições na chave `meals`) · `presentation-widget/.../IpmaGlanceWidget.kt` (widget do IPMA) · `ui/more/account/` (ecrã Account) · `domain/.../ReadingStatus.kt` + migração `15.sqm` · `LibraryViewModel` (categorias virtuais −101…−104) · `index.html` (site) · `supabase/functions/change-username/` (edge function). O resto é Mihon.
+Código do Aoi: `app/.../tachiyomi/data/account/` (cliente Supabase, conta, sync; `LibraryRequests` = mangas pedidos no site, tabela `library_requests`) · `ui/tutorial/` (tutorial) · `app/src/main/assets/admin/` (página do Admin: `index.html`, `trello.js`, `web.js` = ponte do site; a app usa `ui/more/admin/AdminScreen.kt`; dados na `admin_data`, Refeições na chave `meals`) · `presentation-widget/.../IpmaGlanceWidget.kt` (widget do IPMA) · `ui/more/account/` (ecrã Account) · `domain/.../ReadingStatus.kt` + migração `15.sqm` · `LibraryViewModel` (categorias virtuais −101…−104) · `index.html` (site) · `supabase/functions/change-username/` (edge function). O resto é Mihon.
 
 ## Gotchas
 - O import da cloud nunca deve ir buscar capítulos à fonte (apagava capítulos locais)

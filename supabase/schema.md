@@ -115,6 +115,25 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 |-|-|
 | `id` smallint PK (sempre 1), `days_before` smallint (1 a 7), `remind_at` time (default 19:00), `updated_by`, `updated_at` (trigger) | select, insert, update para qualquer admin: as definições do lembrete são comuns |
 
+### library_requests (desde 29/10/2026, [`20261029_library_requests.sql`](migrations/20261029_library_requests.sql))
+Pedidos do site para acrescentar mangas à biblioteca. O site cria; a app (`LibraryRequests`, no sync automático) pesquisa nas extensões instaladas e acrescenta.
+
+| Coluna | Tipo |
+|-|-|
+| id | uuid PK default `gen_random_uuid()` |
+| user_id | uuid not null default `auth.uid()` (FK auth.users) |
+| query | text not null (título ou link da página do manga, 1 a 500 caracteres) |
+| source_id | text (`manga.source` da app como texto, os IDs não cabem num número de JS; null = todas as fontes do telemóvel) |
+| reading_status | text not null default `PLAN_TO_READ` (`READING`, `COMPLETED`, `DROPPED`, `PLAN_TO_READ`) |
+| state | text not null default `PENDING` |
+| candidates | jsonb not null default `[]`: opções para o site escolher, `{source_id, source_name, url, title, thumbnail_url}` |
+| choice | jsonb: a opção escolhida no site (mesma forma) |
+| manga_id | uuid (FK manga, on delete set null): o manga acrescentado |
+| message | text: nome da fonte em falta, erro, "Already in your library" |
+| created_at, updated_at | timestamptz (`updated_at` pelo trigger) |
+
+Estados: `PENDING` (o site pediu) → `SEARCHING` (um telemóvel ficou com ele; mais de 10 min = a app morreu e volta a ser tratado) → `ADDED`, `NOT_FOUND`, `FAILED`, `CHOOSE` (várias opções; o site escolhe → `CHOSEN` → `ADDED`) ou `MISSING_EXTENSION` (a fonte pedida ou escolhida não está instalada; volta a ser tratado quando for). `CANCELLED` é do site. RLS com uma política `ALL` própria, sem acesso para `anon`.
+
 ## RLS e permissões
 
 RLS ligada nas 7 tabelas.
