@@ -617,23 +617,6 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-add-status{ display:flex; gap:6px; margin-left:auto; }
 .anime-add-status button{ padding:6px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; }
 .anime-add-status button.active{ border-color:var(--accent); background:var(--accent); color:var(--on-accent); }
-.manga-add-form{ display:flex; flex-direction:column; gap:10px; }
-.manga-add-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-.manga-add-row select{ padding:7px 12px; border-radius:999px; border:1px solid var(--border-strong); background:var(--bg-elevated); color:var(--text); font-size:13px; max-width:100%; }
-.manga-add-row .anime-add-status{ margin-left:0; flex-wrap:wrap; }
-.manga-add-form .btn{ align-self:flex-end; }
-.request-list{ display:flex; flex-direction:column; gap:10px; margin-top:18px; padding-top:16px; border-top:1px solid var(--border); }
-.request-list:empty{ display:none; }
-.request{ border:1px solid var(--border); border-radius:var(--radius-m); padding:12px; display:flex; flex-direction:column; gap:8px; }
-.request.attention{ border-color:var(--accent); }
-.request-head{ display:flex; align-items:baseline; gap:8px; }
-.request-head .q{ font-weight:700; font-size:14px; overflow-wrap:anywhere; flex:1; }
-.request-head .s{ color:var(--text-muted); font-size:12px; white-space:nowrap; }
-.request-text{ color:var(--text-muted); font-size:13px; margin:0; }
-.request-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-.request-actions .btn{ padding:6px 12px; font-size:12.5px; }
-.request .anime-results{ max-height:none; margin-top:0; }
-.request-notice{ display:block; width:100%; text-align:left; margin:-6px 0 16px; padding:10px 14px; border-radius:var(--radius-m); border:1px solid var(--accent); background:color-mix(in srgb, var(--accent) 10%, var(--bg)); color:var(--text); font-size:13.5px; font-weight:600; }
 .anime-toolbar{ flex-wrap:wrap; }
 .anime-disconnect{ margin-left:auto; }
 .anime-folder-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
@@ -1031,7 +1014,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <button class="icon-btn" id="searchToggle" type="button" aria-label="Search library">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
         </button>
-        <button class="btn btn-primary btn-sm" id="openMangaAdd" type="button">Add manga</button>
       </div>
     </div>
     <div class="lib-toolbar">
@@ -1045,7 +1027,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <input type="search" id="librarySearch" placeholder="Search this list…">
       </div>
     </div>
-    <button type="button" class="request-notice" id="requestNotice" style="display:none;"></button>
     <div class="manga-grid" id="mangaGrid"></div>
     <div class="empty-state" id="libraryEmpty" style="display:none;">
       <h3>Nothing here yet</h3>
@@ -1263,37 +1244,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       </div>
       <button type="button" class="btn btn-primary btn-sm" id="animeAddConfirm">Add</button>
     </div>
-  </div>
-</div>
-
-<!-- ============================================================
-     MODAL — ADD MANGA (o browser não corre as extensões: fica um pedido que a app trata no sync)
-============================================================ -->
-<div class="modal-scrim" id="mangaAddScrim">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mangaAddTitle">
-    <div class="modal-head">
-      <div>
-        <h3 id="mangaAddTitle">Add manga</h3>
-        <p>Your phone searches its extensions and adds it the next time the Aoi app syncs (when you open it).</p>
-      </div>
-      <button type="button" class="modal-close" id="closeMangaAdd" aria-label="Close">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="16" height="16"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
-    </div>
-    <form class="manga-add-form" id="mangaAddForm">
-      <input type="search" class="anime-query" id="mangaQuery" placeholder="Title, or a link to the manga's page" autocomplete="off" maxlength="500">
-      <div class="manga-add-row">
-        <select id="mangaAddSource" aria-label="Source"><option value="">Any source on my phone</option></select>
-        <div class="anime-add-status" id="mangaAddStatus">
-          <button type="button" data-status="READING">Reading</button>
-          <button type="button" data-status="COMPLETED">Completed</button>
-          <button type="button" data-status="DROPPED">Dropped</button>
-          <button type="button" data-status="PLAN_TO_READ">Plan to Read</button>
-        </div>
-      </div>
-      <button type="submit" class="btn btn-primary btn-sm" id="mangaAddSend">Send to the app</button>
-    </form>
-    <div class="request-list" id="requestList"></div>
   </div>
 </div>
 
@@ -1793,7 +1743,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'block';
     showAppView('library');
     fetchLibrary();
-    fetchRequests();
     requestAnimeSync(true);
     handleMalLoginResult();
     checkAdmin();
@@ -1809,7 +1758,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     appSite.style.display = 'none';
     publicSite.style.display = '';
     resetAnimeState();
-    resetRequests();
     setAdminVisible(false);
     qs('userMenu').classList.remove('open');
     window.scrollTo({ top:0 });
@@ -2086,195 +2034,6 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (state.librarySearchOpen) qs('librarySearch').focus();
   };
   qs('librarySearch').oninput = (e) => { state.librarySearchQuery = e.target.value; renderLibrary(); };
-
-  // --- ACRESCENTAR MANGAS (library_requests) ---
-  // O browser não corre as extensões: o site escreve o pedido e a app, no sync seguinte, pesquisa nas fontes
-  // instaladas e acrescenta (CloudSync → LibraryRequests). Com vários resultados a app devolve as opções
-  // (CHOOSE) e escolhe-se aqui. Uma fonte que o telemóvel não tem fica MISSING_EXTENSION até ser instalada.
-  // Enquanto houver pedidos a andar, a lista volta a ser lida de tempos a tempos.
-  const REQUEST_POLL_MS = 5000;
-  const REQUEST_POLL_IDLE_MS = 60000;
-  const REQUEST_ACTIVE = ['PENDING', 'SEARCHING', 'CHOSEN'];
-  const REQUEST_ATTENTION = ['CHOOSE', 'NOT_FOUND', 'MISSING_EXTENSION', 'FAILED'];
-  var mangaAddScrim = qs('mangaAddScrim');
-  var requests = [];
-  var requestSources = null;
-  var requestPollTimer = null;
-  var mangaAddStatus = 'PLAN_TO_READ';
-  registerModal(mangaAddScrim, () => closeModal(mangaAddScrim));
-  qs('closeMangaAdd').onclick = () => closeModal(mangaAddScrim);
-
-  async function openMangaAdd(){
-    mangaAddStatus = REV_STATUS_MAP[state.libraryFilter] || 'PLAN_TO_READ';
-    renderMangaAddStatus();
-    qs('mangaQuery').value = '';
-    renderRequests();
-    openModal(mangaAddScrim);
-    qs('mangaQuery').focus();
-    await loadRequestSources();
-    fetchRequests();
-  }
-  qs('openMangaAdd').onclick = openMangaAdd;
-  qs('requestNotice').onclick = openMangaAdd;
-
-  function renderMangaAddStatus(){
-    qs('mangaAddStatus').querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.status === mangaAddStatus));
-  }
-  qs('mangaAddStatus').onclick = (e) => {
-    const btn = e.target.closest('button[data-status]');
-    if (!btn) return;
-    mangaAddStatus = btn.dataset.status;
-    renderMangaAddStatus();
-  };
-
-  // As fontes que a cloud conhece (as dos mangas da biblioteca); "Any source" procura em todas as do telemóvel
-  async function loadRequestSources(){
-    if (requestSources) return;
-    const { data, error } = await supabase.from('extensions').select('id, name').order('name');
-    if (error) { console.error('extensions', error); return; }
-    requestSources = data || [];
-    qs('mangaAddSource').innerHTML = '<option value="">Any source on my phone</option>' +
-      requestSources.map(s => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');
-  }
-  function sourceName(id){
-    const source = (requestSources || []).find(s => s.id === id);
-    return source ? source.name : null;
-  }
-
-  qs('mangaAddForm').onsubmit = async (e) => {
-    e.preventDefault();
-    const query = qs('mangaQuery').value.trim();
-    if (!query || !currentUser) return;
-    qs('mangaAddSend').disabled = true;
-    const { error } = await supabase.from('library_requests').insert({
-      query,
-      source_id: qs('mangaAddSource').value || null,
-      reading_status: mangaAddStatus
-    });
-    qs('mangaAddSend').disabled = false;
-    if (error) { alert(error.message); return; }
-    qs('mangaQuery').value = '';
-    fetchRequests();
-  };
-
-  async function fetchRequests(){
-    if (!currentUser) return;
-    const { data, error } = await supabase.from('library_requests')
-      .select('id, query, source_id, reading_status, state, candidates, choice, message, created_at')
-      .eq('user_id', currentUser.id)
-      .neq('state', 'CANCELLED')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    if (error) { console.error('library_requests', error); return; }
-    const wasAdded = new Set(requests.filter(r => r.state === 'ADDED').map(r => r.id));
-    requests = data || [];
-    // Acabou de entrar um: a biblioteca já o tem na cloud
-    if (requests.some(r => r.state === 'ADDED' && !wasAdded.has(r.id))) fetchLibrary();
-    renderRequests();
-    scheduleRequestPoll();
-  }
-  function scheduleRequestPoll(){
-    clearTimeout(requestPollTimer);
-    if (!currentUser || !requests.some(r => REQUEST_ACTIVE.includes(r.state))) return;
-    // Com a janela fechada não tem pressa (o pedido pode ficar horas à espera do telemóvel)
-    const delay = mangaAddScrim.classList.contains('open') ? REQUEST_POLL_MS : REQUEST_POLL_IDLE_MS;
-    requestPollTimer = setTimeout(fetchRequests, delay);
-  }
-
-  function requestText(r){
-    const name = r.source_id ? (sourceName(r.source_id) || r.message || 'that source') : null;
-    switch (r.state) {
-      case 'PENDING': return 'Waiting for your phone: open the Aoi app and it gets added.';
-      case 'SEARCHING': return 'Searching on your phone…';
-      case 'CHOSEN': return `Adding ${r.choice ? r.choice.title : 'it'} on your phone…`;
-      case 'CHOOSE': return 'More than one match. Pick the right one:';
-      case 'ADDED': return r.message === 'Already in your library' ? 'Already in your library.' : 'Added to your library.';
-      case 'NOT_FOUND': return name ? `Not found in ${name}.` : "Not found in your phone's sources.";
-      case 'MISSING_EXTENSION': {
-        const missing = (r.choice && r.choice.source_name) || r.message || name || 'That source';
-        return `${missing} isn't installed on your phone. Install it in the app (Browse → Extensions) and open Aoi again, or search the sources you have.`;
-      }
-      case 'FAILED': return `Something went wrong on your phone${r.message ? `: ${r.message}` : ''}.`;
-      default: return r.state;
-    }
-  }
-  function requestActions(r){
-    const btn = (action, label, cls) => `<button type="button" class="btn ${cls || 'btn-ghost'} btn-sm" data-request-action="${action}" data-id="${r.id}">${label}</button>`;
-    switch (r.state) {
-      case 'PENDING': return btn('remove', 'Cancel');
-      case 'CHOOSE': return btn('remove', 'None of these');
-      case 'ADDED': return btn('remove', 'Clear');
-      case 'NOT_FOUND': return (r.source_id ? btn('all', 'Search all sources', 'btn-primary') : btn('retry', 'Try again')) + btn('remove', 'Remove');
-      case 'MISSING_EXTENSION': return btn('all', 'Search the sources I have', 'btn-primary') + btn('remove', 'Remove');
-      case 'FAILED': return btn('retry', 'Try again', 'btn-primary') + btn('remove', 'Remove');
-      default: return '';
-    }
-  }
-  function candidatesHTML(r){
-    return `<div class="anime-results">${(r.candidates || []).map((c, i) => {
-      const img = c.thumbnail_url ? `<img src="${esc(c.thumbnail_url)}" alt="" loading="lazy" onerror="this.outerHTML='<span class=&quot;noimg&quot;></span>'">` : '<span class="noimg"></span>';
-      return `<button type="button" class="anime-result" data-request-choose="${i}" data-id="${r.id}">${img}<div><div class="t">${esc(c.title)}</div><div class="m">${esc(c.source_name)}</div></div></button>`;
-    }).join('')}</div>`;
-  }
-  function renderRequests(){
-    qs('requestList').innerHTML = requests.map(r => {
-      const status = STATUS_LABEL[STATUS_MAP[r.reading_status]] || '';
-      const attention = REQUEST_ATTENTION.includes(r.state) ? ' attention' : '';
-      return `<div class="request${attention}">
-        <div class="request-head"><span class="q">${esc(r.query)}</span><span class="s">${esc(status)}</span></div>
-        <p class="request-text">${esc(requestText(r))}</p>
-        ${r.state === 'CHOOSE' ? candidatesHTML(r) : ''}
-        <div class="request-actions">${requestActions(r)}</div>
-      </div>`;
-    }).join('');
-    renderRequestNotice();
-  }
-  function renderRequestNotice(){
-    const attention = requests.filter(r => REQUEST_ATTENTION.includes(r.state)).length;
-    const waiting = requests.filter(r => REQUEST_ACTIVE.includes(r.state)).length;
-    const parts = [];
-    if (attention) parts.push(attention === 1 ? '1 manga request needs you' : `${attention} manga requests need you`);
-    if (waiting) parts.push(waiting === 1 ? '1 waiting for your phone' : `${waiting} waiting for your phone`);
-    qs('requestNotice').style.display = parts.length ? '' : 'none';
-    qs('requestNotice').textContent = parts.join(' · ');
-  }
-
-  async function changeRequest(id, values, onlyIfState){
-    let query = supabase.from('library_requests').update(values).eq('id', id);
-    if (onlyIfState) query = query.eq('state', onlyIfState);
-    const { error } = await query;
-    if (error) alert(error.message);
-    fetchRequests();
-  }
-  qs('requestList').onclick = async (e) => {
-    const choose = e.target.closest('[data-request-choose]');
-    if (choose) {
-      const r = requests.find(x => x.id === choose.dataset.id);
-      const candidate = r && r.candidates[Number(choose.dataset.requestChoose)];
-      if (candidate) changeRequest(r.id, { state: 'CHOSEN', choice: candidate, message: null }, 'CHOOSE');
-      return;
-    }
-    const btn = e.target.closest('[data-request-action]');
-    if (!btn) return;
-    const id = btn.dataset.id;
-    const again = { state: 'PENDING', candidates: [], choice: null, message: null };
-    switch (btn.dataset.requestAction) {
-      case 'remove': {
-        const { error } = await supabase.from('library_requests').delete().eq('id', id);
-        if (error) alert(error.message);
-        fetchRequests();
-        break;
-      }
-      case 'all': changeRequest(id, Object.assign({}, again, { source_id: null })); break;
-      case 'retry': changeRequest(id, again); break;
-    }
-  };
-  function resetRequests(){
-    clearTimeout(requestPollTimer);
-    requests = [];
-    requestSources = null;
-    renderRequests();
-  }
 
   // --- REVEAL-ON-SCROLL (was missing entirely: .reveal elements never got
   // the .in class, so they stayed at opacity:0 forever — this is why the
