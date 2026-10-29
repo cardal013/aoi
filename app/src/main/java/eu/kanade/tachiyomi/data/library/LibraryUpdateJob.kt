@@ -188,7 +188,10 @@ class LibraryUpdateJob(private val context: Context, workerParams: WorkerParamet
             }
         }
 
-        val restrictions = libraryPreferences.autoUpdateMangaRestrictions.get()
+        // Aoi: carregar em atualizar (Update library, Update category, puxar para baixo) atualiza tudo; as
+        // restrições "Skip updating entries" só valem para o update automático. Antes um manga com capítulos
+        // por ler ficava de fora sem aviso e era preciso abri-lo e atualizar um a um
+        val restrictions = if (tags.contains(WORK_NAME_MANUAL)) emptySet() else libraryPreferences.autoUpdateMangaRestrictions.get()
         val skippedUpdates = mutableListOf<Pair<Manga, String?>>()
         val timeZone = TimeZone.currentSystemDefault()
         val (_, fetchWindowUpperBound) = fetchInterval.getWindow(

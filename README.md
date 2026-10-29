@@ -107,6 +107,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.34.3
+- *Update library* (and the automatic update) checks every manga again: new chapters no longer need a refresh one by one
+
 ### 0.34.2
 - No more *Support us* button or donation pop-up (they came from Mihon)
 

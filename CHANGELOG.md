@@ -14,6 +14,12 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.34.3] - 2026-10-29
+### Fixed
+- *Update library*, *Update category* and pull-to-refresh now check every manga for new chapters. Before, they silently skipped the ones with unread chapters, not started, completed or "outside the release period" (Mihon's defaults), so new chapters only showed up after refreshing each manga by hand
+### Changed
+- The automatic library update also checks every manga by default (*Settings → Library → Skip updating entries* still works if you turn it on)
+
 ## [Aoi v0.34.2] - 2026-10-28
 ### Added
 - Site (no APK needed): select several chapters of a manga, or all of them, and mark them read or unread at once, like in the app. Long-press a chapter or tap *Select*; Shift+click picks a range

@@ -55,14 +55,11 @@ class LibraryPreferences(
             DEVICE_ONLY_ON_WIFI,
         ),
     )
+    // Aoi: por defeito o update automático também não salta mangas (no Mihon saltava os que têm capítulos por ler,
+    // os não começados, os acabados e os fora do período de lançamento)
     val autoUpdateMangaRestrictions: Preference<Set<String>> = preferenceStore.getStringSet(
         "library_update_manga_restriction",
-        setOf(
-            MANGA_HAS_UNREAD,
-            MANGA_NON_COMPLETED,
-            MANGA_NON_READ,
-            MANGA_OUTSIDE_RELEASE_PERIOD,
-        ),
+        emptySet(),
     )
 
     val autoUpdateMetadata: Preference<Boolean> = preferenceStore.getBoolean("auto_update_metadata", false)
