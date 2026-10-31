@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.36.1] - 2026-10-31
+### Changed
+- Admin: *Refeições* back to the first look: solid green and red rounded squares, weekday letters, legend with a hint below
+
 ## [Aoi Chrome extension 1.0.0] - 2026-10-29
 ### Added
 - Chrome extension (`extension/`, download from the site): on the chapter pages of the manga in your library it shows a pill in the corner (*Ch. 47 · 13 left*); click it for the chapter, the page, *Mark read* and *Next*. It marks the chapter as read when you reach the last page or click *Next*. It can be dragged anywhere and stays hidden outside your library. It connects to your account through the site with its own token, not the site's session

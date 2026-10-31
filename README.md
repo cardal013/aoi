@@ -118,6 +118,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.36.1
+- Admin: *Refeições* back to the first look (solid green and red squares, legend below)
+
 ### Chrome extension 1.0.0
 - Aoi on the manga sites: a pill in the corner, chapter and page, *Mark read*, *Next*, marks as read at the last page
 - Site: opening a chapter on a computer offers the extension; without it, *Read up to* marks several chapters at once
