@@ -131,12 +131,23 @@
   .btn.danger{background:var(--danger)}
 
   /* Refeições */
-  .day.meal-yes{background:rgba(74,222,128,.35)}
-  .day.meal-no{background:rgba(255,107,107,.35)}
-  .day.meal-yes .num,.day.meal-no .num{color:#fff;font-weight:700}
-  .legend{display:flex;gap:16px;justify-content:center;margin-top:12px;font-size:13px;color:var(--muted)}
-  .legend span::before{content:'';display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:6px;vertical-align:-1px;background:var(--c)}
-  #pageMeals .cal{min-height:380px}
+  #pageMeals .meals{width:100%;max-width:480px;margin:0 auto}
+  .meals-nav{display:flex;align-items:center;padding:4px 0 12px}
+  .meals-nav h2{flex:1;text-align:center;font-size:17px;font-weight:500}
+  .meals-nav button{background:none;border:none;color:var(--text);width:44px;height:44px;border-radius:50%;font-size:26px;cursor:pointer}
+  .meals-nav button:hover{background:var(--card)}
+  .meals-week,.meals-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+  .meals-week{margin-bottom:6px}
+  .meals-week div{text-align:center;color:var(--muted);font-size:13px;font-weight:500}
+  .mday{aspect-ratio:1;border-radius:10px;background:var(--card2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .mday:active{transform:scale(.94)}
+  .mday.yes{background:#2e7d32;color:#fff}
+  .mday.no{background:#c62828;color:#fff}
+  .mday.today{box-shadow:inset 0 0 0 2px var(--accent);font-weight:700}
+  .legend{display:flex;flex-direction:column;gap:8px;margin-top:16px;font-size:14px}
+  .legend span{display:flex;align-items:center;gap:8px}
+  .legend span::before{content:'';width:16px;height:16px;border-radius:4px;background:var(--c)}
+  .legend p{font-size:12px;color:var(--muted);line-height:1.5}
 
   /* Users (só no site) */
   #pageUsers{max-width:720px;width:100%;margin:0 auto}
@@ -221,21 +232,19 @@
 
   <!-- Página Refeições: verde = almoço em casa, vermelho = não almoço -->
   <section class="page" id="pageMeals">
-    <div class="cal-nav">
-      <button id="prevM" aria-label="Mês anterior">‹</button>
-      <div class="mid">
+    <div class="meals">
+      <div class="meals-nav">
+        <button id="prevM" aria-label="Mês anterior">‹</button>
         <h2 id="monthLabelM"></h2>
-        <button class="today-btn" id="todayM">Hoje</button>
+        <button id="nextM" aria-label="Mês seguinte">›</button>
       </div>
-      <button id="nextM" aria-label="Mês seguinte">›</button>
-    </div>
-    <div class="cal">
-      <div class="weekdays"><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sáb</div><div>Dom</div></div>
-      <div class="days" id="daysM"></div>
-    </div>
-    <div class="legend">
-      <span style="--c:rgba(74,222,128,.8)">Almoço em casa</span>
-      <span style="--c:rgba(255,107,107,.8)">Não almoço</span>
+      <div class="meals-week"><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div><div>D</div></div>
+      <div class="meals-days" id="daysM"></div>
+      <div class="legend">
+        <span style="--c:#2e7d32">Almoço em casa</span>
+        <span style="--c:#c62828">Não almoço em casa</span>
+        <p>Toca num dia para o marcar: verde, vermelho e outra vez vazio.</p>
+      </div>
     </div>
   </section>
 
@@ -804,18 +813,31 @@ function drawRepos(){
 /* ---------- Refeições ---------- */
 let mview = new Date(); mview.setDate(1);
 function renderMeals(){
-  renderGrid($('daysM'), $('monthLabelM'), mview, () => [], key => {
-    // vazio → verde (em casa) → vermelho (fora) → vazio
-    if(meals[key] === undefined) meals[key] = true;
-    else if(meals[key] === true) meals[key] = false;
-    else delete meals[key];
-    store.set('meals', meals);
-    renderMeals();
-  }, key => meals[key] === true ? ' meal-yes' : meals[key] === false ? ' meal-no' : '');
+  const label = mview.toLocaleDateString('pt-PT',{month:'long',year:'numeric'});
+  $('monthLabelM').textContent = label[0].toUpperCase() + label.slice(1);
+  const offset = (mview.getDay()+6)%7;
+  const daysInMonth = new Date(mview.getFullYear(), mview.getMonth()+1, 0).getDate();
+  const todayStr = fmt(new Date());
+  const box = $('daysM');
+  box.innerHTML = '<div></div>'.repeat(offset);
+  for(let n=1;n<=daysInMonth;n++){
+    const key = fmt(new Date(mview.getFullYear(), mview.getMonth(), n));
+    const el = document.createElement('div');
+    el.className = 'mday' + (meals[key] === true ? ' yes' : meals[key] === false ? ' no' : '') + (key===todayStr ? ' today' : '');
+    el.textContent = n;
+    el.onclick = () => {
+      // vazio → verde (em casa) → vermelho (fora) → vazio
+      if(meals[key] === undefined) meals[key] = true;
+      else if(meals[key] === true) meals[key] = false;
+      else delete meals[key];
+      store.set('meals', meals);
+      renderMeals();
+    };
+    box.appendChild(el);
+  }
 }
 $('prevM').onclick = () => { mview.setMonth(mview.getMonth()-1); renderMeals(); };
 $('nextM').onclick = () => { mview.setMonth(mview.getMonth()+1); renderMeals(); };
-$('todayM').onclick = () => { mview = new Date(); mview.setDate(1); renderMeals(); };
 $('mealsClearBtn').onclick = () => {
   const n = Object.keys(meals).length;
   if(!n){ alert('Não há nada marcado.'); return; }
