@@ -33,6 +33,9 @@
   let isSaving = false;
   let statusMessage = '';
   let ui = null;
+  // Fator com que se desfaz o zoom da página (zoom a 25 % → 4), para o overlay ficar sempre do mesmo tamanho.
+  // As posições guardadas (right, bottom) estão em píxeis "sem zoom"; na página valem isto vezes mais.
+  let scale = 1;
 
   /**
    * Pede uma coisa ao background (que fala com o Supabase).
@@ -346,10 +349,15 @@
     applyPosition(position);
   }
 
-  /** Mete o overlay a { right, bottom } píxeis das margens, sem o deixar sair do ecrã. */
+  /**
+   * Mete o overlay a { right, bottom } píxeis das margens, sem o deixar sair do ecrã.
+   * Com o `zoom` do CSS, o right/bottom da caixa também é multiplicado pelo `scale`; por isso as contas
+   * fazem-se em píxeis "sem zoom" (os da página a dividir pelo `scale`).
+   */
   function applyPosition(position) {
-    const maximumRight = window.innerWidth - ui.box.offsetWidth - SCREEN_EDGE_PX;
-    const maximumBottom = window.innerHeight - ui.box.offsetHeight - SCREEN_EDGE_PX;
+    const boxSize = ui.box.getBoundingClientRect();
+    const maximumRight = (window.innerWidth - boxSize.width) / scale - SCREEN_EDGE_PX;
+    const maximumBottom = (window.innerHeight - boxSize.height) / scale - SCREEN_EDGE_PX;
     const right = Math.min(Math.max(position.right, SCREEN_EDGE_PX), Math.max(maximumRight, SCREEN_EDGE_PX));
     const bottom = Math.min(Math.max(position.bottom, SCREEN_EDGE_PX), Math.max(maximumBottom, SCREEN_EDGE_PX));
     ui.box.style.right = `${right}px`;
@@ -381,7 +389,7 @@
           isDragging = true;
         }
         if (isDragging) {
-          applyPosition({ right: startRight - movedX, bottom: startBottom - movedY });
+          applyPosition({ right: startRight - movedX / scale, bottom: startBottom - movedY / scale });
         }
       }
 
@@ -408,6 +416,13 @@
     applyPosition({ right: parseFloat(ui.box.style.right), bottom: parseFloat(ui.box.style.bottom) });
   }
 
+  /** Desfaz o zoom da página no overlay (zoom é o do separador: 1 = 100 %). */
+  function applyZoom(zoom) {
+    scale = 1 / zoom;
+    ui.box.style.zoom = String(scale);
+    applyPosition({ right: parseFloat(ui.box.style.right), bottom: parseFloat(ui.box.style.bottom) });
+  }
+
   // ---------- Arranque ----------
 
   ui = createOverlay();
@@ -428,7 +443,13 @@
     applyPosition({ right: parseFloat(ui.box.style.right), bottom: parseFloat(ui.box.style.bottom) });
   });
 
-  restorePosition();
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message && message.type === 'zoom-changed') {
+      applyZoom(message.zoom);
+    }
+  });
+
+  restorePosition().then(() => askBackground({ type: 'zoom' })).then(applyZoom).catch(() => null);
   loadChapterForPage();
   watchUrlChanges();
 })();

@@ -127,6 +127,29 @@ async function setChapterRead(message) {
   });
 }
 
+/**
+ * Zoom do separador em relação ao zoom por omissão do browser (1 = 100 %, 0.25 = 25 %).
+ * O overlay usa-o para ficar sempre do mesmo tamanho, com ou sem zoom na página.
+ */
+async function getRelativeZoom(tabId) {
+  const zoom = await chrome.tabs.getZoom(tabId);
+  const settings = await chrome.tabs.getZoomSettings(tabId);
+  return zoom / (settings.defaultZoomFactor || 1);
+}
+
+/** Zoom do separador de onde veio a mensagem (o do overlay). */
+async function getZoom(message, sender) {
+  return sender.tab ? getRelativeZoom(sender.tab.id) : 1;
+}
+
+// Quando o zoom de um separador muda, avisa o overlay desse separador
+chrome.tabs.onZoomChange.addListener(async (info) => {
+  const zoom = await getRelativeZoom(info.tabId).catch(() => null);
+  if (zoom) {
+    chrome.tabs.sendMessage(info.tabId, { type: 'zoom-changed', zoom: zoom }).catch(() => null);
+  }
+});
+
 // Cada tipo de mensagem e a função que lhe responde
 const HANDLERS = {
   'connect': connect,
@@ -134,6 +157,7 @@ const HANDLERS = {
   'status': getStatus,
   'chapter-state': getChapterState,
   'set-read': setChapterRead,
+  'zoom': getZoom,
 };
 
 // Responde às mensagens. Devolve sempre { ok, result } ou { ok: false, error } para o lado de lá saber se falhou.
@@ -143,7 +167,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return false;
   }
 
-  handler(message)
+  handler(message, sender)
     .then((result) => sendResponse({ ok: true, result: result }))
     .catch((error) => sendResponse({ ok: false, error: String(error.message || error) }));
 
