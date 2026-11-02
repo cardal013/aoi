@@ -642,6 +642,10 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-grid .manga-card img{ pointer-events:none; }
 .anime-grid .manga-card.pressed .manga-cover{ border-color:var(--accent); transform:scale(1.03); }
 .anime-grid .manga-card.dragging{ opacity:.6; }
+#mangaGrid .manga-card{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
+#mangaGrid .manga-card img{ pointer-events:none; }
+#mangaGrid .manga-card.pressed .manga-cover{ border-color:var(--accent); transform:scale(1.03); }
+#mangaGrid .manga-card.dragging{ opacity:.6; }
 .anime-badges{ position:absolute; top:8px; left:8px; right:8px; display:flex; gap:4px; flex-wrap:wrap; }
 .anime-badge{ font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--bg-elevated-2); color:var(--text); }
 .anime-badge.accent{ background:var(--accent); color:var(--on-accent); }
@@ -1051,6 +1055,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
         <input type="search" id="librarySearch" placeholder="Search this list…">
       </div>
     </div>
+    <p class="anime-hint" id="mangaHint">Press and hold a cover and move it to change the order (saved in this browser).</p>
     <div class="manga-grid" id="mangaGrid"></div>
     <div class="empty-state" id="libraryEmpty" style="display:none;">
       <h3>Nothing here yet</h3>
@@ -2152,7 +2157,8 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   }
   function renderLibrary(){
     const query = state.librarySearchQuery.toLowerCase();
-    const filtered = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(query)));
+    const inTab = state.library.filter(m => (m.status === state.libraryFilter) && (m.title.toLowerCase().includes(query)));
+    const filtered = sortMangasForTab(inTab, state.libraryFilter);
     // Os acrescentados pelo site que ainda estão a ligar à extensão aparecem primeiro, meio apagados
     const pending = state.pending.filter(r => (STATUS_MAP[r.reading_status] || 'planned') === state.libraryFilter &&
       (r.title || r.query).toLowerCase().includes(query));
@@ -2173,6 +2179,145 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (state.librarySearchOpen) qs('librarySearch').focus();
   };
   qs('librarySearch').oninput = (e) => { state.librarySearchQuery = e.target.value; renderLibrary(); };
+
+  // --- ORDEM DOS MANGAS (ARRASTAR) ---
+  // Carregar sem largar num manga e arrastar muda-o de sítio, como na grelha dos animes. A ordem fica só
+  // neste browser (localStorage), uma lista de ids por conta e por separador. Os mangas que ainda não estão
+  // na lista (nunca arrumados, novos ou vindos de outro separador) vão para o fim, por ordem alfabética
+  const MANGA_ORDER_KEY_PREFIX = 'aoi_manga_order_';
+  var mangaPress = null;            // carregar em curso: { card, pointerId, startX, startY, timer, longPressed, moved, idsBefore }
+  var suppressNextMangaClick = false;
+
+  /**
+   * Lê a ordem guardada neste browser para a conta com sessão.
+   * Devolve: { separador: [mangaId, ...] } (vazio se não houver nada ou sem sessão)
+   */
+  function readMangaOrder(){
+    if (!currentUser) return {};
+    const saved = readStore(MANGA_ORDER_KEY_PREFIX + currentUser.id);
+    if (!saved) return {};
+    try {
+      return JSON.parse(saved) || {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  /**
+   * Guarda a ordem de um separador neste browser.
+   * Recebe: o separador (reading, completed, ...) e a lista de ids pela ordem nova
+   */
+  function saveMangaOrder(tab, mangaIds){
+    if (!currentUser) return;
+    const order = readMangaOrder();
+    order[tab] = mangaIds;
+    writeStore(MANGA_ORDER_KEY_PREFIX + currentUser.id, JSON.stringify(order));
+  }
+
+  /**
+   * Põe os mangas de um separador pela ordem guardada; os que não estão lá vão para o fim, por ordem alfabética.
+   * Recebe: lista de mangas do separador e o separador. Devolve: lista nova, ordenada
+   */
+  function sortMangasForTab(mangas, tab){
+    const savedIds = readMangaOrder()[tab] || [];
+    const savedPosition = {};
+    savedIds.forEach((mangaId, index) => { savedPosition[mangaId] = index; });
+
+    const arranged = mangas.filter(m => m.mangaId in savedPosition);
+    const notArranged = mangas.filter(m => !(m.mangaId in savedPosition));
+    arranged.sort((first, second) => savedPosition[first.mangaId] - savedPosition[second.mangaId]);
+    notArranged.sort((first, second) => first.title.localeCompare(second.title));
+    return arranged.concat(notArranged);
+  }
+
+  // Ids dos cartões de manga na grelha, pela ordem em que estão (sem os pedidos ainda a ligar)
+  function mangaGridIds(){
+    return Array.from(qs('mangaGrid').querySelectorAll('.manga-card[data-id]')).map(card => card.dataset.id);
+  }
+
+  // Com uma pesquisa a lista está filtrada: arrastar baralhava a ordem dos que estão escondidos
+  function mangaDragAllowed(){ return !state.librarySearchQuery.trim(); }
+
+  function endMangaPress(){
+    if (!mangaPress) return;
+    clearTimeout(mangaPress.timer);
+    mangaPress.card.classList.remove('pressed', 'dragging');
+    mangaPress = null;
+  }
+
+  qs('mangaGrid').addEventListener('pointerdown', (e) => {
+    const card = e.target.closest('.manga-card[data-id]');
+    const isLeftButton = (e.button === 0);
+    const onPlayButton = Boolean(e.target.closest('[data-read-play]'));
+    if (!card || !isLeftButton || onPlayButton) return;
+    endMangaPress();
+    suppressNextMangaClick = false;   // o telemóvel nem sempre manda o click depois de carregar sem largar
+    mangaPress = { card: card, pointerId: e.pointerId, startX: e.clientX, startY: e.clientY, longPressed: false, moved: false };
+    mangaPress.timer = setTimeout(() => {
+      if (!mangaPress) return;
+      mangaPress.longPressed = true;
+      mangaPress.idsBefore = mangaGridIds();
+      mangaPress.card.classList.add('pressed');
+      qs('mangaGrid').setPointerCapture(mangaPress.pointerId);
+    }, LONG_PRESS_MS);
+  });
+
+  qs('mangaGrid').addEventListener('pointermove', (e) => {
+    if (!mangaPress || e.pointerId !== mangaPress.pointerId) return;
+    if (!mangaPress.longPressed) {
+      // Mexeu antes do tempo: é um scroll ou um toque normal
+      const distance = Math.hypot(e.clientX - mangaPress.startX, e.clientY - mangaPress.startY);
+      if (distance > MOVE_TOLERANCE_PX) endMangaPress();
+      return;
+    }
+    if (!mangaDragAllowed()) return;
+    mangaPress.moved = true;
+    mangaPress.card.classList.add('dragging');
+
+    const hovered = document.elementFromPoint(e.clientX, e.clientY);
+    const target = hovered ? hovered.closest('#mangaGrid .manga-card[data-id]') : null;
+    if (!target || target === mangaPress.card) return;
+
+    // Troca o cartão de sítio no ecrã; a ordem só se guarda ao largar
+    const grid = qs('mangaGrid');
+    const cards = Array.from(grid.children);
+    const draggedIndex = cards.indexOf(mangaPress.card);
+    const targetIndex = cards.indexOf(target);
+    if (draggedIndex < targetIndex) {
+      grid.insertBefore(mangaPress.card, target.nextSibling);
+    } else {
+      grid.insertBefore(mangaPress.card, target);
+    }
+  });
+
+  qs('mangaGrid').addEventListener('pointerup', (e) => {
+    if (!mangaPress || e.pointerId !== mangaPress.pointerId) return;
+    const finished = mangaPress;
+    endMangaPress();
+    if (!finished.longPressed) return;   // toque normal: o click abre o manga
+
+    // Depois de carregar sem largar, este "largar" não é um toque (não abre o manga)
+    suppressNextMangaClick = true;
+    const idsAfter = mangaGridIds();
+    const orderChanged = finished.moved && idsAfter.join('|') !== finished.idsBefore.join('|');
+    if (orderChanged) saveMangaOrder(state.libraryFilter, idsAfter);
+  });
+
+  qs('mangaGrid').addEventListener('pointercancel', () => {
+    const wasDragging = mangaPress && mangaPress.moved;
+    endMangaPress();
+    if (wasDragging) renderLibrary();   // repõe a ordem que estava
+  });
+
+  // No telemóvel o browser abre o menu da imagem ao carregar sem largar: aqui carregar sem largar é arrastar
+  qs('mangaGrid').addEventListener('contextmenu', (e) => {
+    if (e.target.closest('.manga-card[data-id]')) e.preventDefault();
+  });
+
+  // Sem isto o browser do telemóvel fazia scroll enquanto se arrasta
+  qs('mangaGrid').addEventListener('touchmove', (e) => {
+    if (mangaPress && mangaPress.longPressed) e.preventDefault();
+  }, { passive: false });
 
   // --- REVEAL-ON-SCROLL (was missing entirely: .reveal elements never got
   // the .in class, so they stayed at opacity:0 forever — this is why the
@@ -2211,6 +2356,10 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   registerModal(statusScrim, () => closeModal(statusScrim));
   qs('closeStatusModal').onclick = () => closeModal(statusScrim);
   qs('mangaGrid').onclick = (e) => {
+    if (suppressNextMangaClick) {
+      suppressNextMangaClick = false;
+      return;
+    }
     const pendingCard = e.target.closest('[data-request]');
     if (pendingCard) {
       openPending(pendingCard.dataset.request);
