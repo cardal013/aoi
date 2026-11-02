@@ -2449,6 +2449,13 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
 
   function renderMangaRead(manga){
     const box = qs('mangaRead');
+    // Guarda onde estava o scroll (lista de capítulos e janela) para não saltar para o topo ao redesenhar,
+    // por exemplo ao marcar um capítulo como lido. Só se ainda for o mesmo manga
+    const sameManga = (box.dataset.sourceId === String(manga.sourceId));
+    const oldChapterList = box.querySelector('.chapter-list');
+    const chapterListScroll = (sameManga && oldChapterList) ? oldChapterList.scrollTop : 0;
+    const modalBox = box.closest('.modal');
+    const modalScroll = modalBox ? modalBox.scrollTop : 0;
     const cache = chapterCache[manga.sourceId];
     const next = nextChapterOf(cache);
     let html = '<div class="manga-read-actions">';
@@ -2483,6 +2490,15 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       }).join('') + '</div>';
     }
     box.innerHTML = html;
+    box.dataset.sourceId = String(manga.sourceId);
+
+    const newChapterList = box.querySelector('.chapter-list');
+    if (newChapterList) {
+      newChapterList.scrollTop = chapterListScroll;
+    }
+    if (modalBox && sameManga) {
+      modalBox.scrollTop = modalScroll;
+    }
   }
 
   // Seleção de vários capítulos (como na app): ids escolhidos e o último tocado, para o Shift+clique
