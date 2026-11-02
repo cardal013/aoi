@@ -644,8 +644,13 @@ section{ padding:108px 0; border-top:1px solid var(--border); }
 .anime-grid .manga-card.dragging{ opacity:.6; }
 #mangaGrid .manga-card{ -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; touch-action:manipulation; }
 #mangaGrid .manga-card img{ pointer-events:none; }
-#mangaGrid .manga-card.pressed .manga-cover{ border-color:var(--accent); transform:scale(1.03); }
-#mangaGrid .manga-card.dragging{ opacity:.6; }
+/* Manga "na mão": capa levantada com contorno e sombra, etiqueta Drag, e os outros mangas apagados */
+#mangaGrid.picking{ cursor:grabbing; }
+#mangaGrid.picking .manga-card[data-id]:not(.pressed){ opacity:.45; transition:opacity .15s; }
+#mangaGrid .manga-card.pressed{ position:relative; z-index:5; }
+#mangaGrid .manga-card.pressed .manga-cover{ border-color:var(--accent); box-shadow:0 0 0 3px var(--accent), 0 16px 34px rgba(0,0,0,.45); transform:scale(1.08) rotate(-2deg); transition:transform .15s, box-shadow .15s; }
+#mangaGrid .manga-card.pressed .title{ color:var(--accent); }
+#mangaGrid .manga-card.pressed .cover-wrap::after{ content:"\21C4  Drag"; position:absolute; left:50%; bottom:10px; transform:translateX(-50%) rotate(-2deg); padding:4px 10px; border-radius:999px; background:var(--accent); color:var(--on-accent); font-size:12px; font-weight:700; white-space:nowrap; box-shadow:var(--shadow); }
 .anime-badges{ position:absolute; top:8px; left:8px; right:8px; display:flex; gap:4px; flex-wrap:wrap; }
 .anime-badge{ font-family:var(--font-mono); font-size:11px; padding:3px 8px; border-radius:999px; background:var(--bg-elevated-2); color:var(--text); }
 .anime-badge.accent{ background:var(--accent); color:var(--on-accent); }
@@ -2185,6 +2190,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
   // neste browser (localStorage), uma lista de ids por conta e por separador. Os mangas que ainda não estão
   // na lista (nunca arrumados, novos ou vindos de outro separador) vão para o fim, por ordem alfabética
   const MANGA_ORDER_KEY_PREFIX = 'aoi_manga_order_';
+  const MANGA_PICK_VIBRATION_MS = 30;
   var mangaPress = null;            // carregar em curso: { card, pointerId, startX, startY, timer, longPressed, moved, idsBefore }
   var suppressNextMangaClick = false;
 
@@ -2242,6 +2248,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     if (!mangaPress) return;
     clearTimeout(mangaPress.timer);
     mangaPress.card.classList.remove('pressed', 'dragging');
+    qs('mangaGrid').classList.remove('picking');
     mangaPress = null;
   }
 
@@ -2258,6 +2265,11 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       mangaPress.longPressed = true;
       mangaPress.idsBefore = mangaGridIds();
       mangaPress.card.classList.add('pressed');
+      qs('mangaGrid').classList.add('picking');
+      // No telemóvel, uma vibração curta diz que o manga já está na mão
+      if (navigator.vibrate) {
+        navigator.vibrate(MANGA_PICK_VIBRATION_MS);
+      }
       qs('mangaGrid').setPointerCapture(mangaPress.pointerId);
     }, LONG_PRESS_MS);
   });
