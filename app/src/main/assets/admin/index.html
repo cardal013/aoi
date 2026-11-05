@@ -34,11 +34,9 @@
   #pageFsisep{padding:0}
   .cal-semana-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
   .cal-semana-bar span{color:var(--muted);font-size:14px}
-  .cal-scroll{overflow:auto;border-radius:12px}
-  .cal-img{display:block;width:100%;height:auto}
-  .cal-img.zoom{width:260%;max-width:none}
-  #calRascunho{margin-bottom:22px}
-  .cal-aviso{background:color-mix(in srgb,#e6a93a 22%,transparent);color:#f5cf85;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.35;margin-bottom:10px}
+  #calScroll{overflow:auto;border-radius:12px}
+  #calImg{display:block;width:100%;height:auto}
+  #calImg.zoom{width:260%;max-width:none}
   #calVazio{color:var(--muted);font-size:15px;line-height:1.4}
   /* Fixa ao ecrã: na WebView o flex não lhe dava a altura toda. O top e a altura vêm do header (showFsisep) */
   #fsisepFrame{position:fixed;left:0;right:0;width:100%;max-width:1200px;margin:0 auto;border:0;display:block}
@@ -269,11 +267,7 @@
       <span id="calSemana"></span>
       <button class="pill-btn" id="calZoomBtn">🔍 Aumentar</button>
     </div>
-    <div id="calRascunho" style="display:none">
-      <p class="cal-aviso">Proposta da Maria, por aprovar: <span id="calRascunhoSemana"></span>. Só se vê no site; vai para a app depois da tua luz verde.</p>
-      <div class="cal-scroll"><img class="cal-img" id="calRascunhoImg" alt="Proposta da semana"></div>
-    </div>
-    <div class="cal-scroll"><img class="cal-img" id="calImg" alt="Calendário da semana" style="display:none"></div>
+    <div id="calScroll"><img id="calImg" alt="Calendário da semana" style="display:none"></div>
   </section>
 
   <!-- Página FSISEP: disponibilidade da eletrónica (fsisep.html, os dados vêm da admin_data) -->
@@ -405,8 +399,8 @@ const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
 
 /* ---------- Dados: localStorage + cloud ---------- */
 // Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
-// fsisep_polls, calendario e calendario_rascunho só se leem aqui: escrevem-se fora do Admin (ver supabase/schema.md).
-const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls', 'calendario', 'calendario_rascunho'];
+// fsisep_polls e calendario só se leem aqui: escrevem-se fora do Admin (ver supabase/schema.md).
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls', 'calendario'];
 const SAVE_DELAY = 800;
 const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
 const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
@@ -790,27 +784,18 @@ window.aoiBack = () => {
 };
 
 /* ---------- Calendário ---------- */
-const hasCalImage = c => !!c && typeof c.imagem === 'string' && c.imagem.startsWith('data:image/');
-const setCalImage = (id, c) => { if($(id).getAttribute('src') !== c.imagem) $(id).src = c.imagem; };
 function renderCalendario(){
   const cal = store.get('calendario', null);
-  // O rascunho nunca aparece na app: só no site, até a imagem ser aprovada
-  const draft = Aoi && Aoi.isWeb ? store.get('calendario_rascunho', null) : null;
-  const has = hasCalImage(cal), hasDraft = hasCalImage(draft);
-  $('calVazio').style.display = has || hasDraft ? 'none' : 'block';
-  $('calBarra').style.display = has || hasDraft ? 'flex' : 'none';
-  $('calRascunho').style.display = hasDraft ? 'block' : 'none';
+  const has = !!cal && typeof cal.imagem === 'string' && cal.imagem.startsWith('data:image/');
+  $('calVazio').style.display = has ? 'none' : 'block';
+  $('calBarra').style.display = has ? 'flex' : 'none';
   $('calImg').style.display = has ? 'block' : 'none';
-  $('calSemana').textContent = has ? `Em vigor: ${cal.semana || ''}` : '';
-  if(hasDraft){
-    $('calRascunhoSemana').textContent = draft.semana || '';
-    setCalImage('calRascunhoImg', draft);
-  }
-  if(has) setCalImage('calImg', cal);
+  if(!has) return;
+  $('calSemana').textContent = cal.semana || '';
+  if($('calImg').getAttribute('src') !== cal.imagem) $('calImg').src = cal.imagem;
 }
 $('calZoomBtn').onclick = () => {
   const zoom = $('calImg').classList.toggle('zoom');
-  $('calRascunhoImg').classList.toggle('zoom', zoom);
   $('calZoomBtn').textContent = zoom ? '🔍 Reduzir' : '🔍 Aumentar';
 };
 

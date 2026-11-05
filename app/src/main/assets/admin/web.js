@@ -55,7 +55,6 @@
   };
 
   window.Aoi = {
-    isWeb: true,
     userId: () => uid,
 
     async ready(){
