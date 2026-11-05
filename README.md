@@ -118,6 +118,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.38.0
+- Admin: *Calendário* tab with the picture of the week
+
 ### 0.37.0
 - Admin: *FSISEP* tab with the team's availability for meetings
 

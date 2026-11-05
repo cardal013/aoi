@@ -32,6 +32,12 @@
   .page{display:none;padding:0 18px 18px}
   .page.active{display:flex;flex-direction:column;flex:1}
   #pageFsisep{padding:0}
+  .cal-semana-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .cal-semana-bar span{color:var(--muted);font-size:14px}
+  #calScroll{overflow:auto;border-radius:12px}
+  #calImg{display:block;width:100%;height:auto}
+  #calImg.zoom{width:260%;max-width:none}
+  #calVazio{color:var(--muted);font-size:15px;line-height:1.4}
   /* Fixa ao ecrã: na WebView o flex não lhe dava a altura toda. O top e a altura vêm do header (showFsisep) */
   #fsisepFrame{position:fixed;left:0;right:0;width:100%;max-width:1200px;margin:0 auto;border:0;display:block}
   #pageSave{padding-bottom: var(--bottom-space);}
@@ -254,6 +260,16 @@
   <!-- Página Trello (trello.js) -->
   <section class="page" id="pageTrello"></section>
 
+  <!-- Página Calendário: imagem da semana aprovada, vinda da chave calendario da admin_data -->
+  <section class="page" id="pageCalendario">
+    <p id="calVazio">Ainda não há calendário publicado para esta conta.</p>
+    <div class="cal-semana-bar" id="calBarra" style="display:none">
+      <span id="calSemana"></span>
+      <button class="pill-btn" id="calZoomBtn">🔍 Aumentar</button>
+    </div>
+    <div id="calScroll"><img id="calImg" alt="Calendário da semana" style="display:none"></div>
+  </section>
+
   <!-- Página FSISEP: disponibilidade da eletrónica (fsisep.html, os dados vêm da admin_data) -->
   <section class="page" id="pageFsisep"><iframe id="fsisepFrame" title="FSISEP"></iframe></section>
 
@@ -329,6 +345,7 @@
   <div class="overlay" id="overlay"></div>
   <aside class="drawer" id="drawer">
     <h3>Menu</h3>
+    <button id="goCalendario">📅 Calendário</button>
     <button id="goSave">🌍 Savearth</button>
     <button id="goGits"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Gits</button>
     <button id="goMeals">🍽️ Refeições</button>
@@ -382,8 +399,8 @@ const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
 
 /* ---------- Dados: localStorage + cloud ---------- */
 // Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
-// fsisep_polls só se lê: escreve-se no SQL Editor (ver supabase/schema.md).
-const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls'];
+// fsisep_polls e calendario só se leem aqui: escrevem-se fora do Admin (ver supabase/schema.md).
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls', 'calendario'];
 const SAVE_DELAY = 800;
 const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
 const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
@@ -723,9 +740,9 @@ const openMenu = v => { $('drawer').classList.toggle('show',v); $('overlay').cla
 $('menuBtn').onclick = () => openMenu(true);
 $('overlay').onclick = () => openMenu(false);
 
-const PAGES  = { save:'pageSave', gits:'pageGits', meals:'pageMeals', trello:'pageTrello', fsisep:'pageFsisep', users:'pageUsers', settings:'pageSettings' };
-const TITLES = { save:'Savearth', gits:'Gits', meals:'Refeições', trello:'Trello', fsisep:'FSISEP', users:'Users', settings:'Definições' };
-const NAV    = { save:'goSave', gits:'goGits', meals:'goMeals', trello:'goTrello', fsisep:'goFsisep', users:'goUsers', settings:'goSettings' };
+const PAGES  = { calendario:'pageCalendario', save:'pageSave', gits:'pageGits', meals:'pageMeals', trello:'pageTrello', fsisep:'pageFsisep', users:'pageUsers', settings:'pageSettings' };
+const TITLES = { calendario:'Calendário', save:'Savearth', gits:'Gits', meals:'Refeições', trello:'Trello', fsisep:'FSISEP', users:'Users', settings:'Definições' };
+const NAV    = { calendario:'goCalendario', save:'goSave', gits:'goGits', meals:'goMeals', trello:'goTrello', fsisep:'goFsisep', users:'goUsers', settings:'goSettings' };
 const hasUsers = () => !!(Aoi && Aoi.users);
 let current = PAGES[home] ? home : 'save';
 function go(page){
@@ -741,6 +758,7 @@ function go(page){
   if(page==='meals') renderMeals();
   if(page==='trello' && window.Trello) Trello.show();
   if(page==='fsisep') showFsisep();
+  if(page==='calendario') renderCalendario();
   if(page==='users') renderUsers();
   if(page==='settings') renderSettings();
 }
@@ -763,6 +781,22 @@ window.aoiBack = () => {
   if(current !== start){ go(start); return true; }
   flushNow();
   return false;
+};
+
+/* ---------- Calendário ---------- */
+function renderCalendario(){
+  const cal = store.get('calendario', null);
+  const has = !!cal && typeof cal.imagem === 'string' && cal.imagem.startsWith('data:image/');
+  $('calVazio').style.display = has ? 'none' : 'block';
+  $('calBarra').style.display = has ? 'flex' : 'none';
+  $('calImg').style.display = has ? 'block' : 'none';
+  if(!has) return;
+  $('calSemana').textContent = cal.semana || '';
+  if($('calImg').getAttribute('src') !== cal.imagem) $('calImg').src = cal.imagem;
+}
+$('calZoomBtn').onclick = () => {
+  const zoom = $('calImg').classList.toggle('zoom');
+  $('calZoomBtn').textContent = zoom ? '🔍 Reduzir' : '🔍 Aumentar';
 };
 
 /* ---------- FSISEP ---------- */

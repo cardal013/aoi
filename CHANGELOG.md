@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.38.0] - 2026-11-05
+### Added
+- Admin: *Calendário* tab above *Savearth* with the picture of the week, with a button to zoom in. The picture is kept in the admin's account, not in the app
+
 ## [Aoi v0.37.0] - 2026-11-05
 ### Added
 - Admin: *FSISEP* tab with the availability of the electronics team for meetings (one tab per poll, overlap grid, members list with search, *Who answered*, light and dark theme). The data is kept in the admin's account, not in the app

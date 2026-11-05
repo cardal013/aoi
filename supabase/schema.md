@@ -105,6 +105,8 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 
 Chave `fsisep_polls` (desde a v0.37.0): disponibilidade da eletrónica da FSISEP para a aba FSISEP do Admin. Tem nomes e horários de outras pessoas, por isso **não vai para o repo nem para os assets, que são públicos**: escreve-se só no SQL Editor e a página só a lê.
 
+Chave `calendario` (desde a v0.38.0): `{semana, imagem}`, com a imagem da semana em data URL JPEG, para a aba Calendário do Admin. Também tem nomes e horários de outras pessoas, por isso **nunca vai para o repo nem para os assets**. Escreve-a o agente `secretaria` do vault, depois de o Afonso a aprovar; a página só a lê.
+
 `public.is_admin()` (security definer) diz se a conta com sessão está em `admins`. O admin é pelo id da conta, por isso mudar o username não o tira.
 
 ### admin_meals (desde 25/10/2026, [`20261025_admin_meals.sql`](migrations/20261025_admin_meals.sql))
