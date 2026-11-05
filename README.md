@@ -118,6 +118,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.39.0
+- Admin: *Calendário* is now a real calendar: the month with labels on each day, and the selected day below
+
 ### 0.38.0
 - Admin: *Calendário* tab with the picture of the week
 

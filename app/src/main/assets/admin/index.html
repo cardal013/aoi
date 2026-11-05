@@ -32,12 +32,24 @@
   .page{display:none;padding:0 18px 18px}
   .page.active{display:flex;flex-direction:column;flex:1}
   #pageFsisep{padding:0}
-  .cal-semana-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
-  .cal-semana-bar span{color:var(--muted);font-size:14px}
-  #calScroll{overflow:auto;border-radius:12px}
-  #calImg{display:block;width:100%;height:auto}
-  #calImg.zoom{width:260%;max-width:none}
   #calVazio{color:var(--muted);font-size:15px;line-height:1.4}
+  .calw-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+  .calw-nav b{font-size:16px;text-align:center}
+  .calw-nav .pill-btn{width:42px;padding:0;font-size:20px}
+  .calw-cab,.calw-mes{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+  .calw-cab{text-align:center;color:var(--muted);font-size:13px;font-weight:600;margin-bottom:6px}
+  .calw-dia{background:var(--card);border:1px solid transparent;border-radius:9px;color:var(--text);padding:4px 3px;min-height:44px;cursor:pointer;display:flex;flex-direction:column;align-items:stretch;gap:2px;font-size:13px;text-align:left}
+  .calw-dia.fora{background:transparent;color:var(--muted)}
+  .calw-dia.hoje{border-color:var(--line)}
+  .calw-dia.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .calw-dia>span{padding-left:2px}
+  .calw-et{border-radius:4px;font-size:9.5px;font-weight:700;line-height:1.25;padding:0 3px;white-space:nowrap;overflow:hidden}
+  #calDiaTitulo{font-size:15px;margin:16px 0 8px}
+  .calw-linha{display:grid;grid-template-columns:50px 4px minmax(0,1fr);gap:9px;align-items:stretch;background:var(--card);border-radius:10px;padding:7px 9px;margin-bottom:5px;font-size:14px;line-height:1.25}
+  .calw-linha.pausa{background:transparent;color:var(--muted);padding:3px 9px}
+  .calw-linha small{font-size:11.5px;color:var(--muted);align-self:center;white-space:pre-line}
+  .calw-linha i{border-radius:3px;min-height:28px}
+  .calw-linha span{align-self:center}
   /* Fixa ao ecrã: na WebView o flex não lhe dava a altura toda. O top e a altura vêm do header (showFsisep) */
   #fsisepFrame{position:fixed;left:0;right:0;width:100%;max-width:1200px;margin:0 auto;border:0;display:block}
   #pageSave{padding-bottom: var(--bottom-space);}
@@ -260,14 +272,20 @@
   <!-- Página Trello (trello.js) -->
   <section class="page" id="pageTrello"></section>
 
-  <!-- Página Calendário: imagem da semana aprovada, vinda da chave calendario da admin_data -->
+  <!-- Página Calendário: semanas aprovadas, vindas da chave calendario_semanas da admin_data -->
   <section class="page" id="pageCalendario">
     <p id="calVazio">Ainda não há calendário publicado para esta conta.</p>
-    <div class="cal-semana-bar" id="calBarra" style="display:none">
-      <span id="calSemana"></span>
-      <button class="pill-btn" id="calZoomBtn">🔍 Aumentar</button>
+    <div id="calConteudo" style="display:none">
+      <div class="calw-nav">
+        <button class="pill-btn" id="calAntes" aria-label="Mês anterior">‹</button>
+        <b id="calTitulo"></b>
+        <button class="pill-btn" id="calDepois" aria-label="Mês seguinte">›</button>
+      </div>
+      <div class="calw-cab"><div>S</div><div>T</div><div>Q</div><div>Q</div><div>S</div><div>S</div><div>D</div></div>
+      <div class="calw-mes" id="calMes"></div>
+      <h4 id="calDiaTitulo"></h4>
+      <div id="calDiaLista"></div>
     </div>
-    <div id="calScroll"><img id="calImg" alt="Calendário da semana" style="display:none"></div>
   </section>
 
   <!-- Página FSISEP: disponibilidade da eletrónica (fsisep.html, os dados vêm da admin_data) -->
@@ -399,8 +417,9 @@ const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
 
 /* ---------- Dados: localStorage + cloud ---------- */
 // Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
-// fsisep_polls e calendario só se leem aqui: escrevem-se fora do Admin (ver supabase/schema.md).
-const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls', 'calendario'];
+// fsisep_polls e calendario_semanas só se leem aqui: escrevem-se fora do Admin (ver supabase/schema.md).
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls', 'calendario_semanas'];
+localStorage.removeItem('calendario'); // a imagem da semana da v0.38.0, que já não se usa
 const SAVE_DELAY = 800;
 const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
 const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
@@ -784,20 +803,113 @@ window.aoiBack = () => {
 };
 
 /* ---------- Calendário ---------- */
-function renderCalendario(){
-  const cal = store.get('calendario', null);
-  const has = !!cal && typeof cal.imagem === 'string' && cal.imagem.startsWith('data:image/');
-  $('calVazio').style.display = has ? 'none' : 'block';
-  $('calBarra').style.display = has ? 'flex' : 'none';
-  $('calImg').style.display = has ? 'block' : 'none';
-  if(!has) return;
-  $('calSemana').textContent = cal.semana || '';
-  if($('calImg').getAttribute('src') !== cal.imagem) $('calImg').src = cal.imagem;
-}
-$('calZoomBtn').onclick = () => {
-  const zoom = $('calImg').classList.toggle('zoom');
-  $('calZoomBtn').textContent = zoom ? '🔍 Reduzir' : '🔍 Aumentar';
+const CAL_DIAS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+const CAL_DIAS_NOME = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const CAL_MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const CAL_MAX_ETIQUETAS = 4;
+// tipo: [cor do bloco, cor do texto], as mesmas da imagem que a Maria gera (calendario.py do vault)
+const CAL_CORES = {
+  aula:['#8a93a8','#d7dbe6'], est:['#6d8bff','#a9bbff'], fs:['#e5574a','#ff9f96'], reuniao:['#e5574a','#fff'],
+  trab:['#e6a93a','#f5cf85'], plano:['#3fc9a5','#8ce6cf'], prazo:['#d65fb0','#f4b3e0'], opc:['#6d8bff','#a9bbff'],
+  pausa:['#4a4f5e','#8b90a0'],
 };
+const CAL_ETIQUETAS = { aula:'Aula', est:'Mes', opc:'Mes', fs:'FS', reuniao:'Reun', trab:'Trab', plano:'Plano', prazo:'Prazo' };
+let calDiaAberto = null, calMesAberto = null; // 'AAAA-MM-DD' e 'AAAA-MM'
+
+const calEl = (tag, cls, text) => {
+  const node = document.createElement(tag);
+  if(cls) node.className = cls;
+  if(text !== undefined) node.textContent = text;
+  return node;
+};
+const calUtc = iso => new Date(iso + 'T00:00:00Z');
+const calIso = date => date.toISOString().slice(0, 10);
+const calSomaDias = (iso, n) => { const d = calUtc(iso); d.setUTCDate(d.getUTCDate() + n); return calIso(d); };
+function calHoje(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+// { 'AAAA-MM-DD': [blocos] }, a partir das semanas aprovadas. Acordar e deitar não aparecem
+function calBlocosPorData(){
+  const semanas = store.get('calendario_semanas', null) || {}, porData = {};
+  Object.keys(semanas).filter(i => /^\d{4}-\d{2}-\d{2}$/.test(i)).forEach(inicio => {
+    const semana = semanas[inicio];
+    (semana.ordem_dias || CAL_DIAS).forEach((dia, i) => {
+      const blocos = ((semana.dias || {})[dia] || []).filter(b => b[0] !== 'sono');
+      if(blocos.length) porData[calSomaDias(inicio, i)] = blocos.map(([tipo, quando, texto]) => ({ tipo, quando, texto }));
+    });
+  });
+  return porData;
+}
+// Abre em hoje; sem nada hoje, no próximo dia marcado ou, se já passaram todos, no último
+function calEscolherDia(datas){
+  const hoje = calHoje();
+  return datas.find(d => d >= hoje) || datas[datas.length - 1];
+}
+function calEtiquetas(blocos){
+  const tipos = {};
+  blocos.forEach(b => { const nome = CAL_ETIQUETAS[b.tipo]; if(nome && !tipos[nome]) tipos[nome] = b.tipo; });
+  return Object.entries(tipos).slice(0, CAL_MAX_ETIQUETAS);
+}
+function calDesenharMes(porData){
+  const grelha = $('calMes'), hoje = calHoje();
+  const [ano, mes] = calMesAberto.split('-').map(Number);
+  const primeiro = `${calMesAberto}-01`;
+  const antes = (calUtc(primeiro).getUTCDay() + 6) % 7;
+  const noMes = new Date(Date.UTC(ano, mes, 0)).getUTCDate();
+  const total = Math.ceil((antes + noMes) / 7) * 7;
+  $('calTitulo').textContent = `${CAL_MESES[mes-1][0].toUpperCase()}${CAL_MESES[mes-1].slice(1)} de ${ano}`;
+  grelha.innerHTML = '';
+  for(let i = 0; i < total; i++){
+    const data = calSomaDias(primeiro, i - antes);
+    const fora = !data.startsWith(calMesAberto);
+    const botao = calEl('button', 'calw-dia' + (fora ? ' fora' : '') + (data === hoje ? ' hoje' : '') + (data === calDiaAberto ? ' sel' : ''));
+    botao.appendChild(calEl('span', '', String(+data.slice(8))));
+    calEtiquetas(porData[data] || []).forEach(([nome, tipo]) => {
+      const etiqueta = calEl('div', 'calw-et', nome);
+      etiqueta.style.background = tipo === 'reuniao' ? '#c0392b' : `color-mix(in srgb,${CAL_CORES[tipo][0]} 30%,transparent)`;
+      etiqueta.style.color = CAL_CORES[tipo][1];
+      botao.appendChild(etiqueta);
+    });
+    botao.onclick = () => { calDiaAberto = data; calMesAberto = data.slice(0, 7); renderCalendario(); };
+    grelha.appendChild(botao);
+  }
+}
+function calDesenharDia(porData){
+  const d = calUtc(calDiaAberto), lista = $('calDiaLista');
+  $('calDiaTitulo').textContent = `${CAL_DIAS_NOME[d.getUTCDay()]}, ${d.getUTCDate()} de ${CAL_MESES[d.getUTCMonth()]}`;
+  lista.innerHTML = '';
+  const blocos = porData[calDiaAberto] || [];
+  if(!blocos.length) lista.appendChild(calEl('p', '', 'Nada marcado neste dia.'));
+  blocos.forEach(b => {
+    const linha = calEl('div', 'calw-linha' + (b.tipo === 'pausa' ? ' pausa' : ''));
+    linha.appendChild(calEl('small', '', b.quando.replace('–', '\n')));
+    const barra = calEl('i');
+    barra.style.background = (CAL_CORES[b.tipo] || CAL_CORES.pausa)[0];
+    linha.appendChild(barra);
+    linha.appendChild(calEl('span', '', b.texto));
+    lista.appendChild(linha);
+  });
+}
+function renderCalendario(){
+  const porData = calBlocosPorData(), datas = Object.keys(porData).sort();
+  $('calVazio').style.display = datas.length ? 'none' : 'block';
+  $('calConteudo').style.display = datas.length ? 'block' : 'none';
+  if(!datas.length) return;
+  if(calDiaAberto === null){
+    calDiaAberto = calEscolherDia(datas);
+    calMesAberto = calDiaAberto.slice(0, 7);
+  }
+  calDesenharMes(porData);
+  calDesenharDia(porData);
+}
+function calMudarMes(delta){
+  const [ano, mes] = calMesAberto.split('-').map(Number);
+  calMesAberto = new Date(Date.UTC(ano, mes - 1 + delta, 1)).toISOString().slice(0, 7);
+  renderCalendario();
+}
+$('calAntes').onclick = () => calMudarMes(-1);
+$('calDepois').onclick = () => calMudarMes(1);
 
 /* ---------- FSISEP ---------- */
 // A página só carrega quando se abre a aba: escondida, a iframe não tem tamanho

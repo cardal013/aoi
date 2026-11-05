@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.39.0] - 2026-11-05
+### Changed
+- Admin: *Calendário* is now a real calendar instead of a picture: the month with labels on each day, and tap a day to see what you have from what time to what time
+
 ## [Aoi v0.38.0] - 2026-11-05
 ### Added
 - Admin: *Calendário* tab above *Savearth* with the picture of the week, with a button to zoom in. The picture is kept in the admin's account, not in the app
