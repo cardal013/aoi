@@ -103,6 +103,8 @@ A mesma migration pôs o trigger `user_chapter_progress_set_updated_at` (insert 
 | admins | `user_id` uuid PK (FK auth.users), `created_at` | select só da própria linha; ninguém escreve pela API (só no SQL Editor) |
 | admin_data | `user_id`, `key` text (PK juntos), `value` jsonb, `updated_at` (trigger) | `ALL` só se `auth.uid() = user_id` **e** `is_admin()` |
 
+Chave `fsisep_polls` (desde a v0.37.0): disponibilidade da eletrónica da FSISEP para a aba FSISEP do Admin. Tem nomes e horários de outras pessoas, por isso **não vai para o repo nem para os assets, que são públicos**: escreve-se só no SQL Editor e a página só a lê.
+
 `public.is_admin()` (security definer) diz se a conta com sessão está em `admins`. O admin é pelo id da conta, por isso mudar o username não o tira.
 
 ### admin_meals (desde 25/10/2026, [`20261025_admin_meals.sql`](migrations/20261025_admin_meals.sql))

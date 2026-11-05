@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.37.0] - 2026-11-05
+### Added
+- Admin: *FSISEP* tab with the availability of the electronics team for meetings (one tab per poll, overlap grid, members list with search, *Who answered*, light and dark theme). The data is kept in the admin's account, not in the app
+
 ## [Aoi v0.36.1] - 2026-10-31
 ### Changed
 - Admin: *Refeições* back to the first look: solid green and red rounded squares, weekday letters, legend with a hint below

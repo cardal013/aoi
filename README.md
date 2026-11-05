@@ -118,6 +118,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.37.0
+- Admin: *FSISEP* tab with the team's availability for meetings
+
 ### 0.36.1
 - Admin: *Refeições* back to the first look (solid green and red squares, legend below)
 

@@ -1,0 +1,913 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeting Polls Eletro</title>
+<!--
+  Aba FSISEP do Admin: cópia da vista "View overlap" dos meeting polls da FSISEP Platform.
+  Corre numa iframe do index.html. O repo é público, por isso os dados não estão aqui:
+  vêm da chave fsisep_polls da admin_data (só a conta do admin os lê) por postMessage.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Cores e medidas copiadas das variáveis CSS do site (tema escuro por omissão) */
+  :root {
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+    --radius: .5rem; --radius-sm: .375rem; --radius-lg: .625rem; --radius-xl: .875rem; --radius-pill: 999px;
+    --ease: cubic-bezier(.4, 0, .2, 1);
+    --coluna-horas: 4.5rem; --coluna-dia: 4.5rem;
+    --color-primary: #c0392b; --color-primary-hover: #d9483a; --color-primary-dim: #2b100d;
+    --color-surface: #0d0d0f; --color-surface-2: #141417; --color-surface-3: #1c1c20; --color-surface-4: #2a2a30;
+    --color-text: #ededf0; --color-text-muted: #a0a0aa; --color-text-dim: #80808b;
+    --color-border: #212126; --color-danger: #f87171;
+    --shadow-md: 0 4px 12px #00000057, 0 1px 3px #0000004d;
+    --shadow-lg: 0 12px 32px #00000070, 0 2px 8px #0000004d;
+    --ring: 0 0 0 3px #c0392b42;
+    --color-dept-1-bg: #16273b; --color-dept-1-text: #6cadfa;
+    --color-dept-2-bg: #2a1a0e; --color-dept-2-text: #e89154;
+    --color-dept-3-bg: #102723; --color-dept-3-text: #3fc9bb;
+    --color-dept-4-bg: #2a2109; --color-dept-4-text: #e0a838;
+    --color-dept-5-bg: #2a1220; --color-dept-5-text: #ec7fb4;
+    --color-dept-6-bg: #10281c; --color-dept-6-text: #45d19b;
+    --color-dept-7-bg: #1f1b36; --color-dept-7-text: #a893f5;
+    --color-dept-8-bg: #2c1314; --color-dept-8-text: #ef7a72;
+  }
+  :root[data-theme="light"] {
+    --color-primary: #c0392b; --color-primary-hover: #a52f22; --color-primary-dim: #fceceb;
+    --color-surface: #fafafb; --color-surface-2: #fff; --color-surface-3: #f2f2f4; --color-surface-4: #e4e4e8;
+    --color-text: #17171a; --color-text-muted: #5b5b65; --color-text-dim: #71717c;
+    --color-border: #e7e7ea; --color-danger: #dc2626;
+    --shadow-md: 0 4px 6px -1px #0000001a, 0 2px 4px -2px #0000001a;
+    --shadow-lg: 0 10px 15px -3px #0000001a, 0 4px 6px -4px #0000001a;
+    --color-dept-1-bg: #dbeafe; --color-dept-1-text: #1d4ed8;
+    --color-dept-2-bg: #ffe2cf; --color-dept-2-text: #b5450f;
+    --color-dept-3-bg: #ccf5ec; --color-dept-3-text: #0f766e;
+    --color-dept-4-bg: #fef3c7; --color-dept-4-text: #92620a;
+    --color-dept-5-bg: #fbe0ef; --color-dept-5-text: #b3186c;
+    --color-dept-6-bg: #dcfce7; --color-dept-6-text: #15803d;
+    --color-dept-7-bg: #ece5fc; --color-dept-7-text: #6425c9;
+    --color-dept-8-bg: #fde2e1; --color-dept-8-text: #b91c1c;
+  }
+
+  *, ::before, ::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  html { background-color: var(--color-surface); color: var(--color-text); font-family: var(--font-sans);
+         -webkit-font-smoothing: antialiased; line-height: 1.5; }
+  body { background-color: var(--color-surface); }
+  button, input { font: inherit; color: inherit; }
+
+  /* Enquanto não chegam os dados só se vê o aviso */
+  .sem-dados { display: none; color: var(--color-text-muted); font-size: .875rem; }
+  body.a-espera .sem-dados { display: block; }
+  body.a-espera .page-container > :not(.sem-dados) { display: none; }
+
+  /* Barra de cima */
+  .topbar { display: flex; align-items: center; justify-content: space-between; height: 3.25rem;
+            padding: 0 1rem; border-bottom: 1px solid var(--color-border); }
+  .logo { font-weight: 700; font-style: italic; font-size: 1.5rem; letter-spacing: -0.04em; }
+  .logo span { font-weight: 600; font-size: 1.15rem; letter-spacing: 0; }
+  .theme-toggle { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--color-border);
+                  border-radius: var(--radius-pill); background: var(--color-surface-2); cursor: pointer; }
+  .theme-toggle i { width: 1.375rem; height: 1.375rem; border-radius: 50%; display: grid; place-items: center;
+                    font-style: normal; font-size: .7rem; color: var(--color-text-dim); }
+  .theme-toggle i.ativo { background: var(--color-primary); color: #fff; }
+
+  .page-container { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .back-link { display: inline-flex; align-items: center; gap: .375rem; color: var(--color-text-muted);
+               font-size: .8125rem; padding: .25rem 0; margin-bottom: .75rem; }
+
+  /* Abas dos dois polls (mesmo estilo dos botões de modo do site) */
+  .mode-tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1.25rem; }
+  .mode-tab { padding: .5rem 1rem; border-radius: var(--radius-sm); border: 1px solid var(--color-border);
+              background-color: var(--color-surface-2); color: var(--color-text-muted); font-size: .875rem;
+              font-weight: 500; cursor: pointer; transition: background .15s, color .15s; }
+  .mode-tab:hover { background-color: var(--color-surface-3); }
+  .mode-tab--active, .mode-tab--active:hover { background-color: var(--color-primary); color: #fff; border-color: var(--color-primary); }
+  .mode-tab--outline { background-color: var(--color-surface-2); color: var(--color-text); border-color: var(--color-primary); cursor: default; }
+
+  .page-title { letter-spacing: -0.02em; font-size: 1.75rem; font-weight: 600; line-height: 1.3; }
+  .page-subtitle { color: var(--color-text-muted); margin-top: .125rem; font-size: .8125rem; }
+  .header-actions { display: flex; gap: .75rem; margin: 1rem 0; padding-bottom: 1rem; border-bottom: 1px solid var(--color-border); }
+  .btn-secondary { display: flex; align-items: center; gap: .375rem; padding: .5rem 1rem; border-radius: var(--radius-sm);
+                   border: 1px solid var(--color-border); background: transparent; color: var(--color-text-muted);
+                   font-size: .875rem; cursor: pointer; transition: background .15s, color .15s; }
+  .btn-secondary:hover { background-color: var(--color-surface-3); color: var(--color-text); }
+
+  /* Página com a grelha à esquerda e a lista de membros à direita */
+  .grid-toolbar { display: flex; align-items: center; gap: .75rem; margin-bottom: 1rem; }
+  .poll-layout { display: grid; grid-template-columns: minmax(0, 1fr) 15rem; gap: 1.25rem; align-items: start; }
+  .filter-hint { color: var(--color-text-muted); font-size: .8125rem; margin: 0 0 .75rem; }
+
+  /* Painel dos membros */
+  .members-panel { position: sticky; top: 1rem; background: var(--color-surface-2); border: 1px solid var(--color-border);
+                   border-radius: var(--radius-lg); padding: .75rem; display: flex; flex-direction: column; gap: .625rem; }
+  .members-head { display: flex; align-items: center; justify-content: space-between; }
+  .members-title { font-size: .8125rem; font-weight: 600; color: var(--color-text-muted); }
+  .members-clear { border: 0; background: transparent; color: var(--color-text-muted); font-size: .75rem; cursor: pointer; text-decoration: underline; }
+  .members-clear:hover { color: var(--color-text); }
+  .search-box { display: flex; align-items: center; gap: .5rem; padding: 0 .625rem; height: 2.125rem;
+                background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
+  .search-box:focus-within { border-color: var(--color-primary); box-shadow: var(--ring); }
+  .search-box svg { flex-shrink: 0; color: var(--color-text-dim); }
+  .search-box input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: .8125rem; }
+  .search-box input::placeholder { color: var(--color-text-dim); }
+  .members-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+  .member-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+                 padding: .375rem .5rem; border: 1px solid transparent; border-radius: var(--radius-sm);
+                 background: transparent; cursor: pointer; text-align: left; transition: background .15s, border-color .15s; }
+  .member-item:hover { background: var(--color-surface-3); }
+  .member-item--selected, .member-item--selected:hover { background: var(--color-primary-dim); border-color: var(--color-primary); }
+  .member-tag { flex-shrink: 0; font-size: .625rem; color: var(--color-text-dim); }
+  .members-empty { font-size: .75rem; color: var(--color-text-dim); padding: .25rem .5rem; }
+
+  /* Grelha de disponibilidade (CSS do componente AvailabilityGrid do site) */
+  .avail-grid-wrap { overflow-x: auto; user-select: none; }
+  .avail-grid { display: grid; gap: 1px; background-color: var(--color-border); border: 1px solid var(--color-border);
+                border-radius: var(--radius-lg); overflow: hidden; min-width: 32rem; }
+  .avail-corner { background-color: var(--color-surface-3); }
+  .avail-date-head { background-color: var(--color-surface-3); padding: .5rem .25rem; text-align: center; font-size: .6875rem;
+                     font-weight: 600; color: var(--color-text-muted); white-space: nowrap; }
+  .avail-time-label { position: relative; background-color: var(--color-surface-3); }
+  .avail-time-label::before { content: ""; position: absolute; top: -1px; left: 0; right: .25rem; height: 1px;
+                              background-color: var(--color-surface-3); z-index: 1; }
+  .avail-time-text { position: absolute; top: -.5px; right: .5rem; transform: translateY(-50%); font-size: .6875rem; font-weight: 500;
+                     font-variant-numeric: tabular-nums; color: var(--color-text-dim); line-height: 1; white-space: nowrap;
+                     background-color: var(--color-surface-3); padding: 0 .25rem; z-index: 2; }
+  .avail-cell { position: relative; height: 1.625rem; padding: 0; border: none; background-color: var(--color-surface-2); cursor: default; }
+  .avail-cell:focus-visible { outline: 2px solid var(--color-text); outline-offset: -2px; }
+  .avail-legend[hidden] { display: none; }
+  .avail-legend { display: flex; align-items: center; gap: .5rem; margin-top: .5rem; font-size: .6875rem; color: var(--color-text-dim); }
+  .avail-legend-bar { width: 6rem; height: .5rem; border-radius: var(--radius-pill); }
+  .avail-tooltip { position: fixed; display: flex; flex-direction: column; gap: .25rem; background-color: var(--color-surface-3);
+                   border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: .5rem .625rem; white-space: nowrap;
+                   box-shadow: var(--shadow-md); overflow-y: auto; opacity: 0; pointer-events: none; transition: opacity .15s; z-index: 250; }
+  .avail-tooltip--ready { opacity: 1; }
+  .avail-tooltip-count { font-size: .75rem; font-weight: 600; color: var(--color-text); }
+  .avail-tooltip-empty { font-size: .75rem; color: var(--color-text-dim); }
+
+  /* Avatar com as iniciais (PersonAvatar do site) */
+  .person-avatar-wrap { display: inline-flex; align-items: center; gap: .5rem; min-width: 0; }
+  .person-avatar { display: inline-grid; place-items: center; flex-shrink: 0; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+                   font-size: .625rem; font-weight: 600; letter-spacing: .02em; }
+  .person-avatar-name { font-size: .8125rem; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; }
+
+  /* Janela "Who answered" */
+  .modal-overlay { position: fixed; inset: 0; background-color: rgba(0, 0, 0, .65); display: flex; align-items: flex-end;
+                   justify-content: center; z-index: 100; }
+  .modal-overlay[hidden] { display: none; }
+  .modal-panel { background-color: var(--color-surface-2); border: 1px solid var(--color-border); border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+                 width: 100%; max-height: 90%; overflow-y: auto; box-shadow: var(--shadow-lg); }
+  @media (min-width: 480px) {
+    .modal-overlay { align-items: center; padding: 1.5rem; }
+    .modal-panel { border-radius: var(--radius-xl); max-width: 22rem; }
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; border-bottom: 1px solid var(--color-border); }
+  .modal-title { font-weight: 700; font-size: 1.125rem; letter-spacing: -.01em; }
+  .modal-close { display: grid; place-items: center; width: 2rem; height: 2rem; border-radius: var(--radius-sm); border: 0;
+                 background: transparent; color: var(--color-text-muted); cursor: pointer; font-size: 1.25rem; }
+  .modal-close:hover { background-color: var(--color-surface-3); color: var(--color-text); }
+  .modal-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
+  .ans-title { font-size: .8125rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: .5rem; display: flex; gap: .5rem; align-items: center; }
+  .ans-count { font-size: .6875rem; background: var(--color-surface-3); border-radius: var(--radius-pill); padding: 0 .5rem; }
+  .ans-list { list-style: none; display: flex; flex-direction: column; gap: .5rem; }
+  .ans-empty { font-size: .8125rem; color: var(--color-text-dim); }
+
+  @media (max-width: 800px) {
+    .poll-layout { grid-template-columns: minmax(0, 1fr); }
+    .members-panel { position: static; order: -1; }
+  }
+  @media (max-width: 480px) {
+    .page-title { font-size: 1.375rem; }
+    /* No telemóvel os cinco dias cabem na largura, sem deslizar para o lado */
+    :root { --coluna-horas: 3.25rem; --coluna-dia: 0px; }
+    .avail-grid { min-width: 0; }
+
+  }
+</style>
+</head>
+<body class="a-espera">
+
+<header class="topbar">
+  <div class="logo">FS<span>PLATFORM</span></div>
+  <button class="theme-toggle" id="botao-tema" type="button" aria-label="Toggle theme">
+    <i id="icone-escuro">☾</i><i id="icone-claro">☼</i>
+  </button>
+</header>
+
+<main class="page-container">
+  <p class="sem-dados" id="aviso-dados">A carregar…</p>
+  <div class="back-link">← Meeting Polls</div>
+
+  <nav class="mode-tabs" id="abas-polls"></nav>
+
+  <h1 class="page-title" id="titulo-poll"></h1>
+  <p class="page-subtitle" id="subtitulo-poll"></p>
+
+  <div class="header-actions">
+    <button class="btn-secondary" id="botao-quem-respondeu" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Who answered
+    </button>
+  </div>
+
+  <div class="grid-toolbar">
+    <span class="mode-tab mode-tab--outline">View overlap</span>
+  </div>
+
+  <div class="poll-layout">
+    <section>
+      <p class="filter-hint" id="aviso-filtro" hidden></p>
+      <div class="avail-grid-wrap">
+        <div class="avail-grid" id="grelha"></div>
+      </div>
+      <div class="avail-legend" id="legenda" title="Colour mixes how many of the people who answered are free with how this time ranks against the other times.">
+        <span>Fewer free</span><span class="avail-legend-bar" id="barra-legenda"></span><span>More free</span>
+      </div>
+    </section>
+
+    <aside class="members-panel">
+      <div class="members-head">
+        <h2 class="members-title">Members</h2>
+        <button class="members-clear" id="limpar-membros" type="button" hidden>Clear</button>
+      </div>
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="caixa-pesquisa" type="text" placeholder="Search people…" autocomplete="off">
+      </div>
+      <ul class="members-list" id="lista-membros"></ul>
+    </aside>
+  </div>
+</main>
+
+<div class="avail-tooltip" id="tooltip" role="tooltip" hidden></div>
+
+<div class="modal-overlay" id="janela-respostas" hidden>
+  <div class="modal-panel">
+    <div class="modal-header">
+      <h2 class="modal-title">Who answered</h2>
+      <button class="modal-close" id="fechar-janela" type="button" aria-label="Close">×</button>
+    </div>
+    <div class="modal-body" id="corpo-janela"></div>
+  </div>
+</div>
+
+<script>
+// Preenchidos por receber_dados com o que vem do Admin
+let PESSOAS = {};
+let POLLS = [];
+
+const DURACAO_SLOT_MIN = 30;
+const PESO_NUMERO_LIVRES = 0.5;      // mesmo peso que o site usa ao misturar "quantos livres" com a posição no ranking
+const NUMERO_CORES_DEPARTAMENTO = 8; // o site tem 8 pares de cores para os avatares
+const DIAS_SEMANA = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const INDICE_SEGUNDA = 1;  // Date.getDay(): 0 = domingo, 1 = segunda, …, 5 = sexta
+const INDICE_SEXTA = 5;
+const MARGEM_TOOLTIP_PX = 6;
+const MARGEM_JANELA_PX = 8;
+
+// Estado da página
+let poll_atual = null;
+let pessoas_escolhidas = [];   // ids escolhidos na lista de membros; vazio = contar toda a gente
+
+
+// ---------------------------------------------------------------------------
+// Funções de apoio: datas, horas, nomes
+// ---------------------------------------------------------------------------
+
+/** Converte "HH:MM" em minutos desde a meia-noite. */
+function hora_para_minutos(hora) {
+  const partes = hora.split(":");
+  return Number(partes[0]) * 60 + Number(partes[1]);
+}
+
+/** Converte minutos desde a meia-noite em "HH:MM". */
+function minutos_para_hora(minutos) {
+  const horas = String(Math.floor(minutos / 60)).padStart(2, "0");
+  const resto = String(minutos % 60).padStart(2, "0");
+  return horas + ":" + resto;
+}
+
+/** Devolve a lista de horas de início dos slots de um poll ("08:00", "08:30", …). */
+function horas_dos_slots(poll) {
+  const horas = [];
+  const inicio_min = hora_para_minutos(poll.hora_inicio);
+  const fim_min = hora_para_minutos(poll.hora_fim);
+  for (let minuto = inicio_min; minuto < fim_min; minuto += DURACAO_SLOT_MIN) {
+    horas.push(minutos_para_hora(minuto));
+  }
+  return horas;
+}
+
+/** Dia da semana de uma data: 0 = domingo, 1 = segunda, …, 6 = sábado. */
+function dia_da_semana(dia) {
+  // ao meio-dia para o fuso horário não mudar o dia
+  return new Date(dia + "T12:00:00").getDay();
+}
+
+/** "2026-11-02" → "Mon": só o dia da semana, sem dia do mês nem mês. */
+function formatar_cabecalho_dia(dia) {
+  return DIAS_SEMANA[dia_da_semana(dia)];
+}
+
+/** Dias do poll que caem de segunda a sexta (os fins de semana não aparecem). */
+function dias_uteis(poll) {
+  return poll.dias.filter(dia => {
+    const indice = dia_da_semana(dia);
+    return indice >= INDICE_SEGUNDA && indice <= INDICE_SEXTA;
+  });
+}
+
+/** Tira acentos e passa a minúsculas, para a pesquisa não depender disso. */
+function normalizar_texto(texto) {
+  return texto.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+}
+
+/** Ids das pessoas livres num slot (lista vazia se ninguém está livre). */
+function ids_livres_no_slot(poll, slot) {
+  const texto_ids = poll.livres[slot];
+  if (!texto_ids) {
+    return [];
+  }
+  return texto_ids.split(",").map(Number);
+}
+
+
+// ---------------------------------------------------------------------------
+// Cores: mesma fórmula do site (AvailabilityGrid)
+// ---------------------------------------------------------------------------
+
+/**
+ * Cria a função que dá um valor de 0 a 1 para cada número de pessoas livres.
+ * Mistura duas coisas, metade cada:
+ *  - quantos estão livres a dividir pelo total que conta (respondidos, ou escolhidos na lista de membros)
+ *  - a posição desse número no ranking de todos os slots do poll
+ * Recebe: lista com o número de livres de cada slot, e o total que conta.
+ * Devolve: função (numero_livres) → valor entre 0 e 1.
+ */
+function criar_escala_cores(contagens_slots, total_que_conta) {
+  const numero_slots = contagens_slots.length;
+
+  // quantos slots têm cada número de livres
+  const frequencia = new Map();
+  for (const contagem of contagens_slots) {
+    frequencia.set(contagem, (frequencia.get(contagem) || 0) + 1);
+  }
+
+  // posição de cada número no ranking (percentil ao meio do grupo)
+  const posicao_ranking = new Map();
+  const contagens_ordenadas = [...frequencia.keys()].sort((a, b) => a - b);
+  let slots_abaixo = 0;
+  for (const contagem of contagens_ordenadas) {
+    const slots_com_esta_contagem = frequencia.get(contagem);
+    posicao_ranking.set(contagem, (slots_abaixo + slots_com_esta_contagem / 2) / numero_slots);
+    slots_abaixo += slots_com_esta_contagem;
+  }
+
+  const ha_variedade = frequencia.size > 1;
+
+  return function (numero_livres) {
+    let fracao_livres = 0;
+    if (total_que_conta > 0) {
+      fracao_livres = Math.min(numero_livres / total_que_conta, 1);
+    }
+    if (!ha_variedade) {
+      return fracao_livres;
+    }
+    return PESO_NUMERO_LIVRES * fracao_livres + (1 - PESO_NUMERO_LIVRES) * posicao_ranking.get(numero_livres);
+  };
+}
+
+/** Valor 0..1 → cor de vermelho (0) a verde (1), igual ao site. */
+function cor_do_valor(valor) {
+  const valor_limitado = Math.min(Math.max(valor, 0), 1);
+  const matiz = Math.round(valor_limitado * 120);
+  return "hsl(" + matiz + " 65% 42% / 0.85)";
+}
+
+/** Índice (1..8) da cor do avatar, a partir do nome (mesmo hash do site). */
+function indice_cor_avatar(nome) {
+  const texto = (nome || "?").trim().toLowerCase();
+  let hash = 7;
+  for (let i = 0; i < texto.length; i++) {
+    hash = (hash * 33 + texto.charCodeAt(i)) | 0;
+  }
+  return (Math.abs(hash) % NUMERO_CORES_DEPARTAMENTO) + 1;
+}
+
+/** Iniciais do nome: primeira letra do primeiro e do último nome. */
+function iniciais(nome) {
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length === 1) {
+    return partes[0].slice(0, 2).toUpperCase();
+  }
+  return (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+}
+
+/** Cria o elemento do avatar com as iniciais e o nome ao lado. */
+function criar_avatar(id_pessoa) {
+  const nome = PESSOAS[id_pessoa];
+  const cor = indice_cor_avatar(nome);
+
+  const caixa = document.createElement("span");
+  caixa.className = "person-avatar-wrap";
+
+  const circulo = document.createElement("span");
+  circulo.className = "person-avatar";
+  circulo.style.backgroundColor = "var(--color-dept-" + cor + "-bg)";
+  circulo.style.color = "var(--color-dept-" + cor + "-text)";
+  circulo.textContent = iniciais(nome);
+
+  const texto_nome = document.createElement("span");
+  texto_nome.className = "person-avatar-name";
+  texto_nome.textContent = nome;
+
+  caixa.append(circulo, texto_nome);
+  return caixa;
+}
+
+
+// ---------------------------------------------------------------------------
+// Contagem com ou sem membros escolhidos
+// ---------------------------------------------------------------------------
+
+/** Está a filtrar por membros escolhidos na lista? */
+function esta_a_filtrar() {
+  return pessoas_escolhidas.length > 0;
+}
+
+/** Pessoas livres num slot que contam (todas, ou só os membros escolhidos). */
+function pessoas_livres_que_contam(slot) {
+  const livres = ids_livres_no_slot(poll_atual, slot);
+  if (!esta_a_filtrar()) {
+    return livres;
+  }
+  return livres.filter(id_pessoa => pessoas_escolhidas.includes(id_pessoa));
+}
+
+/** Total no denominador do tooltip ("X / total free"): convidados, ou escolhidos. */
+function total_no_tooltip() {
+  if (esta_a_filtrar()) {
+    return pessoas_escolhidas.length;
+  }
+  return poll_atual.convidados.length;
+}
+
+/** Total usado na escala de cores: quem respondeu (entre os escolhidos, se houver filtro). */
+function total_para_cores() {
+  if (!esta_a_filtrar()) {
+    return poll_atual.responderam.length;
+  }
+  const escolhidos_que_responderam = pessoas_escolhidas.filter(id_pessoa => poll_atual.responderam.includes(id_pessoa));
+  return escolhidos_que_responderam.length;
+}
+
+
+// ---------------------------------------------------------------------------
+// Desenhar a página
+// ---------------------------------------------------------------------------
+
+/** Desenha as abas (uma por poll) e marca a que está aberta. */
+function desenhar_abas() {
+  const caixa_abas = document.getElementById("abas-polls");
+  caixa_abas.innerHTML = "";
+  for (const poll of POLLS) {
+    const aba = document.createElement("button");
+    aba.type = "button";
+    aba.className = "mode-tab";
+    if (poll === poll_atual) {
+      aba.classList.add("mode-tab--active");
+    }
+    aba.textContent = poll.titulo;
+    aba.addEventListener("click", () => abrir_poll(poll));
+    caixa_abas.appendChild(aba);
+  }
+}
+
+/** Escreve o título e a linha "Mon–Fri · horas · convidados · respostas". */
+function desenhar_cabecalho() {
+  document.getElementById("titulo-poll").textContent = poll_atual.titulo;
+  document.getElementById("subtitulo-poll").textContent =
+    "Mon–Fri" +
+    " · " + poll_atual.hora_inicio + "–" + poll_atual.hora_fim +
+    " · " + poll_atual.convidados.length + " invited" +
+    " · " + poll_atual.responderam.length + " answered";
+  document.title = poll_atual.titulo;
+}
+
+/** Desenha a grelha dias × horas com as cores do overlap. */
+function desenhar_grelha() {
+  const grelha = document.getElementById("grelha");
+  const horas = horas_dos_slots(poll_atual);
+  const dias_visiveis = dias_uteis(poll_atual);
+  grelha.innerHTML = "";
+  grelha.style.gridTemplateColumns = "var(--coluna-horas) repeat(" + dias_visiveis.length + ", minmax(var(--coluna-dia), 1fr))";
+
+  // escala de cores calculada com todos os slots do poll (incluindo o fim de semana),
+  // para as cores ficarem iguais às do site
+  const contagens = [];
+  for (const dia of poll_atual.dias) {
+    for (const hora of horas) {
+      contagens.push(pessoas_livres_que_contam(dia + "T" + hora).length);
+    }
+  }
+  const total_cores = total_para_cores();
+  const escala = criar_escala_cores(contagens, total_cores);
+
+  // linha de cima: canto vazio + nome de cada dia
+  const canto = document.createElement("div");
+  canto.className = "avail-corner";
+  grelha.appendChild(canto);
+  for (const dia of dias_visiveis) {
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "avail-date-head";
+    cabecalho.textContent = formatar_cabecalho_dia(dia);
+    grelha.appendChild(cabecalho);
+  }
+
+  // uma linha por hora: etiqueta + uma célula por dia
+  for (const hora of horas) {
+    const etiqueta = document.createElement("div");
+    etiqueta.className = "avail-time-label";
+    etiqueta.innerHTML = '<span class="avail-time-text">' + hora + "</span>";
+    grelha.appendChild(etiqueta);
+
+    for (const dia of dias_visiveis) {
+      grelha.appendChild(criar_celula(dia + "T" + hora, escala, total_cores));
+    }
+  }
+}
+
+/** Cria a célula de um slot, com a cor e os eventos do tooltip. */
+function criar_celula(slot, escala, total_cores) {
+  const livres = pessoas_livres_que_contam(slot);
+  const celula = document.createElement("button");
+  celula.type = "button";
+  celula.className = "avail-cell";
+  celula.tabIndex = 0;
+
+  // com uma só pessoa escolhida mostra-se o horário dela:
+  // verde onde está livre, vazio onde não está
+  const mostra_horario_de_uma_pessoa = (pessoas_escolhidas.length === 1);
+  if (mostra_horario_de_uma_pessoa) {
+    const pessoa_livre = (livres.length > 0);
+    if (pessoa_livre) {
+      celula.style.backgroundColor = cor_do_valor(1);
+    }
+  } else if (total_cores > 0) {
+    celula.style.backgroundColor = cor_do_valor(escala(livres.length));
+  }
+
+  const nomes = livres.map(id_pessoa => PESSOAS[id_pessoa]).join(", ");
+  let descricao = livres.length + " / " + total_no_tooltip() + " free";
+  if (nomes) {
+    descricao += ": " + nomes;
+  }
+  celula.setAttribute("aria-label", descricao);
+
+  celula.addEventListener("pointerenter", () => mostrar_tooltip(slot, celula));
+  celula.addEventListener("pointerleave", esconder_tooltip);
+  celula.addEventListener("focus", () => mostrar_tooltip(slot, celula));
+  celula.addEventListener("blur", esconder_tooltip);
+  return celula;
+}
+
+/** Pinta a barra da legenda com as 5 cores de referência do site. */
+function desenhar_legenda() {
+  const cores = [0, 0.25, 0.5, 0.75, 1].map(cor_do_valor);
+  document.getElementById("barra-legenda").style.background = "linear-gradient(to right, " + cores.join(", ") + ")";
+}
+
+/** Mostra a frase que explica o que a grelha está a mostrar, quando há membros escolhidos. */
+function desenhar_aviso_filtro() {
+  const aviso = document.getElementById("aviso-filtro");
+  if (!esta_a_filtrar()) {
+    aviso.hidden = true;
+    return;
+  }
+  const nao_responderam = pessoas_escolhidas.filter(id_pessoa => !poll_atual.responderam.includes(id_pessoa));
+  let texto;
+  if (pessoas_escolhidas.length === 1) {
+    texto = "Showing " + PESSOAS[pessoas_escolhidas[0]] + "'s availability (green = free).";
+  } else {
+    texto = "Showing overlap for " + pessoas_escolhidas.length + " selected people.";
+  }
+  if (nao_responderam.length > 0) {
+    const nomes = nao_responderam.map(id_pessoa => PESSOAS[id_pessoa]).join(", ");
+    texto += " Not answered yet: " + nomes + ".";
+  }
+  aviso.textContent = texto;
+  aviso.hidden = false;
+}
+
+/** Guarda os dados vindos do Admin e mostra a página; sem dados fica o aviso. */
+function receber_dados(dados) {
+  if (!dados || !dados.polls || dados.polls.length === 0) {
+    document.getElementById("aviso-dados").textContent = "Sem dados: esta conta não tem os meeting polls guardados, ou ainda não houve ligação à cloud.";
+    document.body.classList.add("a-espera");
+    return;
+  }
+  PESSOAS = dados.pessoas;
+  POLLS = dados.polls;
+  poll_atual = POLLS.find(poll => poll_atual && poll.id === poll_atual.id) || POLLS[0];
+  document.body.classList.remove("a-espera");
+  desenhar_tudo();
+}
+
+/** Abre um poll (ao mudar de aba) e redesenha tudo. */
+function abrir_poll(poll) {
+  poll_atual = poll;
+  // só ficam escolhidas as pessoas que também estão convidadas neste poll
+  pessoas_escolhidas = pessoas_escolhidas.filter(id_pessoa => poll.convidados.includes(id_pessoa));
+  desenhar_tudo();
+}
+
+/** Redesenha a página inteira com o estado atual. */
+function desenhar_tudo() {
+  desenhar_abas();
+  desenhar_cabecalho();
+  desenhar_lista_membros();
+  desenhar_aviso_filtro();
+  // com uma só pessoa a grelha é verde/vazio, por isso a escala de cores não faz sentido
+  document.getElementById("legenda").hidden = (pessoas_escolhidas.length === 1);
+  desenhar_grelha();
+}
+
+
+// ---------------------------------------------------------------------------
+// Tooltip ao passar por cima de uma célula
+// ---------------------------------------------------------------------------
+
+/**
+ * Mostra o tooltip com "X / N free" e a lista de quem está livre.
+ * Fica por cima da célula se couber, senão por baixo (como no site).
+ */
+function mostrar_tooltip(slot, celula) {
+  const tooltip = document.getElementById("tooltip");
+  const livres = pessoas_livres_que_contam(slot);
+
+  tooltip.innerHTML = "";
+  tooltip.style.maxHeight = "";
+  const contagem = document.createElement("p");
+  contagem.className = "avail-tooltip-count";
+  contagem.textContent = livres.length + " / " + total_no_tooltip() + " free";
+  tooltip.appendChild(contagem);
+
+  for (const id_pessoa of livres) {
+    tooltip.appendChild(criar_avatar(id_pessoa));
+  }
+  if (livres.length === 0) {
+    const vazio = document.createElement("p");
+    vazio.className = "avail-tooltip-empty";
+    vazio.textContent = "No one free";
+    tooltip.appendChild(vazio);
+  }
+
+  tooltip.hidden = false;
+  posicionar_tooltip(tooltip, celula);
+  tooltip.classList.add("avail-tooltip--ready");
+}
+
+/** Calcula onde pôr o tooltip para não sair da janela. */
+function posicionar_tooltip(tooltip, celula) {
+  const caixa_celula = celula.getBoundingClientRect();
+  const caixa_tooltip = tooltip.getBoundingClientRect();
+  const espaco_em_cima = caixa_celula.top - MARGEM_JANELA_PX - MARGEM_TOOLTIP_PX;
+  const espaco_em_baixo = window.innerHeight - caixa_celula.bottom - MARGEM_JANELA_PX - MARGEM_TOOLTIP_PX;
+
+  const cabe_em_cima = caixa_tooltip.height <= espaco_em_cima;
+  const ha_mais_espaco_em_cima = espaco_em_cima >= espaco_em_baixo;
+  const vai_para_cima = cabe_em_cima || ha_mais_espaco_em_cima;
+
+  let espaco_disponivel = vai_para_cima ? espaco_em_cima : espaco_em_baixo;
+  espaco_disponivel = Math.max(espaco_disponivel, 0);
+  const altura = Math.min(caixa_tooltip.height, espaco_disponivel);
+
+  let topo;
+  if (vai_para_cima) {
+    topo = caixa_celula.top - MARGEM_TOOLTIP_PX - altura;
+  } else {
+    topo = caixa_celula.bottom + MARGEM_TOOLTIP_PX;
+  }
+
+  const esquerda_centrada = caixa_celula.left + caixa_celula.width / 2 - caixa_tooltip.width / 2;
+  const esquerda_maxima = Math.max(window.innerWidth - caixa_tooltip.width - MARGEM_JANELA_PX, MARGEM_JANELA_PX);
+  const esquerda = Math.min(Math.max(esquerda_centrada, MARGEM_JANELA_PX), esquerda_maxima);
+
+  tooltip.style.top = topo + "px";
+  tooltip.style.left = esquerda + "px";
+  tooltip.style.maxHeight = espaco_disponivel + "px";
+}
+
+/** Esconde o tooltip. */
+function esconder_tooltip() {
+  const tooltip = document.getElementById("tooltip");
+  tooltip.classList.remove("avail-tooltip--ready");
+  tooltip.hidden = true;
+}
+
+
+// ---------------------------------------------------------------------------
+// Lista de membros à direita (com pesquisa)
+// ---------------------------------------------------------------------------
+
+/** Convidados do poll aberto cujo nome contém o texto da pesquisa, por ordem alfabética. */
+function procurar_membros(texto) {
+  const texto_normalizado = normalizar_texto(texto);
+  const encontrados = [];
+  for (const id_pessoa of poll_atual.convidados) {
+    const nome_normalizado = normalizar_texto(PESSOAS[id_pessoa]);
+    if (nome_normalizado.includes(texto_normalizado)) {
+      encontrados.push(id_pessoa);
+    }
+  }
+  encontrados.sort((a, b) => PESSOAS[a].localeCompare(PESSOAS[b]));
+  return encontrados;
+}
+
+/** Desenha a lista de membros; os escolhidos ficam realçados. */
+function desenhar_lista_membros() {
+  const lista = document.getElementById("lista-membros");
+  const texto_pesquisa = document.getElementById("caixa-pesquisa").value;
+  const encontrados = procurar_membros(texto_pesquisa);
+  lista.innerHTML = "";
+
+  if (encontrados.length === 0) {
+    const sem_resultados = document.createElement("li");
+    sem_resultados.className = "members-empty";
+    sem_resultados.textContent = "No people found";
+    lista.appendChild(sem_resultados);
+  }
+
+  for (const id_pessoa of encontrados) {
+    lista.appendChild(criar_item_membro(id_pessoa));
+  }
+
+  // o "Clear" só aparece quando há alguém escolhido
+  document.getElementById("limpar-membros").hidden = !esta_a_filtrar();
+}
+
+/** Cria a linha de um membro: avatar, nome e aviso se ainda não respondeu. */
+function criar_item_membro(id_pessoa) {
+  const item = document.createElement("li");
+  const botao = document.createElement("button");
+  botao.type = "button";
+  botao.className = "member-item";
+
+  const esta_escolhido = pessoas_escolhidas.includes(id_pessoa);
+  if (esta_escolhido) {
+    botao.classList.add("member-item--selected");
+  }
+  botao.setAttribute("aria-pressed", String(esta_escolhido));
+  botao.appendChild(criar_avatar(id_pessoa));
+
+  const ja_respondeu = poll_atual.responderam.includes(id_pessoa);
+  if (!ja_respondeu) {
+    const etiqueta = document.createElement("span");
+    etiqueta.className = "member-tag";
+    etiqueta.textContent = "no answer";
+    botao.appendChild(etiqueta);
+  }
+
+  botao.addEventListener("click", () => alternar_membro(id_pessoa));
+  item.appendChild(botao);
+  return item;
+}
+
+/** Escolhe o membro se ainda não estava escolhido; tira-o se já estava. Redesenha a página. */
+function alternar_membro(id_pessoa) {
+  if (pessoas_escolhidas.includes(id_pessoa)) {
+    pessoas_escolhidas = pessoas_escolhidas.filter(id => id !== id_pessoa);
+  } else {
+    pessoas_escolhidas.push(id_pessoa);
+  }
+  desenhar_tudo();
+}
+
+/** Liga a caixa de pesquisa (filtra a lista) e o botão "Clear". */
+function ligar_lista_membros() {
+  const caixa = document.getElementById("caixa-pesquisa");
+  caixa.addEventListener("input", desenhar_lista_membros);
+  caixa.addEventListener("keydown", evento => {
+    // Enter escolhe o primeiro membro da lista filtrada
+    if (evento.key !== "Enter") {
+      return;
+    }
+    const encontrados = procurar_membros(caixa.value);
+    if (encontrados.length > 0) {
+      caixa.value = "";
+      alternar_membro(encontrados[0]);
+    }
+  });
+
+  document.getElementById("limpar-membros").addEventListener("click", () => {
+    pessoas_escolhidas = [];
+    desenhar_tudo();
+  });
+}
+
+
+// ---------------------------------------------------------------------------
+// Janela "Who answered" e tema claro/escuro
+// ---------------------------------------------------------------------------
+
+/** Cria uma secção da janela (título, número e lista de pessoas). */
+function criar_secao_respostas(titulo, ids_pessoas, texto_se_vazio) {
+  const secao = document.createElement("section");
+  const cabecalho = document.createElement("h3");
+  cabecalho.className = "ans-title";
+  cabecalho.innerHTML = titulo + ' <span class="ans-count">' + ids_pessoas.length + "</span>";
+  secao.appendChild(cabecalho);
+
+  if (ids_pessoas.length === 0) {
+    const vazio = document.createElement("p");
+    vazio.className = "ans-empty";
+    vazio.textContent = texto_se_vazio;
+    secao.appendChild(vazio);
+    return secao;
+  }
+
+  const lista = document.createElement("ul");
+  lista.className = "ans-list";
+  const ordenados = [...ids_pessoas].sort((a, b) => PESSOAS[a].localeCompare(PESSOAS[b]));
+  for (const id_pessoa of ordenados) {
+    const item = document.createElement("li");
+    item.appendChild(criar_avatar(id_pessoa));
+    lista.appendChild(item);
+  }
+  secao.appendChild(lista);
+  return secao;
+}
+
+/** Abre a janela com quem respondeu e quem falta, para o poll aberto. */
+function abrir_janela_respostas() {
+  const corpo = document.getElementById("corpo-janela");
+  const responderam = poll_atual.convidados.filter(id_pessoa => poll_atual.responderam.includes(id_pessoa));
+  const faltam = poll_atual.convidados.filter(id_pessoa => !poll_atual.responderam.includes(id_pessoa));
+
+  corpo.innerHTML = "";
+  corpo.appendChild(criar_secao_respostas("Not answered yet", faltam, "Everyone has answered."));
+  corpo.appendChild(criar_secao_respostas("Answered", responderam, "Nobody has answered yet."));
+  document.getElementById("janela-respostas").hidden = false;
+  window.parent.postMessage({ fsisepJanela: true }, "*");
+}
+
+function fechar_janela_respostas() {
+  document.getElementById("janela-respostas").hidden = true;
+  window.parent.postMessage({ fsisepJanela: false }, "*");
+}
+
+/** Aplica o tema e marca o ícone certo no botão. */
+function aplicar_tema(tema) {
+  const tema_claro = (tema === "light");
+  if (tema_claro) {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+  document.getElementById("icone-claro").classList.toggle("ativo", tema_claro);
+  document.getElementById("icone-escuro").classList.toggle("ativo", !tema_claro);
+}
+
+function ligar_botoes() {
+  document.getElementById("botao-quem-respondeu").addEventListener("click", abrir_janela_respostas);
+  document.getElementById("fechar-janela").addEventListener("click", fechar_janela_respostas);
+  document.getElementById("janela-respostas").addEventListener("click", evento => {
+    // clicar fora do painel fecha a janela
+    if (evento.target.id === "janela-respostas") {
+      fechar_janela_respostas();
+    }
+  });
+  document.getElementById("botao-tema").addEventListener("click", () => {
+    const esta_claro = document.documentElement.getAttribute("data-theme") === "light";
+    aplicar_tema(esta_claro ? "dark" : "light");
+  });
+  // tal como no site, o tooltip esconde-se ao fazer scroll ou mudar o tamanho da janela
+  window.addEventListener("scroll", esconder_tooltip, { capture: true, passive: true });
+  window.addEventListener("resize", esconder_tooltip);
+}
+
+
+// ---------------------------------------------------------------------------
+// Arranque
+// ---------------------------------------------------------------------------
+aplicar_tema("dark");
+desenhar_legenda();
+ligar_lista_membros();
+ligar_botoes();
+window.addEventListener("message", evento => {
+  if (evento.source !== window.parent || !evento.data) {
+    return;
+  }
+  if ("fsisep" in evento.data) {
+    receber_dados(evento.data.fsisep);
+  }
+  if (evento.data.fsisepFechar) {
+    fechar_janela_respostas();
+  }
+});
+window.parent.postMessage({ fsisepPronta: true }, "*");
+</script>
+</body>
+</html>

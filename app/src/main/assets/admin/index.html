@@ -31,6 +31,9 @@
   .pill-btn:hover{background:var(--card2)}
   .page{display:none;padding:0 18px 18px}
   .page.active{display:flex;flex-direction:column;flex:1}
+  #pageFsisep{padding:0}
+  /* Fixa ao ecrã: na WebView o flex não lhe dava a altura toda. O top e a altura vêm do header (showFsisep) */
+  #fsisepFrame{position:fixed;left:0;right:0;width:100%;max-width:1200px;margin:0 auto;border:0;display:block}
   #pageSave{padding-bottom: var(--bottom-space);}
 
   /* Calendário */
@@ -251,6 +254,9 @@
   <!-- Página Trello (trello.js) -->
   <section class="page" id="pageTrello"></section>
 
+  <!-- Página FSISEP: disponibilidade da eletrónica (fsisep.html, os dados vêm da admin_data) -->
+  <section class="page" id="pageFsisep"><iframe id="fsisepFrame" title="FSISEP"></iframe></section>
+
   <!-- Página Users (só no site; na app está em Account) -->
   <section class="page" id="pageUsers">
     <input type="search" id="usersSearch" placeholder="Procurar username">
@@ -327,6 +333,7 @@
     <button id="goGits"><svg class="gh" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Gits</button>
     <button id="goMeals">🍽️ Refeições</button>
     <button id="goTrello">📋 Trello</button>
+    <button id="goFsisep">🏎️ FSISEP</button>
     <button id="goUsers" style="display:none">👥 Users</button>
     <button id="goSettings">⚙️ Definições</button>
     <button id="goAoi">↩️ Voltar ao Aoi</button>
@@ -375,7 +382,8 @@ const Aoi = window.Aoi || null;           // ponte para o Kotlin (AdminScreen)
 
 /* ---------- Dados: localStorage + cloud ---------- */
 // Chaves que vão para a tabela admin_data. O token e a lista do GitHub ficam só no telemóvel.
-const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals'];
+// fsisep_polls só se lê: escreve-se no SQL Editor (ver supabase/schema.md).
+const SYNCED = ['shifts', 'rate', 'fuelPrice', 'consumption', 'shiftDefault', 'home', 'filter', 'meals', 'fsisep_polls'];
 const SAVE_DELAY = 800;
 const readRaw = (k, d) => { try{ return JSON.parse(localStorage.getItem(k)) ?? d }catch(e){ return d } };
 const writeRaw = (k, v) => { try{ localStorage.setItem(k, JSON.stringify(v)) }catch(e){} };
@@ -715,9 +723,9 @@ const openMenu = v => { $('drawer').classList.toggle('show',v); $('overlay').cla
 $('menuBtn').onclick = () => openMenu(true);
 $('overlay').onclick = () => openMenu(false);
 
-const PAGES  = { save:'pageSave', gits:'pageGits', meals:'pageMeals', trello:'pageTrello', users:'pageUsers', settings:'pageSettings' };
-const TITLES = { save:'Savearth', gits:'Gits', meals:'Refeições', trello:'Trello', users:'Users', settings:'Definições' };
-const NAV    = { save:'goSave', gits:'goGits', meals:'goMeals', trello:'goTrello', users:'goUsers', settings:'goSettings' };
+const PAGES  = { save:'pageSave', gits:'pageGits', meals:'pageMeals', trello:'pageTrello', fsisep:'pageFsisep', users:'pageUsers', settings:'pageSettings' };
+const TITLES = { save:'Savearth', gits:'Gits', meals:'Refeições', trello:'Trello', fsisep:'FSISEP', users:'Users', settings:'Definições' };
+const NAV    = { save:'goSave', gits:'goGits', meals:'goMeals', trello:'goTrello', fsisep:'goFsisep', users:'goUsers', settings:'goSettings' };
 const hasUsers = () => !!(Aoi && Aoi.users);
 let current = PAGES[home] ? home : 'save';
 function go(page){
@@ -732,6 +740,7 @@ function go(page){
   if(page==='gits') renderGits();
   if(page==='meals') renderMeals();
   if(page==='trello' && window.Trello) Trello.show();
+  if(page==='fsisep') showFsisep();
   if(page==='users') renderUsers();
   if(page==='settings') renderSettings();
 }
@@ -745,6 +754,7 @@ $('goAoi').onclick = closeAdmin;
 // Botão Voltar do Android: fecha modal, depois o menu, depois volta ao ecrã inicial; false = sair do Admin
 window.aoiBack = () => {
   if(window.Trello && Trello.back()) return true;
+  if(fsisepDialogOpen){ $('fsisepFrame').contentWindow.postMessage({ fsisepFechar:true }, '*'); return true; }
   const open = document.querySelector('.modal.show');
   if(open){ open.classList.remove('show'); return true; }
   if(selected){ endSelection(); return true; }
@@ -754,6 +764,24 @@ window.aoiBack = () => {
   flushNow();
   return false;
 };
+
+/* ---------- FSISEP ---------- */
+// A página só carrega quando se abre a aba: escondida, a iframe não tem tamanho
+let fsisepDialogOpen = false;
+const sendFsisep = () => $('fsisepFrame').contentWindow.postMessage({ fsisep:store.get('fsisep_polls', null) }, '*');
+function showFsisep(){
+  const frame = $('fsisepFrame');
+  const top = document.querySelector('header').offsetHeight;
+  frame.style.top = top + 'px';
+  frame.style.height = `calc(100% - ${top}px)`;
+  if(frame.getAttribute('src')) sendFsisep();
+  else frame.setAttribute('src', 'fsisep.html');
+}
+window.addEventListener('message', e => {
+  if(e.source !== $('fsisepFrame').contentWindow || !e.data) return;
+  if(e.data.fsisepPronta) sendFsisep();
+  if('fsisepJanela' in e.data) fsisepDialogOpen = e.data.fsisepJanela;
+});
 
 /* ---------- Gits ---------- */
 const GH_USER = 'cardal013';
