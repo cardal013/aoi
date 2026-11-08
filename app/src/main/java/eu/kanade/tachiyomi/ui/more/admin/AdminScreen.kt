@@ -49,7 +49,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 /**
- * Admin: Savearth, Gits, Refeições, Trello e Definições, numa página web (assets/admin/index.html, a mesma do site).
+ * Admin: Calendário, Savearth, Gits, Refeições, FSISEP e Definições, numa página web (assets/admin/index.html, a mesma do site).
  * Só aparece no More para contas admin. Os dados sincronizam com a cloud através do [AdminViewModel].
  */
 class AdminScreen : Screen() {
@@ -60,7 +60,7 @@ class AdminScreen : Screen() {
         val viewModel = metroViewModel<AdminViewModel>()
         var webView by remember { mutableStateOf<WebView?>(null) }
 
-        // <input type="file"> da página (anexos do Trello): a resposta tem de chegar sempre, mesmo vazia
+        // <input type="file"> da página: a resposta tem de chegar sempre, mesmo vazia
         var fileCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
         val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             fileCallback?.onReceiveValue(uri?.let { arrayOf(it) })

@@ -1118,7 +1118,7 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
     </div>
   </section>
 
-  <!-- ADMIN: só para contas admin (tabela admins). Savearth, Gits, Refeições, Trello, Users e Definições -->
+  <!-- ADMIN: só para contas admin (tabela admins). Calendário, Savearth, Gits, Refeições, FSISEP, Users e Definições -->
   <section id="app-view-admin">
     <iframe id="adminFrame" title="Admin"></iframe>
   </section>
@@ -2054,12 +2054,18 @@ footer{ border-top:1px solid var(--border); padding:56px 0 40px; }
       var isOpen = userMenu.classList.toggle('open');
       userMenuBtn.setAttribute('aria-expanded', String(isOpen));
     });
-    document.addEventListener('click', function(e){
-      if (!userMenu.classList.contains('open')) return;
-      if (userMenu.contains(e.target) || userMenuBtn.contains(e.target)) return;
+    var closeUserMenu = function(){
       userMenu.classList.remove('open');
       userMenuBtn.setAttribute('aria-expanded', 'false');
+    };
+    document.addEventListener('click', function(e){
+      if (!userMenu.classList.contains('open')) return;
+      if (userMenuBtn.contains(e.target)) return;
+      if (userMenu.contains(e.target) && !e.target.closest('button')) return;
+      closeUserMenu();
     });
+    // Um clique dentro da iframe do Admin não chega ao document: tira o foco à página
+    window.addEventListener('blur', closeUserMenu);
   }
 
   // --- PASSWORD SHOW/HIDE TOGGLES (login, signup, change password) ---
