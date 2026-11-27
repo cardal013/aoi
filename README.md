@@ -118,6 +118,12 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.40.0
+- *Library refresh* widget: update by reading status and see the manga with new chapters
+- Share on the manga screen's top bar, with the cover, title and link
+- Account: why a sync failed, with *Retry*
+- Admin: no *Trello*; *Calendário* as start screen
+
 ### 0.39.0
 - Admin: *Calendário* is now a real calendar: the month with labels on each day, and the selected day below
 

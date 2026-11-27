@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -80,6 +81,7 @@ fun AccountScreenContent(
     onNavigateToCloudLibrary: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
+    onRetrySync: () -> Unit,
     onLogin: (String, String) -> Unit,
     onSignUp: (String, String) -> Unit,
     onLogout: () -> Unit,
@@ -121,6 +123,7 @@ fun AccountScreenContent(
                         onCloudLibrary = onNavigateToCloudLibrary,
                         onRemoveLocalOnly = onRemoveLocalOnly,
                         onKeepLocalOnly = onKeepLocalOnly,
+                        onRetrySync = onRetrySync,
                     )
                 } else {
                     AuthView(onLogin = onLogin, onSignUp = onSignUp)
@@ -263,6 +266,7 @@ private fun ProfileView(
     onCloudLibrary: () -> Unit,
     onRemoveLocalOnly: () -> Unit,
     onKeepLocalOnly: () -> Unit,
+    onRetrySync: () -> Unit,
 ) {
     Icon(
         painter = painterResource(R.drawable.ic_mihon),
@@ -278,6 +282,10 @@ private fun ProfileView(
     )
     Spacer(modifier = Modifier.height(4.dp))
     SyncStatus(syncState)
+    val error = syncState.error
+    if (error != null && !syncState.running) {
+        SyncError(error, onRetrySync)
+    }
 
     if (syncState.localOnly.isNotEmpty()) {
         Spacer(modifier = Modifier.height(12.dp))
@@ -368,6 +376,33 @@ private fun SyncStatus(syncState: CloudSync.State) {
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.primary,
     )
+}
+
+@Composable
+private fun SyncError(error: CloudSync.SyncError, onRetry: () -> Unit) {
+    val color = if (error == CloudSync.SyncError.OFFLINE) {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    } else {
+        MaterialTheme.colorScheme.error
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+    Text(
+        text = stringResource(
+            when (error) {
+                CloudSync.SyncError.OFFLINE -> MR.strings.cloud_sync_error_offline
+                CloudSync.SyncError.SESSION_EXPIRED -> MR.strings.cloud_sync_error_session
+                CloudSync.SyncError.SERVER -> MR.strings.cloud_sync_error_server
+            },
+        ),
+        style = MaterialTheme.typography.bodySmall,
+        color = color,
+        textAlign = TextAlign.Center,
+    )
+    if (error != CloudSync.SyncError.SESSION_EXPIRED) {
+        TextButton(onClick = onRetry) {
+            Text(stringResource(MR.strings.action_retry))
+        }
+    }
 }
 
 @Composable

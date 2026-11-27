@@ -42,6 +42,7 @@ class AccountScreen : Screen() {
             onNavigateToCloudLibrary = { uriHandler.openUri(CLOUD_LIBRARY_URL) },
             onRemoveLocalOnly = viewModel::removeLocalOnly,
             onKeepLocalOnly = viewModel::keepLocalOnly,
+            onRetrySync = viewModel::retrySync,
             onLogin = viewModel::login,
             onSignUp = viewModel::signUp,
             onLogout = viewModel::logout,

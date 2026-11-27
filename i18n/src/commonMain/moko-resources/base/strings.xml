@@ -148,6 +148,9 @@
     <string name="cloud_sync_running">Syncing…</string>
     <string name="cloud_sync_never">Not synced yet</string>
     <string name="cloud_sync_just_now">Last synced just now</string>
+    <string name="cloud_sync_error_offline">No connection. Changes will sync when you\'re back online.</string>
+    <string name="cloud_sync_error_session">Your session expired. Log out and log in again to keep syncing.</string>
+    <string name="cloud_sync_error_server">The last sync failed. Some changes aren\'t in the cloud yet.</string>
     <string name="cloud_sync_local_only_summary">They were removed on another device, or never made it to the cloud.</string>
     <string name="cloud_sync_local_only_remove">Remove here</string>
     <string name="cloud_sync_local_only_keep">Keep and upload</string>

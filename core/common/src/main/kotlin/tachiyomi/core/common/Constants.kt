@@ -19,4 +19,8 @@ object Constants {
     const val SHORTCUT_SOURCES = "eu.kanade.tachiyomi.SHOW_CATALOGUES"
     const val SHORTCUT_EXTENSIONS = "eu.kanade.tachiyomi.EXTENSIONS"
     const val SHORTCUT_DOWNLOADS = "eu.kanade.tachiyomi.SHOW_DOWNLOADS"
+
+    // Aoi: botões do widget da biblioteca (o receiver está na app, o widget não vê o LibraryUpdateJob)
+    const val LIBRARY_REFRESH_RECEIVER = "eu.kanade.tachiyomi.data.library.LibraryRefreshReceiver"
+    const val LIBRARY_REFRESH_CATEGORY = "category"
 }

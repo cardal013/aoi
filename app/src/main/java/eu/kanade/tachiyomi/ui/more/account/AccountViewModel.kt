@@ -85,6 +85,8 @@ class AccountViewModel(
 
     fun keepLocalOnly() = cloudSync.keepLocalOnly()
 
+    fun retrySync() = cloudSync.retry()
+
     @Immutable
     data class State(
         val username: String? = null,

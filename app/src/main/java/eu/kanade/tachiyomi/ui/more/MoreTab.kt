@@ -34,6 +34,7 @@ import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.util.Tab
 import eu.kanade.tachiyomi.R
 import eu.kanade.tachiyomi.data.account.AdminRepository
+import eu.kanade.tachiyomi.data.account.CloudSync
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.download.DownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoryScreen
@@ -54,6 +55,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import tachiyomi.core.common.i18n.stringResource
@@ -84,6 +86,7 @@ data object MoreTab : Tab {
         val viewModel = metroViewModel<MoreViewModel>()
         val downloadQueueState by viewModel.downloadQueueState.collectAsState()
         val isAdmin by viewModel.isAdmin.collectAsState()
+        val syncFailed by viewModel.syncFailed.collectAsState()
 
         val chooseBackup = rememberLauncherForActivityResult(
             object : ActivityResultContracts.GetContent() {
@@ -145,6 +148,7 @@ data object MoreTab : Tab {
             onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
             onClickBackup = { showBackupDialog = true },
             onClickAccount = { navigator.push(AccountScreen()) },
+            syncFailed = syncFailed,
             isAdmin = isAdmin,
             onClickAdmin = { navigator.push(AdminScreen()) },
             onClickSettings = { navigator.push(SettingsScreen()) },
@@ -159,6 +163,7 @@ data object MoreTab : Tab {
 class MoreViewModel(
     private val downloadManager: DownloadManager,
     adminRepository: AdminRepository,
+    cloudSync: CloudSync,
     preferences: BasePreferences,
 ) : ViewModel() {
 
@@ -169,6 +174,11 @@ class MoreViewModel(
     val downloadQueueState: StateFlow<DownloadQueueState> = _downloadQueueState.asStateFlow()
 
     val isAdmin: StateFlow<Boolean> = adminRepository.isAdmin
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), false)
+
+    // Sem rede não conta: o sync volta a correr sozinho quando a rede volta
+    val syncFailed: StateFlow<Boolean> = cloudSync.state
+        .map { it.error != null && it.error != CloudSync.SyncError.OFFLINE }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), false)
 
     init {

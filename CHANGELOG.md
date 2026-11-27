@@ -14,6 +14,14 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.40.0] - 2026-11-27
+### Added
+- *Library refresh* widget: buttons to update *Reading*, *Completed*, *Dropped* or *Plan to Read* (same order as the library tabs), ↻ to update everything, and the covers of the manga with new chapters (with how many). Make it bigger to see more covers
+- Account: when a sync fails it says why (no connection, session expired or the server) with *Retry*; a red dot on *Account* in *More* while it isn't fixed
+### Changed
+- Share button on the manga screen's top bar (it was hidden in ⋮). The message now has the cover, the title and the link
+- Admin: no more *Trello*; the *Calendário* can be the start screen (*Definições*)
+
 ## [Aoi v0.39.0] - 2026-11-05
 ### Changed
 - Admin: *Calendário* is now a real calendar instead of a picture: the month with labels on each day, and tap a day to see what you have from what time to what time

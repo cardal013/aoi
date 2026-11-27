@@ -36,6 +36,7 @@ class WidgetManager(
                 try {
                     UpdatesGridGlanceWidget().updateAll(context)
                     UpdatesGridCoverScreenGlanceWidget().updateAll(context)
+                    LibraryRefreshGlanceWidget().updateAll(context)
                 } catch (e: Exception) {
                     this.logcat(LogPriority.ERROR, e) { "Failed to update widget" }
                 }

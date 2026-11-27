@@ -1,7 +1,13 @@
 package eu.kanade.presentation.more
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -48,6 +54,7 @@ fun MoreScreen(
     onClickBackup: () -> Unit,
     onClickSettings: () -> Unit,
     onClickAccount: () -> Unit,
+    syncFailed: Boolean,
     isAdmin: Boolean,
     onClickAdmin: () -> Unit,
     onClickAbout: () -> Unit,
@@ -84,6 +91,18 @@ fun MoreScreen(
                     modifier = Modifier.tutorialTarget(TutorialTarget.Account),
                     title = stringResource(MR.strings.account_title),
                     icon = MaterialSymbols.Rounded.Person,
+                    widget = if (syncFailed) {
+                        {
+                            Box(
+                                modifier = Modifier
+                                    .padding(end = 16.dp)
+                                    .size(10.dp)
+                                    .background(MaterialTheme.colorScheme.error, CircleShape),
+                            )
+                        }
+                    } else {
+                        null
+                    },
                     onPreferenceClick = onClickAccount,
                 )
             }

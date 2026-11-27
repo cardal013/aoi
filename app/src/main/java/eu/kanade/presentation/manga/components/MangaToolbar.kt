@@ -21,6 +21,7 @@ import mihon.icons.materialsymbols.rounded.Download
 import mihon.icons.materialsymbols.rounded.FilterList
 import mihon.icons.materialsymbols.rounded.FlipToBack
 import mihon.icons.materialsymbols.rounded.SelectAll
+import mihon.icons.materialsymbols.rounded.Share
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.theme.active
@@ -102,6 +103,15 @@ fun MangaToolbar(
                             ),
                         )
                     }
+                    if (onClickShare != null) {
+                        add(
+                            AppBar.Action(
+                                title = stringResource(MR.strings.action_share),
+                                icon = MaterialSymbols.Rounded.Share,
+                                onClick = onClickShare,
+                            ),
+                        )
+                    }
                     add(
                         AppBar.Action(
                             title = stringResource(MR.strings.action_filter),
@@ -129,14 +139,6 @@ fun MangaToolbar(
                             AppBar.OverflowAction(
                                 title = stringResource(MR.strings.action_migrate),
                                 onClick = onClickMigrate,
-                            ),
-                        )
-                    }
-                    if (onClickShare != null) {
-                        add(
-                            AppBar.OverflowAction(
-                                title = stringResource(MR.strings.action_share),
-                                onClick = onClickShare,
                             ),
                         )
                     }

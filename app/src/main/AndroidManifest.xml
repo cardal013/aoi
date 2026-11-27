@@ -242,6 +242,10 @@
             android:name=".data.notification.NotificationReceiver"
             android:exported="false" />
 
+        <receiver
+            android:name=".data.library.LibraryRefreshReceiver"
+            android:exported="false" />
+
         <service
             android:name=".extension.util.ExtensionInstallService"
             android:exported="false"

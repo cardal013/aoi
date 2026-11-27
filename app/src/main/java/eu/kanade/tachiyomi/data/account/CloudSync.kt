@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.account
 import android.content.Context
 import android.net.ConnectivityManager
 import android.net.Network
+import android.net.NetworkCapabilities
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.SingleIn
@@ -107,6 +108,9 @@ class CloudSync(
             )
     }
 
+    /** Botão Retry do Account, depois de um sync falhado. */
+    fun retry() = sync(Mode.AUTO)
+
     fun onAppForeground() {
         if (System.currentTimeMillis() - lastAutoSync < FOREGROUND_MIN_INTERVAL_MS) return
         sync(Mode.AUTO)
@@ -151,7 +155,7 @@ class CloudSync(
                     throw e
                 } catch (e: Exception) {
                     logcat(LogPriority.ERROR, e) { "Sync: falhou ($mode)" }
-                    mutableState.update { it.copy(running = false, progress = null) }
+                    mutableState.update { it.copy(running = false, progress = null, error = failureReason()) }
                 }
             }
         }
@@ -240,6 +244,7 @@ class CloudSync(
                 running = false,
                 progress = null,
                 lastSyncAt = if (ok) start else it.lastSyncAt,
+                error = if (ok) null else failureReason(),
             )
         }
     }
@@ -299,6 +304,19 @@ class CloudSync(
         }
     }
 
+    // O repositório apanha as exceções e só devolve ok = false: o motivo deduz-se do estado da rede e da sessão
+    private fun failureReason(): SyncError {
+        val connectivity = context.getSystemService(ConnectivityManager::class.java)
+        val online = connectivity?.getNetworkCapabilities(connectivity.activeNetwork)
+            ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+        val expiresAt = supabase.auth.currentSessionOrNull()?.expiresAt?.toEpochMilliseconds() ?: 0L
+        return when {
+            !online -> SyncError.OFFLINE
+            expiresAt < System.currentTimeMillis() -> SyncError.SESSION_EXPIRED
+            else -> SyncError.SERVER
+        }
+    }
+
     private fun lastSyncAt(userId: String): Long =
         maxOf(
             libraryPreferences.lastCloudUploadSync(userId).get(),
@@ -311,7 +329,11 @@ class CloudSync(
         val lastSyncAt: Long = 0L,
         // Favoritos locais que já não estão na cloud, à espera de o utilizador decidir
         val localOnly: List<Manga> = emptyList(),
+        // Motivo do último sync falhado; volta a null quando um sync corre bem
+        val error: SyncError? = null,
     )
+
+    enum class SyncError { OFFLINE, SESSION_EXPIRED, SERVER }
 
     private enum class Mode { AUTO, UPLOAD }
 

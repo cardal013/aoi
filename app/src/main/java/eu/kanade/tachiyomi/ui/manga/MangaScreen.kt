@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.ui.manga
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -15,9 +17,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import cafe.adriel.voyager.navigator.LocalNavigator
+import coil3.asDrawable
+import coil3.imageLoader
+import coil3.request.ImageRequest
+import coil3.size.Size
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import dev.zacsweers.metrox.viewmodel.assistedMetroViewModel
@@ -37,6 +42,9 @@ import eu.kanade.presentation.manga.components.SetIntervalDialog
 import eu.kanade.presentation.util.AssistContentScreen
 import eu.kanade.presentation.util.Screen
 import eu.kanade.presentation.util.isTabletUi
+import eu.kanade.tachiyomi.data.saver.Image
+import eu.kanade.tachiyomi.data.saver.ImageSaver
+import eu.kanade.tachiyomi.data.saver.Location
 import eu.kanade.tachiyomi.source.Source
 import eu.kanade.tachiyomi.source.isLocalOrStub
 import eu.kanade.tachiyomi.source.online.HttpSource
@@ -50,16 +58,19 @@ import eu.kanade.tachiyomi.ui.reader.ReaderActivity
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
 import eu.kanade.tachiyomi.util.system.copyToClipboard
+import eu.kanade.tachiyomi.util.system.getBitmapOrNull
 import eu.kanade.tachiyomi.util.system.toShareIntent
 import eu.kanade.tachiyomi.util.system.toast
 import kotlinx.coroutines.launch
 import logcat.LogPriority
 import mihon.feature.migration.config.MigrationConfigScreen
 import mihon.feature.migration.dialog.MigrateMangaDialog
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.chapter.model.Chapter
 import tachiyomi.domain.manga.model.Manga
+import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.screens.LoadingScreen
 
 class MangaScreen(
@@ -145,7 +156,10 @@ class MangaScreen(
             onSearch = { query, global -> scope.launch { performSearch(navigator, query, global) } },
             onCoverClicked = viewModel::showCoverDialog,
             onReadingStatusClicked = viewModel::showReadingStatusDialog,
-            onShareClicked = { shareManga(context, viewModel.manga, viewModel.source) }.takeIf { isHttpSource },
+            onShareClicked = {
+                scope.launch { shareManga(context, viewModel.manga, viewModel.source) }
+                Unit
+            }.takeIf { isHttpSource },
             onDownloadActionClicked = viewModel::runDownloadAction.takeIf { !successState.source.isLocalOrStub() },
             onEditCategoryClicked = viewModel::showChangeCategoryDialog.takeIf { successState.manga.favorite },
             onMigrateClicked = {
@@ -318,14 +332,38 @@ class MangaScreen(
         }
     }
 
-    private fun shareManga(context: Context, manga_: Manga?, source_: Source?) {
+    // Aoi: a mensagem leva a capa, o título e o link; sem capa vai só o texto
+    private suspend fun shareManga(context: Context, manga_: Manga?, source_: Source?) {
+        val manga = manga_ ?: return
         try {
-            getMangaUrl(manga_, source_)?.let { url ->
-                val intent = url.toUri().toShareIntent(context, type = "text/plain")
-                context.startActivity(intent)
-            }
+            val url = getMangaUrl(manga, source_) ?: return
+            val text = "${manga.title}\n$url"
+            val cover = withIOContext { saveCoverForShare(context, manga) }
+            val intent = cover?.toShareIntent(context, message = text)
+                ?: Intent.createChooser(
+                    Intent(Intent.ACTION_SEND).apply {
+                        type = "text/plain"
+                        putExtra(Intent.EXTRA_TEXT, text)
+                    },
+                    context.stringResource(MR.strings.action_share),
+                ).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+            context.startActivity(intent)
         } catch (e: Exception) {
             context.toast(e.message)
+        }
+    }
+
+    private suspend fun saveCoverForShare(context: Context, manga: Manga): Uri? {
+        return try {
+            val request = ImageRequest.Builder(context).data(manga).size(Size.ORIGINAL).build()
+            val bitmap = context.imageLoader.execute(request).image
+                ?.asDrawable(context.resources)
+                ?.getBitmapOrNull()
+                ?: return null
+            ImageSaver(context).save(Image.Cover(bitmap, manga.title, Location.Cache))
+        } catch (e: Exception) {
+            logcat(LogPriority.WARN, e)
+            null
         }
     }
 
