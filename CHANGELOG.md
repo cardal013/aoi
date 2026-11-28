@@ -14,6 +14,10 @@ The format is a modified version of [Keep a Changelog](https://keepachangelog.co
 
 Changes made by Aoi on top of Mihon. The Mihon history follows below, unchanged.
 
+## [Aoi v0.40.1] - 2026-11-28
+### Fixed
+- *Library refresh* widget showed *Can't show content* instead of the buttons and covers
+
 ## [Aoi v0.40.0] - 2026-11-27
 ### Added
 - *Library refresh* widget: buttons to update *Reading*, *Completed*, *Dropped* or *Plan to Read* (same order as the library tabs), ↻ to update everything, and the covers of the manga with new chapters (with how many). Make it bigger to see more covers

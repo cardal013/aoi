@@ -118,6 +118,9 @@ Download the latest APK from the [Releases page](https://github.com/cardal013/ao
 
 ## Changelog
 
+### 0.40.1
+- *Library refresh* widget shows again (it said *Can't show content*)
+
 ### 0.40.0
 - *Library refresh* widget: update by reading status and see the manga with new chapters
 - Share on the manga screen's top bar, with the cover, title and link
