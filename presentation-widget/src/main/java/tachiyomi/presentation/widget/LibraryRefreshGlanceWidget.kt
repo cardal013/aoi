@@ -64,13 +64,13 @@ import kotlinx.coroutines.flow.map
 import mihon.core.metro.metroGraph
 import mihon.presentation.widget.di.PresentationWidgetGraph
 import tachiyomi.core.common.Constants
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.manga.model.ReadingStatus
 import tachiyomi.domain.manga.model.categoryId
 import tachiyomi.domain.updates.interactor.GetUpdates
 import tachiyomi.domain.updates.model.UpdatesWithRelations
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.widget.components.CoverHeight
 import tachiyomi.presentation.widget.components.CoverWidth
 import tachiyomi.presentation.widget.components.LockedWidget
@@ -136,7 +136,7 @@ class LibraryRefreshGlanceWidget : GlanceAppWidget() {
         Column(modifier = modifier) {
             Row(modifier = GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = stringResource(MR.strings.app_name),
+                    text = LocalContext.current.stringResource(MR.strings.app_name),
                     style = TextStyle(color = fg, fontSize = 14.sp, fontWeight = FontWeight.Medium),
                 )
                 Spacer(GlanceModifier.defaultWeight())
@@ -156,7 +156,7 @@ class LibraryRefreshGlanceWidget : GlanceAppWidget() {
                 ) {
                     Image(
                         provider = ImageProvider(R.drawable.appwidget_ic_refresh),
-                        contentDescription = stringResource(MR.strings.action_update_library),
+                        contentDescription = LocalContext.current.stringResource(MR.strings.action_update_library),
                         modifier = GlanceModifier.size(18.dp),
                     )
                 }
@@ -174,7 +174,7 @@ class LibraryRefreshGlanceWidget : GlanceAppWidget() {
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            text = stringResource(status.label()),
+                            text = LocalContext.current.stringResource(status.label()),
                             style = TextStyle(color = fg, fontSize = 12.sp, textAlign = TextAlign.Center),
                             maxLines = 1,
                         )
@@ -194,7 +194,7 @@ class LibraryRefreshGlanceWidget : GlanceAppWidget() {
             when {
                 data == null -> CircularProgressIndicator(color = fg)
                 data.isEmpty() -> Text(
-                    text = stringResource(MR.strings.information_no_recent),
+                    text = LocalContext.current.stringResource(MR.strings.information_no_recent),
                     style = TextStyle(color = fg, fontSize = 12.sp),
                 )
                 else -> Column(horizontalAlignment = Alignment.CenterHorizontally) {

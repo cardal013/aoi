@@ -22,8 +22,8 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import tachiyomi.core.common.Constants
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.i18n.MR
-import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.widget.util.calculateRowAndColumnCount
 
 @Composable
@@ -42,7 +42,7 @@ fun UpdatesWidget(
             CircularProgressIndicator(color = contentColor)
         } else if (data.isEmpty()) {
             Text(
-                text = stringResource(MR.strings.information_no_recent),
+                text = LocalContext.current.stringResource(MR.strings.information_no_recent),
                 style = TextStyle(color = contentColor),
             )
         } else {
